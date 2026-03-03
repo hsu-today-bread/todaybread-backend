@@ -1,0 +1,22 @@
+package com.todaybread.server.config;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * OpenAPI 스웨거 설정을 위한 config 클래스입니다.
+ */
+@Configuration
+public class OpenApiConfig {
+
+    @Bean
+    public OpenAPI openAPI() {
+        return new OpenAPI()
+                .info(new Info()
+                        .title("TodayBread API")
+                        .version("v1.0")
+                        .description("TodayBread 백엔드 API 문서"));
+    }
+}
