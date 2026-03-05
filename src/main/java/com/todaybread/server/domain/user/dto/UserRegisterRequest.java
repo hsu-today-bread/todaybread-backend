@@ -1,0 +1,19 @@
+package com.todaybread.server.domain.user.dto;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+
+/**
+ * 회원가입 요청 DTO
+ *
+ * @param email 이메일
+ * @param nickName 닉네임
+ * @param password 패스워드
+ * @param phoneNumber 전화번호
+ */
+public record UserRegisterRequest(
+        @NotBlank @Email String email,
+        @NotBlank String nickName,
+        @NotBlank String password,
+        @NotBlank String phoneNumber) {
+}
