@@ -56,7 +56,6 @@ public class UserService {
      * 비밀번호를 해쉬화합니다.
      * 오류 발생 시, 에러를 던집니다.
      */
-    // TODO - 회원 가입 로직 구현 및 오류 코드 추가 (중복된 경우)
     @Transactional
     public UserRegisterResponse register(UserRegisterRequest request) {
         if (checkEmail(request.email())){
@@ -65,7 +64,11 @@ public class UserService {
         if (checkPhone(request.phoneNumber())){
             throw new CustomException(ErrorCode.USER_DUPLICATED);
         }
+        if (checkNickname(request.nickname())){
+            throw new CustomException(ErrorCode.USER_DUPLICATED);
+        }
 
+        // TODO - 회원 가입 로직 구현 및 오류 코드 추가 (중복된 경우)
         String password = request.password();
 
         return UserRegisterResponse.ok();
@@ -73,11 +76,14 @@ public class UserService {
 
     /**
      * 로그인을 실시합니다. 기본으로 응답을 던지지만, 예외시 오류 코드를 송출합니다.
+     *
      * @param request
      * @return
      */
     public UserLoginResponse login(UserLoginRequest request) {
         // TODO 로그인 붙이기 및 오류 코드 던지기
+
+        return UserLoginResponse.ok();
     }
 
 }

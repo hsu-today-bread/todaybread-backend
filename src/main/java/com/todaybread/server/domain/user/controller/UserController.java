@@ -36,6 +36,17 @@ public class UserController {
     }
 
     /**
+     * 로그인을 담당합니다.
+     *
+     * @param request 로그인 정보 DTO
+     * @return 로그인 응답
+     */
+    @PostMapping("/login")
+    public UserLoginResponse loginUser(@RequestBody @Valid UserLoginRequest request){
+        return userService.login(request);
+    }
+
+    /**
      * 회원 가입 시, 이메일 중복 확인을 체크합니다.
      *
      * @param value 이메일
@@ -55,11 +66,6 @@ public class UserController {
     @GetMapping("/exist/nickname")
     public boolean checkNickname(@RequestParam("value") @NotBlank @NotBlank String value) {
         return userService.checkNickname(value);
-    }
-
-    @PostMapping("/login")
-    public UserLoginResponse loginUser(@RequestBody @Valid UserLoginRequest request){
-        return userService.login(request);
     }
 }
 

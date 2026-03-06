@@ -6,6 +6,11 @@ package com.todaybread.server.domain.user.dto;
  * @param success 성공 여부
  */
 public record UserLoginResponse(boolean success) {
+
+    /**
+     * 성공 응답을 생성합니다.
+     * @return ture
+     */
     public static UserLoginResponse ok(){
         return new UserLoginResponse(true);
     }
