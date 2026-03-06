@@ -4,6 +4,7 @@ import com.todaybread.server.domain.user.dto.UserLoginRequest;
 import com.todaybread.server.domain.user.dto.UserLoginResponse;
 import com.todaybread.server.domain.user.dto.UserRegisterRequest;
 import com.todaybread.server.domain.user.dto.UserRegisterResponse;
+import com.todaybread.server.domain.user.repository.UserRepository;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -18,8 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class UserService {
 
-    // TODO - 리포지터리 연결
-    //private final UserRepository userRepository;
+    private final UserRepository userRepository;
 
     /**
      * 이메일 중복 여부를 체크합니다.
@@ -77,7 +77,7 @@ public class UserService {
     /**
      * 로그인을 실시합니다. 기본으로 응답을 던지지만, 예외시 오류 코드를 송출합니다.
      *
-     * @param request
+     * @param request 로그인 요청 DTO
      * @return
      */
     public UserLoginResponse login(UserLoginRequest request) {
