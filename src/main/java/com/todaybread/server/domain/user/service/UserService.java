@@ -1,5 +1,7 @@
 package com.todaybread.server.domain.user.service;
 
+import com.todaybread.server.domain.user.dto.UserLoginRequest;
+import com.todaybread.server.domain.user.dto.UserLoginResponse;
 import com.todaybread.server.domain.user.dto.UserRegisterRequest;
 import com.todaybread.server.domain.user.dto.UserRegisterResponse;
 import com.todaybread.server.global.exception.CustomException;
@@ -21,6 +23,8 @@ public class UserService {
 
     /**
      * 이메일 중복 여부를 체크합니다.
+     * @param email 이메일
+     * @return true/false
      */
     @Transactional(readOnly = true)
     public boolean checkEmail(String email) {
@@ -29,10 +33,22 @@ public class UserService {
 
     /**
      * 전화번호 중복 여부를 체크합니다.
+     * @param phone 전화번호
+     * @return true/false
      */
     @Transactional(readOnly = true)
     public boolean checkPhone(String phone) {
         return userRepository.existsByPhone(phone);
+    }
+
+    /**
+     * 닉네임 중복 여부를 체크합니다.
+     * @param nickname 닉네임
+     * @return true/false
+     */
+    @Transactional(readOnly = true)
+    public boolean checkNickname(String nickname) {
+        return userRepository.existsByNickname(nickname);
     }
 
     /**
@@ -53,6 +69,15 @@ public class UserService {
         String password = request.password();
 
         return UserRegisterResponse.ok();
+    }
+
+    /**
+     * 로그인을 실시합니다. 기본으로 응답을 던지지만, 예외시 오류 코드를 송출합니다.
+     * @param request
+     * @return
+     */
+    public UserLoginResponse login(UserLoginRequest request) {
+        // TODO 로그인 붙이기 및 오류 코드 던지기
     }
 
 }

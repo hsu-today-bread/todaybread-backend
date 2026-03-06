@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
  * [컨벤션]
  *  - 도메인_http상태코드로 이름을 짓습니다.
  *  - 서버 내부 오류의 경우는 server는 뺍니다.
+ *  - http상태코드로 표현할 수 없는경우 일반 상수를 붙입니다.
  */
 @Getter
 public enum ErrorCode {
