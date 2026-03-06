@@ -31,8 +31,7 @@ public class UserController {
      */
     @PostMapping("/register")
     public UserRegisterResponse registerUser(@RequestBody @Valid UserRegisterRequest request) {
-        userService.register(request);
-        return UserRegisterResponse.ok();
+        return userService.register(request);
     }
 
     /**

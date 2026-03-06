@@ -61,13 +61,13 @@ public class UserService {
     @Transactional
     public UserRegisterResponse register(UserRegisterRequest request) {
         if (checkEmail(request.email())){
-            throw new CustomException(ErrorCode.USER_DUPLICATED);
+            throw new CustomException(ErrorCode.USER_REGISTER_EMAIL_ALREADY_EXISTS);
         }
         if (checkPhone(request.phone())){
-            throw new CustomException(ErrorCode.USER_DUPLICATED);
+            throw new CustomException(ErrorCode.USER_REGISTER_PHONE_ALREADY_EXISTS);
         }
         if (checkNickname(request.nickname())){
-            throw new CustomException(ErrorCode.USER_DUPLICATED);
+            throw new CustomException(ErrorCode.USER_REGISTER_NICKNAME_ALREADY_EXISTS);
         }
 
         // TODO - 회원 가입 로직 구현 및 오류 코드 추가 (중복된 경우)
