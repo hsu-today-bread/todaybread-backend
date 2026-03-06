@@ -49,6 +49,7 @@ public class UserEntity {
     @Builder
     private UserEntity(String email, String passwordHash, String name, String nickname, String phone){
         this.email = email;
+        this.name = name;
         this.passwordHash = passwordHash;
         this.nickname = nickname;
         this.phone = phone;

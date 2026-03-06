@@ -1,0 +1,42 @@
+# ============================================================
+# TodayBread Docker Compose
+# ============================================================
+# 사용법:
+#   시작:              docker compose up -d
+#   종료 (데이터 유지): docker compose down
+#   종료 (데이터 삭제): docker compose down -v
+#   로그 확인:          docker compose logs -f mysql
+#   상태 확인:          docker compose ps
+#   MySQL 접속:         docker exec -it todaybread-mysql mysql -u todaybread -p
+# ============================================================
+
+services:
+  mysql:
+    image: mysql:8.0.39                       # MySQL 8.0 이미지
+    container_name: todaybread-mysql           # 컨테이너 이름
+    restart: unless-stopped                    # 수동 중지 전까지 자동 재시작
+    environment:                               # .env 파일에서 변수를 읽어옴
+      MYSQL_DATABASE: ${MYSQL_DATABASE}        # 생성할 데이터베이스 이름
+      MYSQL_USER: ${MYSQL_USER}                # 생성할 사용자명
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}        # 사용자 비밀번호
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}  # root 비밀번호
+      TZ: Asia/Seoul                           # 타임존 서울
+    ports:
+      - "3306:3306"                            # 호스트:컨테이너 포트 매핑
+    volumes:
+      - mysql_data:/var/lib/mysql              # 데이터 영속화 (컨테이너 삭제해도 유지)
+    command: >-                                # MySQL 시작 옵션
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    healthcheck:                               # 컨테이너 상태 체크
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD || exit 1"]
+      interval: 5s                             # 5초마다 체크
+      timeout: 3s                              # 3초 안에 응답 없으면 실패
+      retries: 20                              # 20번 실패 시 unhealthy
+
+# 데이터 휘발을 방지하기 위해 볼륨 설정! -> 도커 꺼도 데이터 유지됌
+# /var/lib/mysql
+# docker compose down    → 볼륨 유지 (데이터 살아있음)
+# docker compose down -v → 볼륨 삭제 (데이터 날아감, 초기화)
+volumes:
+  mysql_data:
