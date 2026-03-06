@@ -4,10 +4,12 @@ import com.todaybread.server.domain.user.dto.UserLoginRequest;
 import com.todaybread.server.domain.user.dto.UserLoginResponse;
 import com.todaybread.server.domain.user.dto.UserRegisterRequest;
 import com.todaybread.server.domain.user.dto.UserRegisterResponse;
+import com.todaybread.server.domain.user.entity.UserEntity;
 import com.todaybread.server.domain.user.repository.UserRepository;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * 이메일 중복 여부를 체크합니다.
@@ -53,15 +56,14 @@ public class UserService {
 
     /**
      * 회원가입을 실시합니다.
-     * 비밀번호를 해쉬화합니다.
-     * 오류 발생 시, 에러를 던집니다.
+     * 중복 체크 -> 비밀번호 해쉬 -> 엔티티 저장으로 진행됩니다.
      */
     @Transactional
     public UserRegisterResponse register(UserRegisterRequest request) {
         if (checkEmail(request.email())){
             throw new CustomException(ErrorCode.USER_DUPLICATED);
         }
-        if (checkPhone(request.phoneNumber())){
+        if (checkPhone(request.phone())){
             throw new CustomException(ErrorCode.USER_DUPLICATED);
         }
         if (checkNickname(request.nickname())){
@@ -69,8 +71,17 @@ public class UserService {
         }
 
         // TODO - 회원 가입 로직 구현 및 오류 코드 추가 (중복된 경우)
-        String password = request.password();
+        String passwordHash = passwordEncoder.encode(request.password());
 
+        UserEntity userEntity = UserEntity.builder()
+                .email(request.email())
+                .passwordHash(passwordHash)
+                .name(request.name())
+                .nickname(request.nickname())
+                .phone(request.phone())
+                .build();
+
+        userRepository.save(userEntity);
         return UserRegisterResponse.ok();
     }
 
@@ -80,8 +91,8 @@ public class UserService {
      * @param request 로그인 요청 DTO
      * @return
      */
+    @Transactional(readOnly = true)
     public UserLoginResponse login(UserLoginRequest request) {
-        // TODO 로그인 붙이기 및 오류 코드 던지기
 
         return UserLoginResponse.ok();
     }

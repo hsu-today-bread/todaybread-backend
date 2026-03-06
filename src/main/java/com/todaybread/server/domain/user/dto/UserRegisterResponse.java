@@ -8,6 +8,7 @@ package com.todaybread.server.domain.user.dto;
  * @param message 짧은 환영 인사
  */
 public record UserRegisterResponse(boolean status, String message){
+
     public static UserRegisterResponse ok(){
         return new UserRegisterResponse(true, "회원가입 완료");
     }

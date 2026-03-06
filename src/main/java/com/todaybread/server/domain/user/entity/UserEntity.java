@@ -42,11 +42,12 @@ public class UserEntity {
      * 빌더 입니다. ID를 제외하고 모든 정보를 받습니다.
      * @param email 이메일
      * @param passwordHash 해쉬된 비밀번호
+     * @param name 이름
      * @param nickname 닉네임
      * @param phone 핸드폰 넘버
      */
     @Builder
-    private UserEntity(String email, String passwordHash, String nickname, String phone){
+    private UserEntity(String email, String passwordHash, String name, String nickname, String phone){
         this.email = email;
         this.passwordHash = passwordHash;
         this.nickname = nickname;

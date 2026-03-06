@@ -9,7 +9,7 @@ public record UserLoginResponse(boolean success) {
 
     /**
      * 성공 응답을 생성합니다.
-     * @return ture
+     * @return true
      */
     public static UserLoginResponse ok(){
         return new UserLoginResponse(true);

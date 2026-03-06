@@ -8,12 +8,14 @@ import jakarta.validation.constraints.NotBlank;
  *
  * @param email 이메일
  * @param nickname 닉네임
+ * @param name 이름
  * @param password 패스워드
- * @param phoneNumber 전화번호
+ * @param phone 전화번호
  */
 public record UserRegisterRequest(
         @NotBlank @Email String email,
         @NotBlank String nickname,
+        @NotBlank String name,
         @NotBlank String password,
-        @NotBlank String phoneNumber) {
+        @NotBlank String phone) {
 }
