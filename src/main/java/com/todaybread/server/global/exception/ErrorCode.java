@@ -43,11 +43,10 @@ public enum ErrorCode {
      * 유저 오류
      * ============================
      */
-    USER_REGISTER_EMAIL_ALREADY_EXISTS("USER_001", "이미 사용 중인 이메일입니다.", HttpStatus.CONFLICT),
-    USER_REGISTER_PHONE_ALREADY_EXISTS("USER_002", "이미 사용 중인 전화번호입니다.", HttpStatus.CONFLICT),
-    USER_REGISTER_NICKNAME_ALREADY_EXISTS("USER_003", "이미 사용 중인 닉네임입니다.", HttpStatus.CONFLICT),
-    USER_LOGIN_USER_NOT_FOUND("USER_004", "사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
-    USER_LOGIN_INFO_NOT_MATCH("USER_005","비밀번호 혹은 이메일이 일치하지 않습니다.",HttpStatus.UNAUTHORIZED);
+    USER_REGISTER_EMAIL_ALREADY_EXISTS("USER_001", "이미 가입한 이메일입니다.", HttpStatus.CONFLICT),
+    USER_REGISTER_PHONE_ALREADY_EXISTS("USER_002", "이미 가입한 전화번호입니다.", HttpStatus.CONFLICT),
+    USER_REGISTER_NICKNAME_ALREADY_EXISTS("USER_003", "이미 사용중인 닉네임입니다.", HttpStatus.CONFLICT),
+    USER_LOGIN_USER_NOT_FOUND("USER_004", "사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND);
 
     private final String code;
     private final String message;

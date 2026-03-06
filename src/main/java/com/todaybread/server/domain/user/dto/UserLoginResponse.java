@@ -7,6 +7,7 @@ package com.todaybread.server.domain.user.dto;
  */
 public record UserLoginResponse(boolean success) {
 
+    // TODO JWT 토큰
     /**
      * 성공 응답을 생성합니다.
      * @return true

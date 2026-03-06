@@ -13,6 +13,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 /**
  * 유저 도메인의 서비스 계층입니다.
  * 각종 비즈니스 로직을 처리합니다.
@@ -60,6 +62,8 @@ public class UserService {
      */
     @Transactional
     public UserRegisterResponse register(UserRegisterRequest request) {
+
+        // 중복 여부 검증
         if (checkEmail(request.email())){
             throw new CustomException(ErrorCode.USER_REGISTER_EMAIL_ALREADY_EXISTS);
         }
@@ -70,9 +74,10 @@ public class UserService {
             throw new CustomException(ErrorCode.USER_REGISTER_NICKNAME_ALREADY_EXISTS);
         }
 
-        // TODO - 회원 가입 로직 구현 및 오류 코드 추가 (중복된 경우)
+        // 비밀번호 해쉬화
         String passwordHash = passwordEncoder.encode(request.password());
 
+        // 엔티티 생성 후 저장
         UserEntity userEntity = UserEntity.builder()
                 .email(request.email())
                 .passwordHash(passwordHash)
@@ -89,10 +94,20 @@ public class UserService {
      * 로그인을 실시합니다. 기본으로 응답을 던지지만, 예외시 오류 코드를 송출합니다.
      *
      * @param request 로그인 요청 DTO
-     * @return
+     * @return 로그인 여부
      */
     @Transactional(readOnly = true)
     public UserLoginResponse login(UserLoginRequest request) {
+
+        Optional<UserEntity> userEntityOptional = userRepository.findByEmail(request.email());
+        if (userEntityOptional.isEmpty()) {
+            throw new CustomException(ErrorCode.USER_LOGIN_USER_NOT_FOUND);
+        }
+
+        UserEntity userEntity = userEntityOptional.get();
+        if (!passwordEncoder.matches(request.password(), userEntity.getPasswordHash())) {
+            throw new CustomException(ErrorCode.USER_LOGIN_USER_NOT_FOUND);
+        }
 
         return UserLoginResponse.ok();
     }
