@@ -41,6 +41,21 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 내용: @RequestParam, @PathVariable 등 메서드 파라미터 유효성 검증 실패 시 발생하는 예외를 처리합니다.
+     * @param ex ConstraintViolationException 예외
+     * @return ErrorResponse HTTP 형태로 반환 (400 BAD_REQUEST)
+     */
+    @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraintViolationException(jakarta.validation.ConstraintViolationException ex) {
+        String errorMessage = ex.getConstraintViolations().iterator().next().getMessage();
+        ErrorResponse response = new ErrorResponse(ErrorCode.BAD_REQUEST.getCode(), errorMessage);
+
+        return ResponseEntity
+                .status(ErrorCode.BAD_REQUEST.getStatus())
+                .body(response);
+    }
+
+    /**
      * 내용: DB Unique 제약 조건 위반 (회원가입 동시성 문제 등) 시 발생하는 예외를 처리합니다.
      * @param ex DataIntegrityViolationException 예외
      * @return ErrorResponse HTTP 형태로 반환 (409 CONFLICT)
