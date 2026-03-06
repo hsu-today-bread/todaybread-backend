@@ -6,6 +6,7 @@ import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 유저 도메인의 서비스 계층입니다.
@@ -50,6 +51,8 @@ public class UserService {
         }
 
         String password = request.password();
+
+        return UserRegisterResponse.ok();
     }
 
 }
