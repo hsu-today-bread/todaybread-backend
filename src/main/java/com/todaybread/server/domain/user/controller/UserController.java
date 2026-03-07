@@ -63,8 +63,19 @@ public class UserController {
      * @return true/false
      */
     @GetMapping("/exist/nickname")
-    public boolean checkNickname(@RequestParam("value") @NotBlank @NotBlank String value) {
+    public boolean checkNickname(@RequestParam("value") @NotBlank String value) {
         return userService.checkNickname(value);
+    }
+
+    /**
+     * 회원 가입 시, 전화 번호 중복을 체크합니다.
+     *
+     * @param value 전화번호
+     * @return true/false
+     */
+    @GetMapping("/exist/phone")
+    public boolean checkPhone(@RequestParam("value") @NotBlank String value) {
+        return userService.checkPhone(value);
     }
 }
 
