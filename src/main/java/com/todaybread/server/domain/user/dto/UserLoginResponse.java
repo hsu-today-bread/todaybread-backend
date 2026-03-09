@@ -1,0 +1,18 @@
+package com.todaybread.server.domain.user.dto;
+
+/**
+ * 로그인 완료 후 응답 DTO입니다.
+ *
+ * @param success 성공 여부
+ */
+public record UserLoginResponse(boolean success) {
+
+    // TODO JWT 토큰
+    /**
+     * 성공 응답을 생성합니다.
+     * @return true
+     */
+    public static UserLoginResponse ok(){
+        return new UserLoginResponse(true);
+    }
+}
