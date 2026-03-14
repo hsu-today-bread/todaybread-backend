@@ -1,5 +1,7 @@
 package com.todaybread.server.domain.user.service;
 
+import com.todaybread.server.config.jwt.JwtTokenService;
+import com.todaybread.server.domain.auth.service.AuthService;
 import com.todaybread.server.domain.user.dto.UserLoginRequest;
 import com.todaybread.server.domain.user.dto.UserLoginResponse;
 import com.todaybread.server.domain.user.dto.UserRegisterRequest;
@@ -25,6 +27,8 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuthService authService;
+    private final JwtTokenService jwtTokenService;
 
     /**
      * 이메일 중복 여부를 체크합니다.
@@ -92,11 +96,12 @@ public class UserService {
 
     /**
      * 로그인을 실시합니다. 기본으로 응답을 던지지만, 예외시 오류 코드를 송출합니다.
+     * 로그인 및 각종 토큰을 보내고, 이를 DB에 다시 기록합니다.
      *
      * @param request 로그인 요청 DTO
      * @return 로그인 여부
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public UserLoginResponse login(UserLoginRequest request) {
 
         Optional<UserEntity> userEntityOptional = userRepository.findByEmail(request.email());
@@ -109,7 +114,16 @@ public class UserService {
             throw new CustomException(ErrorCode.USER_LOGIN_USER_NOT_FOUND);
         }
 
-        return UserLoginResponse.ok();
+        Long userId = userEntity.getId();
+        String userEmail = userEntity.getEmail();
+        String userRole = userEntity.isBoss() ? "BOSS" : "USER";
+
+        String accessToken = jwtTokenService.generateAccessToken(userId,userEmail,userRole);
+        String refreshToken = jwtTokenService.generateRefreshToken(userId);
+
+        authService.saveRefreshToken(userId,refreshToken);
+
+        return UserLoginResponse.ok(accessToken,refreshToken);
     }
 
 }
