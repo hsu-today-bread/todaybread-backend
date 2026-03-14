@@ -9,6 +9,6 @@ import java.util.Optional;
  * JWT 인증을 위한 리포지터리입니다.
  */
 public interface RefreshTokenRepository extends JpaRepository<RefreshTokenEntity, Long> {
-    Optional<RefreshTokenEntity> findByRefreshToken(String refreshToken);
+    Optional<RefreshTokenEntity> findByToken(String refreshToken);
     void deleteByUserId(Long userId);
 }

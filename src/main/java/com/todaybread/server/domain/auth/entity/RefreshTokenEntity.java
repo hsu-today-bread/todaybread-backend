@@ -40,9 +40,9 @@ public class RefreshTokenEntity extends BaseEntity {
      * @param expiredAt 만료일
      */
     @Builder
-    private RefreshTokenEntity(Long userId, String token, LocalDateTime expiredAt) {
+    private RefreshTokenEntity(Long userId, String token, LocalDateTime expiresAt) {
         this.userId = userId;
         this.token = token;
-        expiresAt = expiredAt;
+        this.expiresAt = expiresAt;
     }
 }
