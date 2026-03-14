@@ -1,5 +1,6 @@
 /*
  users 테이블을 만들기 위한 SQL문 입니다.
+ 하단 created_at, updated_at은 필수로 동일하게 모든 SQL 문에서 사용합니다.
  */
 CREATE TABLE users (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
