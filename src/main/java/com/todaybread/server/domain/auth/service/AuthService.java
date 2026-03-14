@@ -9,6 +9,7 @@ import com.todaybread.server.domain.user.repository.UserRepository;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,10 +18,6 @@ import java.util.Optional;
 
 /**
  * 인증 도메인의 서비스 계층입니다.
- *
- *     - `reissue()`: DB에서 Refresh Token 조회 → 사용자 조회 → 기존 토큰 삭제 → 새 토큰 쌍 생성 → 새 Refresh Token 저장 → TokenResponse 반환
- *     - `logout()`: 해당 사용자의 Refresh Token DB 삭제
- *     - `saveRefreshToken()`: Refresh Token 엔티티 생성 및 저장 헬퍼
  */
 @Service
 @RequiredArgsConstructor
@@ -30,18 +27,24 @@ public class AuthService {
     private final UserRepository userRepository;
     private final JwtTokenService jwtTokenService;
 
+    @Value("${jwt.refresh-token-expiration}")
+    private long refreshTokenExpiration;
+
     /**
      * 새로운 유저-refresh 토큰을 저장합니다.
+     * 기존 토큰을 제거합니다.
      *
      * @param userId 유저 ID
      * @param token 토큰
      */
+    @Transactional
     public void saveRefreshToken(Long userId, String token) {
         RefreshTokenEntity entity = RefreshTokenEntity.builder()
                 .userId(userId)
                 .token(token)
-                .expiresAt(LocalDateTime.now().plusDays(7))
+                .expiresAt(LocalDateTime.now().plusNanos(refreshTokenExpiration * 1_000_000))
                 .build();
+        refreshTokenRepository.deleteByUserId(userId);
         refreshTokenRepository.save(entity);
     }
 
