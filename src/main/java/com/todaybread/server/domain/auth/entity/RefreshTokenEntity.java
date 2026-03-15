@@ -22,12 +22,13 @@ public class RefreshTokenEntity extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "user_id", nullable = false, unique = true)
     private Long userId;
 
-    @Column(nullable = false, unique = true, length = 512)
+    @Column(name = "token", nullable = false, unique = true, length = 512)
     private String token;
 
     @Column(name = "expires_at", nullable = false)
@@ -37,7 +38,7 @@ public class RefreshTokenEntity extends BaseEntity {
      * 빌더 메서드입니다.
      * @param userId 유저 ID
      * @param token refresh 토큰
-     * @param expiredAt 만료일
+     * @param expiresAt 만료일
      */
     @Builder
     private RefreshTokenEntity(Long userId, String token, LocalDateTime expiresAt) {

@@ -1,5 +1,6 @@
 /*
  Refresh 토큰을 저장하기 위한 sql문입니다.
+ 1명의 유저는 하나의 refresh 토큰을 가집니다.
  */
 CREATE TABLE refresh_token (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,

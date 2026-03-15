@@ -16,20 +16,21 @@ public class UserEntity extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 255)
+    @Column(name = "email", nullable = false, unique = true, length = 255)
     private String email;
 
     @Setter
-    @Column(nullable = false, length = 30)
+    @Column(name = "name", nullable = false, length = 30)
     private String name;
 
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
     @Setter
-    @Column(nullable = false, unique = true, length = 30)
+    @Column(name = "nickname", nullable = false, unique = true, length = 30)
     private String nickname;
 
     @Setter
