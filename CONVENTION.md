@@ -66,6 +66,18 @@
 - 마이그레이션 파일명 규칙: `V{버전}__{설명}.sql` (예: `V1__init_user_table.sql`)
 - 운영 반영 전 로컬/스테이징에서 동일 마이그레이션 검증
 - 롤백이 필요한 변경은 사전 대응 SQL 또는 대체 전략을 함께 준비
+- DB 제약조건과 인덱스 이름은 의미가 드러나도록 명시적으로 작성
+- Foreign Key 이름 규칙: `fk_<현재테이블>_<참조테이블>`
+- Unique Constraint 이름 규칙: `uk_<테이블>_<컬럼명>` 또는 `uk_<테이블>_<컬럼명1>_<컬럼명2>`
+  - 다만 UNIQUE 제약이 하나의 컬럼에 국한되는 경우는 인라인 형태로 작성한다.
+    - `normalised_text VARCHAR(255) NOT NULL UNIQUE,`
+- Index 이름 규칙: `idx_<테이블>_<컬럼명>` 또는 `idx_<테이블>_<컬럼명1>_<컬럼명2>`
+- 제약조건 이름에는 SQL 테이블명 기준으로 그대로 사용
+- 예시
+  - `fk_store_users`
+  - `fk_store_stock_store`
+  - `uk_store_stock_store_id`
+  - `idx_store_user_id`
 
 ### 10. 테스트 규칙
 - Service: 단위 테스트로 비즈니스 로직 검증
