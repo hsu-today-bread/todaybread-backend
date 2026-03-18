@@ -1,0 +1,33 @@
+package com.todaybread.server.domain.store.entity;
+
+import com.todaybread.server.global.entity.BaseEntity;
+import jakarta.persistence.*;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+/**
+ * favourite_store 테이블 엔티티를 정의합니다.
+ */
+@Entity
+@Table(name = "favourite_store")
+@Getter
+@NoArgsConstructor
+public class favourite_store extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
+
+    @Column(name = "store_id",nullable = false)
+    private Long storeId;
+
+    @Builder
+    public favourite_store(Long userId, Long storeId) {
+        this.userId = userId;
+        this.storeId = storeId;
+    }
+}
