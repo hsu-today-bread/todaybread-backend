@@ -69,6 +69,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/user/register",
                                 "/api/user/login",
+                                "/api/user/email",
+                                "/api/user/password/reset",
                                 "/api/user/exist/**",
                                 "/api/auth/reissue",
                                 "/api/system/health",

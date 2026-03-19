@@ -47,6 +47,15 @@ public enum ErrorCode {
     USER_REGISTER_PHONE_ALREADY_EXISTS("USER_002", "이미 가입한 전화번호입니다.", HttpStatus.CONFLICT),
     USER_REGISTER_NICKNAME_ALREADY_EXISTS("USER_003", "이미 사용중인 닉네임입니다.", HttpStatus.CONFLICT),
     USER_LOGIN_USER_NOT_FOUND("USER_004", "사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    USER_NOT_FOUND_BY_PHONE("USER_005", "해당 전화번호로 가입된 이메일이 없습니다.", HttpStatus.NOT_FOUND),
+
+    /**
+     * ============================
+     * 키워드 오류
+     * ============================
+     */
+    KEYWORD_ALREADY_EXISTS("KEYWORD_001", "이미 등록된 키워드입니다.", HttpStatus.CONFLICT),
+    USER_KEYWORD_NOT_FOUND("KEYWORD_002", "해당 사용자의 키워드를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
 
     /**
      * ============================

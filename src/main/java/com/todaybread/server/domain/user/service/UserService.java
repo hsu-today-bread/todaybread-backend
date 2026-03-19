@@ -2,10 +2,11 @@ package com.todaybread.server.domain.user.service;
 
 import com.todaybread.server.config.jwt.JwtTokenService;
 import com.todaybread.server.domain.auth.service.AuthService;
+import com.todaybread.server.domain.user.dto.UserFindEmailRequest;
 import com.todaybread.server.domain.user.dto.UserLoginRequest;
 import com.todaybread.server.domain.user.dto.UserLoginResponse;
 import com.todaybread.server.domain.user.dto.UserRegisterRequest;
-import com.todaybread.server.domain.user.dto.UserRegisterResponse;
+import com.todaybread.server.domain.user.dto.UserResetPasswordRequest;
 import com.todaybread.server.domain.user.entity.UserEntity;
 import com.todaybread.server.domain.user.repository.UserRepository;
 import com.todaybread.server.global.exception.CustomException;
@@ -65,7 +66,7 @@ public class UserService {
      * 중복 체크 -> 비밀번호 해쉬 -> 엔티티 저장으로 진행됩니다.
      */
     @Transactional
-    public UserRegisterResponse register(UserRegisterRequest request) {
+    public void register(UserRegisterRequest request) {
 
         // 중복 여부 검증
         if (checkEmail(request.email())){
@@ -91,7 +92,6 @@ public class UserService {
                 .build();
 
         userRepository.save(userEntity);
-        return UserRegisterResponse.ok();
     }
 
     /**
@@ -126,4 +126,37 @@ public class UserService {
         return UserLoginResponse.ok(accessToken,refreshToken);
     }
 
+    /**
+     * 이름과 전화번호로 유저 이메일을 찾습니다.
+     * @param request 이름과 전화번호 DTO
+     * @return 찾은 이메일 응답
+     */
+    @Transactional(readOnly = true)
+    public String findEmail(UserFindEmailRequest request) {
+        UserEntity userEntity = userRepository.findByPhone(request.phone())
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND_BY_PHONE));
+        
+        if (!userEntity.getName().equals(request.name())) {
+            throw new CustomException(ErrorCode.USER_NOT_FOUND_BY_PHONE);
+        }
+        
+        return userEntity.getEmail();
+    }
+
+    /**
+     * 비밀번호를 재설정합니다.
+     * @param request 이메일, 전화번호, 이름, 새로운 비밀번호
+     */
+    @Transactional
+    public void resetPassword(UserResetPasswordRequest request) {
+        UserEntity userEntity = userRepository.findByEmail(request.email())
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_LOGIN_USER_NOT_FOUND));
+
+        if (!userEntity.getPhone().equals(request.phone()) || !userEntity.getName().equals(request.name())) {
+            throw new CustomException(ErrorCode.USER_LOGIN_USER_NOT_FOUND);
+        }
+
+        String newPasswordHash = passwordEncoder.encode(request.newPassword());
+        userEntity.updatePassword(newPasswordHash);
+    }
 }

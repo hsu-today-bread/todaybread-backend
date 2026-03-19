@@ -63,4 +63,12 @@ public class UserEntity extends BaseEntity {
     public void approveBoss() {
         this.boss = true;
     }
+
+    /**
+     * 비밀번호를 변경합니다.
+     * @param newPasswordHash 새로운 해쉬 비밀번호
+     */
+    public void updatePassword(String newPasswordHash) {
+        this.passwordHash = newPasswordHash;
+    }
 }
