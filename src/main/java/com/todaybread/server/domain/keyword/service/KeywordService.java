@@ -1,10 +1,12 @@
 package com.todaybread.server.domain.keyword.service;
 
 import com.todaybread.server.domain.keyword.dto.KeywordResponse;
+import com.todaybread.server.domain.keyword.dto.SubscriberResponse;
 import com.todaybread.server.domain.keyword.entity.KeywordEntity;
 import com.todaybread.server.domain.keyword.entity.UserKeywordEntity;
 import com.todaybread.server.domain.keyword.repository.KeywordRepository;
 import com.todaybread.server.domain.keyword.repository.UserKeywordRepository;
+import com.todaybread.server.domain.user.repository.UserRepository;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,7 @@ public class KeywordService {
 
     private final KeywordRepository keywordRepository;
     private final UserKeywordRepository userKeywordRepository;
+    private final UserRepository userRepository;
 
     /**
      * 키워드를 추가합니다.
@@ -98,6 +101,22 @@ public class KeywordService {
     @Transactional(readOnly = true)
     public List<UserKeywordEntity> getSubscribers(Long keywordId) {
         return userKeywordRepository.findByKeywordId(keywordId);
+    }
+
+    /**
+     * 특정 키워드를 구독 중인 유저들의 상세 정보를 조회합니다.
+     * @param keywordId 키워드 ID
+     * @return 유저 정보 DTO 목록
+     */
+    @Transactional(readOnly = true)
+    public List<SubscriberResponse> getSubscriberUsers(Long keywordId) {
+        List<Long> userIds = userKeywordRepository.findByKeywordId(keywordId).stream()
+                .map(UserKeywordEntity::getUserId)
+                .toList();
+
+        return userRepository.findAllById(userIds).stream()
+                .map(SubscriberResponse::from)
+                .toList();
     }
 
     /**

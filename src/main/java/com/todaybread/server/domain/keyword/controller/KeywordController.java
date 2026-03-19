@@ -48,6 +48,17 @@ public class KeywordController {
     }
 
     /**
+     * 특정 키워드를 구독 중인 유저 목록을 조회합니다.
+     * @param keywordId 키워드 ID
+     * @return 구독 유저 목록 응답
+     */
+    @GetMapping("/{keywordId}/subscribers")
+    public ResponseEntity<UserKeywordSubscribersResponse> getUserSubscribers(@PathVariable Long keywordId) {
+        List<SubscriberResponse> subscribers = keywordService.getSubscriberUsers(keywordId);
+        return ResponseEntity.ok(UserKeywordSubscribersResponse.ok(subscribers));
+    }
+
+    /**
      * 키워드를 추가합니다.
      * @param jwt 유저 JWT 토큰
      * @param keyword 추가할 키워드 텍스트
