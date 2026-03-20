@@ -9,7 +9,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/user/recovery")
+@RequestMapping("/api/user")
 @RequiredArgsConstructor
 @Validated
 public class UserRecoveryController {
@@ -18,26 +18,34 @@ public class UserRecoveryController {
 
     /**
      * 전화번호 이메일 찾기를 담당하는 컨트롤러입니다.
-     * @param value 전화번호
+     * @param phone 전화번호
      * @return 응답 DTO
      */
-    @PostMapping("/find-email")
-    public UserFindEmailResponse findEmailByPhone(@RequestParam("value") @NotBlank String value) {
-        return userRecoveryService.findEmailByPhone(value);
+    @GetMapping("/find-email")
+    public UserFindEmailResponse findEmailByPhone(@RequestParam("phone") @NotBlank String phone) {
+        return userRecoveryService.findEmailByPhone(phone);
     }
 
     /**
-     * 비밀번호 찾기를 담당합니다.
-     * @param request 요청 DTO
+     * 본인 확인을 담당합니다.
+     * @param phone 전화번호
+     * @param email 이메일
      * @return 응답 DTO
      */
     @PostMapping("/verify-identity")
-    public UserResetPasswordResponse verifyIdentity(@RequestBody @Valid UserResetPasswordRequest request) {
-        return userRecoveryService.verifyIdentity(request);
+    public VerifyIdentityResponse verifyIdentity(
+            @RequestParam("phone") @NotBlank String phone,
+            @RequestParam("email") @NotBlank String email) {
+        return userRecoveryService.verifyIdentity(phone, email);
     }
 
+    /**
+     * 비밀번호 재설정을 담당합니다.
+     * @param request 요청 DTO
+     * @return 응답 DTO
+     */
     @PostMapping("/reset-password")
-    public UserNewPasswordResponse resetPassword(@RequestBody @Valid UserNewPasswordRequest request) {
+    public ResetPasswordResponse resetPassword(@RequestBody @Valid ResetPasswordRequest request) {
         return userRecoveryService.resetPassword(request);
     }
 }

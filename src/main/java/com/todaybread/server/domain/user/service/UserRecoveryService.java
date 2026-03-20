@@ -24,6 +24,9 @@ public class UserRecoveryService {
 
     /**
      * 이메일의 일부를 마스킹하고, 이를 리턴합니다.
+     * 로컬 파트 1글자: 전체 '*' 치환, 2~4글자: 첫 글자 + '*' 반복, 5글자 이상: 앞 3글자 + '*' 반복.
+     * 도메인 파트는 원본 그대로 유지하며, 결과 문자열 길이는 원본과 동일합니다.
+     *
      * @param email 기존 이메일
      * @return 마스킹된 이메일
      */
@@ -34,49 +37,48 @@ public class UserRecoveryService {
 
         if (local.length() <= 1) {
             return "*" + domain;
+        } else if (local.length() <= 4) {
+            return local.charAt(0) + "*".repeat(local.length() - 1) + domain;
+        } else {
+            return local.substring(0, 3) + "*".repeat(local.length() - 3) + domain;
         }
-        return local.charAt(0) + "*".repeat(local.length() - 3) + domain;
     }
 
     /**
-     * 들어온 전화번호를 검증하고, 이메일을 보냅니다.
-     * @param phone 이메일
+     * 들어온 전화번호를 검증하고, 마스킹된 이메일을 반환합니다.
+     *
+     * @param phone 전화번호
      * @return 마스킹된 이메일
      */
     @Transactional(readOnly = true)
     public UserFindEmailResponse findEmailByPhone(String phone) {
-        Optional<UserEntity> userEntityOptional = userRepository.findByEmail(phone);
+        Optional<UserEntity> userEntityOptional = userRepository.findByPhone(phone);
         if (userEntityOptional.isEmpty()) {
             throw new CustomException(ErrorCode.USER_RECOVERY_NOT_FOUND);
         }
-        UserEntity userEntity = userEntityOptional.get();
-        String maskedEmail = maskEmail(userEntity.getEmail());
+
+        String email = userEntityOptional.get().getEmail();
+        String maskedEmail = maskEmail(email);
 
         return new UserFindEmailResponse(maskedEmail);
     }
 
     /**
-     * 전화 번호, 이메일을 통해 비밀번호를 바꿀 수 있는 지 여부를 보냅니다.
+     * 전화번호와 이메일을 통해 본인 확인을 수행합니다.
      *
-     * @param request 요청 DTO
-     * @return 여부
+     * @param phone 전화번호
+     * @param email 이메일
+     * @return 본인 확인 결과
      */
     @Transactional(readOnly = true)
-    public UserResetPasswordResponse verifyIdentity(UserResetPasswordRequest request) {
-        String email = request.email();
-        String phone = request.phone();
+    public VerifyIdentityResponse verifyIdentity(String phone, String email) {
         Optional<UserEntity> userEntityOptional = userRepository.findByPhoneAndEmail(phone, email);
 
         if (userEntityOptional.isEmpty()) {
             throw new CustomException(ErrorCode.USER_RECOVERY_NOT_FOUND);
         }
-        UserEntity userEntity = userEntityOptional.get();
 
-        if(!request.email().equals(userEntity.getEmail()) && !request.phone().equals(userEntity.getPhone())) {
-            throw new CustomException(ErrorCode.USER_RECOVERY_NOT_FOUND);
-        }
-
-        return UserResetPasswordResponse.ok();
+        return new VerifyIdentityResponse(true,email);
     }
 
     /**
@@ -85,11 +87,17 @@ public class UserRecoveryService {
      * @param request 요청 DTO
      * @return 결과값
      */
-    @Transactional(readOnly = false)
-    public UserNewPasswordResponse resetPassword(UserNewPasswordRequest request) {
-        Optional<UserEntity> userEntity
+    @Transactional
+    public ResetPasswordResponse resetPassword(ResetPasswordRequest request) {
+        Optional<UserEntity> userEntityOptional = userRepository.findByEmail(request.email());
+        if (userEntityOptional.isEmpty()) {
+            throw new CustomException(ErrorCode.USER_RECOVERY_NOT_FOUND);
+        }
 
+        UserEntity userEntity = userEntityOptional.get();
+        userEntity.changePassword(passwordEncoder.encode(request.newPassword()));
+
+        userRepository.save(userEntity);
+        return ResetPasswordResponse.ok();
     }
-
-
 }
