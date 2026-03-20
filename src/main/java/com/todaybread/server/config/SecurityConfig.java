@@ -69,10 +69,14 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/user/register",
                                 "/api/user/login",
+                                "/api/user/exist/**",
                                 "/api/auth/reissue",
                                 "/api/system/health",
                                 "/swagger-ui/**",
-                                "/v3/api-docs/**"
+                                "/v3/api-docs/**",
+                                "/api/user/find-email",
+                                "/api/user/verify-identity",
+                                "/api/user/reset-password"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

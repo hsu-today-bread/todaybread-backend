@@ -123,7 +123,6 @@ public class UserService {
 
         authService.saveRefreshToken(userId,refreshToken);
 
-        return UserLoginResponse.ok(accessToken,refreshToken);
+        return UserLoginResponse.ok(accessToken, refreshToken, userEntity);
     }
-
 }

@@ -47,6 +47,7 @@ public enum ErrorCode {
     USER_REGISTER_PHONE_ALREADY_EXISTS("USER_002", "이미 가입한 전화번호입니다.", HttpStatus.CONFLICT),
     USER_REGISTER_NICKNAME_ALREADY_EXISTS("USER_003", "이미 사용중인 닉네임입니다.", HttpStatus.CONFLICT),
     USER_LOGIN_USER_NOT_FOUND("USER_004", "사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    USER_RECOVERY_NOT_FOUND("USER_005","가입 정보를 찾을 수 없습니다.",HttpStatus.NOT_FOUND),
 
     /**
      * ============================
