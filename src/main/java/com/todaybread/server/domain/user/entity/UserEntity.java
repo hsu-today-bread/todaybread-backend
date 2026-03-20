@@ -63,4 +63,13 @@ public class UserEntity extends BaseEntity {
     public void approveBoss() {
         this.boss = true;
     }
+
+    /**
+     * 비밀번호 재설정 시, 기존 엔티티의 비밀번호를 수정합니다.
+     *
+     * @param newPassword
+     */
+    public void changePassword(String newPassword) {
+        this.passwordHash = newPassword;
+    }
 }
