@@ -125,5 +125,4 @@ public class UserService {
 
         return UserLoginResponse.ok(accessToken, refreshToken, userEntity);
     }
-
 }

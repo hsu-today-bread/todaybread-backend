@@ -73,7 +73,10 @@ public class SecurityConfig {
                                 "/api/auth/reissue",
                                 "/api/system/health",
                                 "/swagger-ui/**",
-                                "/v3/api-docs/**"
+                                "/v3/api-docs/**",
+                                "/api/user/find-email",
+                                "/api/user/verify-identity",
+                                "/api/user/reset-password"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
