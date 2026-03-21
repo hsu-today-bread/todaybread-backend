@@ -39,12 +39,20 @@ public class AuthService {
      */
     @Transactional
     public void saveRefreshToken(Long userId, String token) {
+        LocalDateTime expiresAt = LocalDateTime.now().plusNanos(refreshTokenExpiration * 1_000_000);
+        Optional<RefreshTokenEntity> refreshTokenOptional = refreshTokenRepository.findByUserId(userId);
+
+        if (refreshTokenOptional.isPresent()) {
+            RefreshTokenEntity entity = refreshTokenOptional.get();
+            entity.renew(token, expiresAt);
+            return;
+        }
+
         RefreshTokenEntity entity = RefreshTokenEntity.builder()
                 .userId(userId)
                 .token(token)
-                .expiresAt(LocalDateTime.now().plusNanos(refreshTokenExpiration * 1_000_000))
+                .expiresAt(expiresAt)
                 .build();
-        refreshTokenRepository.deleteByUserId(userId);
         refreshTokenRepository.save(entity);
     }
 
@@ -75,8 +83,6 @@ public class AuthService {
         if (userEntityOptional.isEmpty()) {
             throw new CustomException(ErrorCode.USER_LOGIN_USER_NOT_FOUND);
         }
-
-        refreshTokenRepository.delete(refreshTokenEntity);
 
         UserEntity userEntity = userEntityOptional.get();
 
