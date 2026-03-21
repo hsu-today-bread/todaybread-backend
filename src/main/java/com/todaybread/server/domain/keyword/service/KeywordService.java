@@ -66,9 +66,17 @@ public class KeywordService {
 
         KeywordEntity keywordEntity;
         if (keywordEntityOptional.isEmpty()) {
-            keywordEntity = keywordRepository.save(
-                    KeywordEntity.builder().normalisedText(normalisedText).build()
-            );
+            try {
+                keywordEntity = keywordRepository.save(
+                        KeywordEntity.builder().normalisedText(normalisedText).build()
+                );
+            } catch (DataIntegrityViolationException e) {
+                Optional<KeywordEntity> retryOptional = keywordRepository.findByNormalisedText(normalisedText);
+                if (retryOptional.isEmpty()) {
+                    throw new CustomException(ErrorCode.COMMON_INTERNAL_SERVER_ERROR);
+                }
+                keywordEntity = retryOptional.get();
+            }
         } else {
             keywordEntity = keywordEntityOptional.get();
         }
@@ -81,8 +89,9 @@ public class KeywordService {
             throw new CustomException(ErrorCode.KEYWORD_LIMIT_EXCEEDED);
         }
 
+        UserKeywordEntity savedEntity;
         try {
-            userKeywordRepository.save(
+            savedEntity = userKeywordRepository.save(
                     UserKeywordEntity.builder()
                             .userId(userId)
                             .keywordId(keywordEntity.getId())
@@ -91,6 +100,12 @@ public class KeywordService {
             );
         } catch (DataIntegrityViolationException e) {
             throw new CustomException(ErrorCode.KEYWORD_ALREADY_EXISTS);
+        }
+
+        // 동시성 체크: 저장 후 개수 확인하여 5개 초과 시 롤백
+        if (userKeywordRepository.findByUserId(userId).size() > MAX_KEYWORDS_PER_USER) {
+            userKeywordRepository.delete(savedEntity);
+            throw new CustomException(ErrorCode.KEYWORD_LIMIT_EXCEEDED);
         }
 
         return KeywordCreateResponse.ok();
