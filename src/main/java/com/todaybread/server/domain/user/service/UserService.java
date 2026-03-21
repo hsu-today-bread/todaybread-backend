@@ -2,10 +2,7 @@ package com.todaybread.server.domain.user.service;
 
 import com.todaybread.server.config.jwt.JwtTokenService;
 import com.todaybread.server.domain.auth.service.AuthService;
-import com.todaybread.server.domain.user.dto.UserLoginRequest;
-import com.todaybread.server.domain.user.dto.UserLoginResponse;
-import com.todaybread.server.domain.user.dto.UserRegisterRequest;
-import com.todaybread.server.domain.user.dto.UserRegisterResponse;
+import com.todaybread.server.domain.user.dto.*;
 import com.todaybread.server.domain.user.entity.UserEntity;
 import com.todaybread.server.domain.user.repository.UserRepository;
 import com.todaybread.server.global.exception.CustomException;
@@ -124,5 +121,39 @@ public class UserService {
         authService.saveRefreshToken(userId,refreshToken);
 
         return UserLoginResponse.ok(accessToken, refreshToken, userEntity);
+    }
+
+    /**
+     * 유저 정보를 업데이트 합니다.
+     * 정보를 중복 검사합니다.
+     *
+     * @param request 요청 DTO
+     * @return 응답 DTO
+     */
+    @Transactional
+    public UserUpdateResponse updateProfile(Long userId, UserUpdateRequest request) {
+        Optional<UserEntity> userEntityOptional = userRepository.findById(userId);
+
+        if (userEntityOptional.isEmpty()) {
+            throw new CustomException(ErrorCode.USER_LOGIN_USER_NOT_FOUND);
+        }
+
+        UserEntity userEntity = userEntityOptional.get();
+
+        String nickname = request.nickname();
+        String name = request.name();
+        String phone = request.phone();
+
+        if (!userEntity.getNickname().equals(nickname) && checkNickname(nickname)) {
+            throw new CustomException(ErrorCode.USER_REGISTER_NICKNAME_ALREADY_EXISTS);
+        }
+        if (!userEntity.getPhone().equals(phone) && checkPhone(phone)) {
+            throw new CustomException(ErrorCode.USER_REGISTER_PHONE_ALREADY_EXISTS);
+        }
+
+        userEntity.updateProfile(name, nickname, phone);
+        userRepository.save(userEntity);
+
+        return UserUpdateResponse.ok(nickname, name, phone);
     }
 }

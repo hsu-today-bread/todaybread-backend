@@ -32,7 +32,7 @@ public class UserRecoveryController {
      * @param email 이메일
      * @return 응답 DTO
      */
-    @PostMapping("/verify-identity")
+    @GetMapping("/verify-identity")
     public VerifyIdentityResponse verifyIdentity(
             @RequestParam("phone") @NotBlank String phone,
             @RequestParam("email") @NotBlank String email) {
