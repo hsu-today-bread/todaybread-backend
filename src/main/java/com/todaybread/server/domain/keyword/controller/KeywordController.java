@@ -5,6 +5,7 @@ import com.todaybread.server.domain.keyword.dto.KeywordCreateResponse;
 import com.todaybread.server.domain.keyword.dto.KeywordDeleteResponse;
 import com.todaybread.server.domain.keyword.dto.KeywordResponse;
 import com.todaybread.server.domain.keyword.service.KeywordService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,6 +22,7 @@ import java.util.List;
 @RequestMapping("/api/keywords")
 @RequiredArgsConstructor
 @Validated
+@SecurityRequirement(name = "bearerAuth")
 public class KeywordController {
 
     private final KeywordService keywordService;
@@ -32,8 +34,7 @@ public class KeywordController {
      * @return 등록 결과 응답
      */
     @PostMapping("/add")
-    public KeywordCreateResponse createKeyword(
-            @AuthenticationPrincipal Jwt jwt,
+    public KeywordCreateResponse createKeyword(@AuthenticationPrincipal Jwt jwt,
             @RequestBody @Valid KeywordCreateRequest request) {
         Long userId = Long.parseLong(jwt.getSubject());
         return keywordService.createKeyword(userId, request);
@@ -57,8 +58,7 @@ public class KeywordController {
      * @return 삭제 결과 응답
      */
     @DeleteMapping("/delete/{userKeywordId}")
-    public KeywordDeleteResponse deleteKeyword(
-            @AuthenticationPrincipal Jwt jwt,
+    public KeywordDeleteResponse deleteKeyword(@AuthenticationPrincipal Jwt jwt,
             @PathVariable Long userKeywordId) {
         Long userId = Long.parseLong(jwt.getSubject());
         return keywordService.deleteKeyword(userId, userKeywordId);

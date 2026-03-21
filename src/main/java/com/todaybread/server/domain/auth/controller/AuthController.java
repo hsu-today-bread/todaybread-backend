@@ -4,6 +4,7 @@ import com.todaybread.server.domain.auth.dto.LogoutResponse;
 import com.todaybread.server.domain.auth.dto.TokenReissueRequest;
 import com.todaybread.server.domain.auth.dto.TokenResponse;
 import com.todaybread.server.domain.auth.service.AuthService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -39,6 +40,7 @@ public class AuthController {
      * @param jwt 프론트에서 유지 중이던 JWT 토큰
      */
     @PostMapping("/logout")
+    @SecurityRequirement(name = "bearerAuth")
     public LogoutResponse logout(@AuthenticationPrincipal Jwt jwt) {
         Long userId = Long.parseLong(jwt.getSubject());
         authService.logout(userId);

@@ -46,4 +46,9 @@ public class RefreshTokenEntity extends BaseEntity {
         this.token = token;
         this.expiresAt = expiresAt;
     }
+
+    public void renew(String token, LocalDateTime expiresAt) {
+        this.token = token;
+        this.expiresAt = expiresAt;
+    }
 }

@@ -33,8 +33,7 @@ public class UserRecoveryController {
      * @return 응답 DTO
      */
     @GetMapping("/verify-identity")
-    public VerifyIdentityResponse verifyIdentity(
-            @RequestParam("phone") @NotBlank String phone,
+    public VerifyIdentityResponse verifyIdentity(@RequestParam("phone") @NotBlank String phone,
             @RequestParam("email") @NotBlank String email) {
         return userRecoveryService.verifyIdentity(phone, email);
     }

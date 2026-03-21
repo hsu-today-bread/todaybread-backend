@@ -27,6 +27,7 @@ import java.util.Optional;
 public class KeywordService {
 
     private static final int MAX_KEYWORDS_PER_USER = 5;
+    private static final int MAX_KEYWORD_LENGTH = 10;
 
     private final KeywordRepository keywordRepository;
     private final UserKeywordRepository userKeywordRepository;
@@ -62,6 +63,11 @@ public class KeywordService {
     @Transactional
     public KeywordCreateResponse createKeyword(Long userId, KeywordCreateRequest request) {
         String normalisedText = normalise(request.keyword());
+
+        if (normalisedText.length() > MAX_KEYWORD_LENGTH) {
+            throw new CustomException(ErrorCode.KEYWORD_LENGTH_LIMIT);
+        }
+
         Optional<KeywordEntity> keywordEntityOptional = keywordRepository.findByNormalisedText(normalisedText);
 
         KeywordEntity keywordEntity;
