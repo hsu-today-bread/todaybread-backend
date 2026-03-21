@@ -51,6 +51,17 @@ public enum ErrorCode {
 
     /**
      * ============================
+     * 키워드 오류
+     * ============================
+     */
+    KEYWORD_ALREADY_EXISTS("KEYWORD_001", "이미 등록된 키워드입니다.", HttpStatus.CONFLICT),
+    KEYWORD_LIMIT_EXCEEDED("KEYWORD_002", "키워드는 최대 5개까지 등록할 수 있습니다.", HttpStatus.BAD_REQUEST),
+    KEYWORD_LENGTH_LIMIT("KEYWORD_003", "키워드는 최대 10자까지 입력할 수 있습니다.", HttpStatus.BAD_REQUEST),
+    KEYWORD_NOT_FOUND("KEYWORD_004", "키워드를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    KEYWORD_FORBIDDEN("KEYWORD_005", "해당 키워드에 대한 권한이 없습니다.", HttpStatus.FORBIDDEN),
+
+    /**
+     * ============================
      * JWT 토큰 관련 오류
      * ============================
      */
