@@ -48,6 +48,8 @@ public enum ErrorCode {
     USER_REGISTER_NICKNAME_ALREADY_EXISTS("USER_003", "이미 사용중인 닉네임입니다.", HttpStatus.CONFLICT),
     USER_LOGIN_USER_NOT_FOUND("USER_004", "사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     USER_RECOVERY_NOT_FOUND("USER_005","가입 정보를 찾을 수 없습니다.",HttpStatus.NOT_FOUND),
+    USER_BOSS_ALREADY_APPROVED("USER_006", "이미 사장님 등록이 완료된 상태입니다.", HttpStatus.CONFLICT),
+    USER_BOSS_NUMBER_FORMAT_ERROR("USER_007","사업자 번호 형식이 맞지 않습니다.",HttpStatus.BAD_REQUEST),
 
     /**
      * ============================

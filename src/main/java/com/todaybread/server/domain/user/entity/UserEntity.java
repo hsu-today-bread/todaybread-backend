@@ -2,7 +2,10 @@ package com.todaybread.server.domain.user.entity;
 
 import com.todaybread.server.global.entity.BaseEntity;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /**
  * JPA 유저 엔티티입니다. 롬복을 사용해, 빌더 형태를 제공합니다.
@@ -22,19 +25,16 @@ public class UserEntity extends BaseEntity {
     @Column(name = "email", nullable = false, unique = true, length = 255)
     private String email;
 
-    @Setter
     @Column(name = "name", nullable = false, length = 30)
     private String name;
 
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
-    @Setter
     @Column(name = "nickname", nullable = false, unique = true, length = 30)
     private String nickname;
 
-    @Setter
-    @Column(name = "phone_number", unique = true, length = 30)
+    @Column(name = "phone_number", nullable = false, unique = true, length = 30)
     private String phone;
 
     @Column(name = "is_boss", nullable = false)

@@ -152,8 +152,49 @@ public class UserService {
         }
 
         userEntity.updateProfile(name, nickname, phone);
-        userRepository.save(userEntity);
 
         return UserUpdateResponse.ok(nickname, name, phone);
     }
+
+    /**
+     * 사업자 등록을 처리합니다.
+     * 토큰을 업데이트합니다.
+     *
+     * @param userId 유저 ID
+     * @param request 요청 DTO
+     * @return 응답 DTO
+     */
+    // TODO 사업자 등록 서비스 로직 수행
+    @Transactional
+    public UserBossResponse approveBoss(Long userId, UserBossRequest request) {
+        Optional<UserEntity> userEntityOptional = userRepository.findById(userId);
+
+        if (userEntityOptional.isEmpty()) {
+            throw new CustomException(ErrorCode.USER_LOGIN_USER_NOT_FOUND);
+        }
+        UserEntity userEntity = userEntityOptional.get();
+
+        if (userEntity.isBoss()){
+            throw new CustomException(ErrorCode.USER_BOSS_ALREADY_APPROVED);
+        }
+
+        String bossNumber = request.bossNumber();
+        if (!bossNumber.matches("\\d{10}")) {
+            throw new CustomException(ErrorCode.USER_BOSS_NUMBER_FORMAT_ERROR);
+        }
+
+        userEntity.approveBoss();
+
+        String userEmail = userEntity.getEmail();
+        String userRole = userEntity.isBoss() ? "BOSS" : "USER";
+
+        String accessToken = jwtTokenService.generateAccessToken(userId,userEmail,userRole);
+        String refreshToken = jwtTokenService.generateRefreshToken(userId);
+
+        authService.saveRefreshToken(userId,refreshToken);
+
+        return UserBossResponse.ok(accessToken, refreshToken);
+    }
+
+
 }

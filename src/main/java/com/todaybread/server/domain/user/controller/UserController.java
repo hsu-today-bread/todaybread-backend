@@ -93,4 +93,19 @@ public class UserController {
         Long userId = Long.parseLong(jwt.getSubject());
         return userService.updateProfile(userId, request);
     }
+
+    /**
+     * 사업자 등록 번호 도메인을 처리합니다.
+     *
+     * @param jwt JWT 토큰
+     * @param request 요청 DTO
+     * @return 응답 DTO
+     */
+    @PostMapping("/boss-approve")
+    @SecurityRequirement(name = "bearerAuth")
+    public UserBossResponse approveBoss(@AuthenticationPrincipal Jwt jwt,
+                                      @RequestBody @Valid UserBossRequest request){
+        Long userId = Long.parseLong(jwt.getSubject());
+        return userService.approveBoss(userId, request);
+    }
 }
