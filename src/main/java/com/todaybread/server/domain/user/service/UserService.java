@@ -152,7 +152,6 @@ public class UserService {
         }
 
         userEntity.updateProfile(name, nickname, phone);
-        userRepository.save(userEntity);
 
         return UserUpdateResponse.ok(nickname, name, phone);
     }

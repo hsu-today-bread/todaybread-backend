@@ -17,6 +17,7 @@ import java.util.List;
 public interface UserKeywordRepository extends JpaRepository<UserKeywordEntity, Long> {
     List<UserKeywordEntity> findByUserId(Long userId);
     List<UserKeywordEntity> findByKeywordId(Long keywordId);
+    long countByUserId(Long userId);
     boolean existsByUserIdAndKeywordId(Long userId, Long keywordId);
     boolean existsByUserId(Long userId);
 }

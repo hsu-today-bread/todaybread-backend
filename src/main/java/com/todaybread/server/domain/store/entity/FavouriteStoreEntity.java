@@ -2,6 +2,7 @@ package com.todaybread.server.domain.store.entity;
 
 import com.todaybread.server.global.entity.BaseEntity;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,8 +13,8 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "favourite_store")
 @Getter
-@NoArgsConstructor
-public class favourite_store extends BaseEntity {
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class FavouriteStoreEntity extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,11 +23,11 @@ public class favourite_store extends BaseEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(name = "store_id",nullable = false)
+    @Column(name = "store_id", nullable = false)
     private Long storeId;
 
     @Builder
-    public favourite_store(Long userId, Long storeId) {
+    private FavouriteStoreEntity(Long userId, Long storeId) {
         this.userId = userId;
         this.storeId = storeId;
     }

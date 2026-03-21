@@ -97,7 +97,6 @@ public class UserRecoveryService {
         UserEntity userEntity = userEntityOptional.get();
         userEntity.changePassword(passwordEncoder.encode(request.newPassword()));
 
-        userRepository.save(userEntity);
         return ResetPasswordResponse.ok();
     }
 }

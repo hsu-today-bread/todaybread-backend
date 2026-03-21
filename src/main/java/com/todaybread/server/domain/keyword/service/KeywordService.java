@@ -38,7 +38,7 @@ public class KeywordService {
      * @param text 키워드
      * @return 정규화된 키워드
      */
-    String normalise(String text) {
+    private String normalise(String text) {
         String stripped = text.strip();
         boolean hasEnglish = false;
         for (int i = 0; i < stripped.length(); i++) {
@@ -91,13 +91,12 @@ public class KeywordService {
             throw new CustomException(ErrorCode.KEYWORD_ALREADY_EXISTS);
         }
 
-        if (userKeywordRepository.findByUserId(userId).size() >= MAX_KEYWORDS_PER_USER) {
+        if (userKeywordRepository.countByUserId(userId) >= MAX_KEYWORDS_PER_USER) {
             throw new CustomException(ErrorCode.KEYWORD_LIMIT_EXCEEDED);
         }
 
-        UserKeywordEntity savedEntity;
         try {
-            savedEntity = userKeywordRepository.save(
+            userKeywordRepository.save(
                     UserKeywordEntity.builder()
                             .userId(userId)
                             .keywordId(keywordEntity.getId())
@@ -106,12 +105,6 @@ public class KeywordService {
             );
         } catch (DataIntegrityViolationException e) {
             throw new CustomException(ErrorCode.KEYWORD_ALREADY_EXISTS);
-        }
-
-        // 동시성 체크: 저장 후 개수 확인하여 5개 초과 시 롤백
-        if (userKeywordRepository.findByUserId(userId).size() > MAX_KEYWORDS_PER_USER) {
-            userKeywordRepository.delete(savedEntity);
-            throw new CustomException(ErrorCode.KEYWORD_LIMIT_EXCEEDED);
         }
 
         return KeywordCreateResponse.ok();
