@@ -125,6 +125,7 @@ public class UserService {
 
     /**
      * 유저 정보를 업데이트 합니다.
+     * 정보를 중복 검사합니다.
      *
      * @param request 요청 DTO
      * @return 응답 DTO
@@ -141,11 +142,18 @@ public class UserService {
 
         String nickname = request.nickname();
         String name = request.name();
-        String email = request.email();
+        String phone = request.phone();
 
-        userEntity.updateProfile(nickname, name, email);
+        if (!userEntity.getNickname().equals(nickname) && checkNickname(nickname)) {
+            throw new CustomException(ErrorCode.USER_REGISTER_NICKNAME_ALREADY_EXISTS);
+        }
+        if (!userEntity.getPhone().equals(phone) && checkPhone(phone)) {
+            throw new CustomException(ErrorCode.USER_REGISTER_PHONE_ALREADY_EXISTS);
+        }
+
+        userEntity.updateProfile(name, nickname, phone);
         userRepository.save(userEntity);
 
-        return UserUpdateResponse.ok(nickname, name, email);
+        return UserUpdateResponse.ok(nickname, name, phone);
     }
 }

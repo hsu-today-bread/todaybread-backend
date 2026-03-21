@@ -67,7 +67,7 @@ public class UserEntity extends BaseEntity {
     /**
      * 비밀번호 재설정 시, 기존 엔티티의 비밀번호를 수정합니다.
      *
-     * @param newPassword 새 비밀번호ㄴ
+     * @param newPassword 새 비밀번호
      */
     public void changePassword(String newPassword) {
         this.passwordHash = newPassword;
@@ -80,9 +80,9 @@ public class UserEntity extends BaseEntity {
      * @param nickname 닉네임
      * @param phone 전화번호
      */
-    public void updateProfile(String nickname,String name, String phone){
-        this.nickname = nickname;
+    public void updateProfile(String name, String nickname, String phone){
         this.name = name;
+        this.nickname = nickname;
         this.phone = phone;
     }
 
