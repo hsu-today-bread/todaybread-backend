@@ -3,7 +3,7 @@ package com.todaybread.server.domain.store.dto;
 import com.todaybread.server.domain.store.entity.StoreEntity;
 
 import java.math.BigDecimal;
-import java.time.LocalTime;
+import java.sql.Time;
 
 public record StoreInfo(
         String name,
@@ -13,8 +13,8 @@ public record StoreInfo(
         String addressLine2,
         BigDecimal latitude,
         BigDecimal longitude,
-        LocalTime endTime,
-        LocalTime lastOrderTime,
+        Time endTime,
+        Time lastOrderTime,
         String orderTime
 ) {
     public static StoreInfo getStoreInfo(StoreEntity storeEntity) {
