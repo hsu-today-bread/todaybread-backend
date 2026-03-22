@@ -2,6 +2,7 @@ package com.todaybread.server.domain.store.service;
 
 import com.todaybread.server.domain.store.dto.StoreAddRequest;
 import com.todaybread.server.domain.store.dto.StoreAddResponse;
+import com.todaybread.server.domain.store.dto.StoreInfo;
 import com.todaybread.server.domain.store.dto.StoreStatusResponse;
 import com.todaybread.server.domain.store.entity.StoreEntity;
 import com.todaybread.server.domain.store.repository.StoreRepository;
@@ -12,7 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalTime;
+import java.util.Optional;
 
 /**
  * store 도메인 서비스 계층입니다.
@@ -30,9 +31,16 @@ public class StoreService {
      */
     @Transactional(readOnly = true)
     public StoreStatusResponse getStoreStatus(Long userId){
-        boolean hasStore = storeRepository.existsByUserIdAndIsActiveTrue(userId);
+        Optional<StoreEntity> storeEntityOptional = storeRepository.findByUserIdAndIsActiveTrue(userId);
 
-        return StoreStatusResponse.ok(true, hasStore);
+        // 가게가 없다면...
+        if (storeEntityOptional.isEmpty()) {
+            return StoreStatusResponse.hasNoStore();
+        }
+
+        // 가게가 있는 경우
+        StoreEntity storeEntity = storeEntityOptional.get();
+        return StoreStatusResponse.hasStore(StoreInfo.getStoreInfo(storeEntity));
     }
 
     /**
@@ -60,12 +68,12 @@ public class StoreService {
                 .longitude(BigDecimal.valueOf(request.longitude()))
                 .endTime(request.endTime().toLocalTime())
                 .lastOrderTime(request.lastOrderTime().toLocalTime())
-                .orderTime(LocalTime.parse(request.orderTime()))
+                .orderTime(request.orderTime())
                 .build();
 
         storeRepository.save(storeEntity);
 
-        return StoreAddResponse.ok();
+        return StoreAddResponse.ok(StoreInfo.getStoreInfo(storeEntity));
     }
 
 }

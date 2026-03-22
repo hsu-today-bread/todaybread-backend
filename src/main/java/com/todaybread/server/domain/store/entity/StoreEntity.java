@@ -53,7 +53,7 @@ public class StoreEntity extends BaseEntity {
     private LocalTime lastOrderTime;
 
     @Column(name = "order_time", nullable = false)
-    private LocalTime orderTime;
+    private String orderTime;
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive;
@@ -62,7 +62,7 @@ public class StoreEntity extends BaseEntity {
     private StoreEntity(Long userId, String name, String phoneNumber,
                         String description, String addressLine1, String addressLine2,
                         BigDecimal latitude, BigDecimal longitude, LocalTime endTime,
-                        LocalTime lastOrderTime, LocalTime orderTime) {
+                        LocalTime lastOrderTime, String orderTime) {
         this.userId = userId;
         this.name = name;
         this.phoneNumber = phoneNumber;
