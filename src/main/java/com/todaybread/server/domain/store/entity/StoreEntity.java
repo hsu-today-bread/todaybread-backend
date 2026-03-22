@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.sql.Time;
-import java.time.LocalTime;
 
 /**
  * store 도메인 엔티티입니다.
@@ -62,8 +61,8 @@ public class StoreEntity extends BaseEntity {
     @Builder
     private StoreEntity(Long userId, String name, String phoneNumber,
                         String description, String addressLine1, String addressLine2,
-                        BigDecimal latitude, BigDecimal longitude, LocalTime endTime,
-                        LocalTime lastOrderTime, String orderTime) {
+                        BigDecimal latitude, BigDecimal longitude, Time endTime,
+                        Time lastOrderTime, String orderTime) {
         this.userId = userId;
         this.name = name;
         this.phoneNumber = phoneNumber;

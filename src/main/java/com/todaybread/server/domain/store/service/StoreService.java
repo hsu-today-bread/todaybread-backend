@@ -12,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.Optional;
 
 /**
@@ -68,10 +67,10 @@ public class StoreService {
                 .description(request.description())
                 .addressLine1(request.addressLine1())
                 .addressLine2(request.addressLine2())
-                .latitude(BigDecimal.valueOf(request.latitude()))
-                .longitude(BigDecimal.valueOf(request.longitude()))
-                .endTime(request.endTime().toLocalTime())
-                .lastOrderTime(request.lastOrderTime().toLocalTime())
+                .latitude(request.latitude())
+                .longitude(request.longitude())
+                .endTime(request.endTime())
+                .lastOrderTime(request.lastOrderTime())
                 .orderTime(request.orderTime())
                 .build();
 
