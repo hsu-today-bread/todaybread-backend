@@ -3,7 +3,7 @@
  */
 CREATE TABLE store (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL UNIQUE,
     name VARCHAR(100) NOT NULL,
     phone_number VARCHAR(30) NOT NULL UNIQUE,
     description TEXT NOT NULL,
@@ -13,7 +13,7 @@ CREATE TABLE store (
     longitude DECIMAL(10,7) NOT NULL,
     end_time TIME NOT NULL,
     last_order_time TIME NOT NULL,
-    order_time TIME NOT NULL,
+    order_time TEXT NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),

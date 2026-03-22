@@ -2,21 +2,28 @@ package com.todaybread.server.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.todaybread.server.config.jwt.JwtTokenService;
+import com.todaybread.server.global.exception.ErrorCode;
+import com.todaybread.server.global.exception.ErrorResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler;
+import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
-import com.todaybread.server.global.exception.ErrorCode;
-import com.todaybread.server.global.exception.ErrorResponse;
-import org.springframework.security.core.AuthenticationException;
 
 /**
  * Spring Security 관련 빈을 등록하는 설정 클래스입니다.
@@ -24,6 +31,7 @@ import org.springframework.security.core.AuthenticationException;
  * JWT 인증에는 Spring Security Resource Server와 Nimbus 디코더를 사용합니다.
  */
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
     /**
@@ -49,6 +57,44 @@ public class SecurityConfig {
     }
 
     /**
+     * JWT role claim을 Spring Security 권한으로 변환합니다.
+     * 예: role=BOSS -> ROLE_BOSS
+     * @return JWT 인증 변환기
+     */
+    @Bean
+    public JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtGrantedAuthoritiesConverter authoritiesConverter = new JwtGrantedAuthoritiesConverter();
+        authoritiesConverter.setAuthoritiesClaimName("role");
+        authoritiesConverter.setAuthorityPrefix("ROLE_");
+
+        JwtAuthenticationConverter authenticationConverter = new JwtAuthenticationConverter();
+        authenticationConverter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
+        return authenticationConverter;
+    }
+
+    /**
+     * 역할 계층을 정의합니다.
+     * @return 역할 계층
+     */
+    @Bean
+    public RoleHierarchy roleHierarchy() {
+        return RoleHierarchyImpl.fromHierarchy("ROLE_BOSS > ROLE_USER");
+    }
+
+    /**
+     * 메서드 보안 표현식에 역할 계층을 적용합니다.
+     * @param roleHierarchy 역할 계층
+     * @return 메서드 보안 표현식 핸들러
+     */
+    @Bean
+    public MethodSecurityExpressionHandler methodSecurityExpressionHandler(RoleHierarchy roleHierarchy) {
+        DefaultMethodSecurityExpressionHandler expressionHandler =
+                new DefaultMethodSecurityExpressionHandler();
+        expressionHandler.setRoleHierarchy(roleHierarchy);
+        return expressionHandler;
+    }
+
+    /**
      * 애플리케이션의 HTTP 보안 정책을 정의합니다.
      * 세션을 사용하지 않는 stateless 구조로 설정하고,
      * 회원가입/로그인/헬스체크/Swagger 경로는 인증 없이 허용합니다.
@@ -60,7 +106,9 @@ public class SecurityConfig {
      * @throws Exception SecurityFilterChain 구성 중 예외가 발생할 경우
      */
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtDecoder jwtDecoder) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+            JwtDecoder jwtDecoder,
+            JwtAuthenticationConverter jwtAuthenticationConverter) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session ->
@@ -81,7 +129,9 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwt -> jwt.decoder(jwtDecoder))
+                        .jwt(jwt -> jwt
+                                .decoder(jwtDecoder)
+                                .jwtAuthenticationConverter(jwtAuthenticationConverter))
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint())
                 )
                 .build();

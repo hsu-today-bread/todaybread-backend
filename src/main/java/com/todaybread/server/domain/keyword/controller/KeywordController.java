@@ -1,5 +1,6 @@
 package com.todaybread.server.domain.keyword.controller;
 
+import com.todaybread.server.config.jwt.JwtRoleHelper;
 import com.todaybread.server.domain.keyword.dto.KeywordCreateRequest;
 import com.todaybread.server.domain.keyword.dto.KeywordCreateResponse;
 import com.todaybread.server.domain.keyword.dto.KeywordDeleteResponse;
@@ -36,7 +37,7 @@ public class KeywordController {
     @PostMapping("/add")
     public KeywordCreateResponse createKeyword(@AuthenticationPrincipal Jwt jwt,
             @RequestBody @Valid KeywordCreateRequest request) {
-        Long userId = Long.parseLong(jwt.getSubject());
+        Long userId = JwtRoleHelper.getUserId(jwt);
         return keywordService.createKeyword(userId, request);
     }
 
@@ -47,7 +48,7 @@ public class KeywordController {
      */
     @GetMapping("/get-keyword")
     public List<KeywordResponse> getMyKeywords(@AuthenticationPrincipal Jwt jwt) {
-        Long userId = Long.parseLong(jwt.getSubject());
+        Long userId = JwtRoleHelper.getUserId(jwt);
         return keywordService.getMyKeywords(userId);
     }
 
@@ -60,7 +61,7 @@ public class KeywordController {
     @DeleteMapping("/delete/{userKeywordId}")
     public KeywordDeleteResponse deleteKeyword(@AuthenticationPrincipal Jwt jwt,
             @PathVariable Long userKeywordId) {
-        Long userId = Long.parseLong(jwt.getSubject());
+        Long userId = JwtRoleHelper.getUserId(jwt);
         return keywordService.deleteKeyword(userId, userKeywordId);
     }
 }

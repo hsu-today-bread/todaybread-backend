@@ -1,5 +1,6 @@
 package com.todaybread.server.domain.auth.controller;
 
+import com.todaybread.server.config.jwt.JwtRoleHelper;
 import com.todaybread.server.domain.auth.dto.LogoutResponse;
 import com.todaybread.server.domain.auth.dto.TokenReissueRequest;
 import com.todaybread.server.domain.auth.dto.TokenResponse;
@@ -42,7 +43,7 @@ public class AuthController {
     @PostMapping("/logout")
     @SecurityRequirement(name = "bearerAuth")
     public LogoutResponse logout(@AuthenticationPrincipal Jwt jwt) {
-        Long userId = Long.parseLong(jwt.getSubject());
+        Long userId = JwtRoleHelper.getUserId(jwt);
         authService.logout(userId);
         return LogoutResponse.ok();
     }

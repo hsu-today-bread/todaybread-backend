@@ -1,5 +1,6 @@
 package com.todaybread.server.domain.user.controller;
 
+import com.todaybread.server.config.jwt.JwtRoleHelper;
 import com.todaybread.server.domain.user.dto.*;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import com.todaybread.server.domain.user.service.UserService;
@@ -90,7 +91,7 @@ public class UserController {
     public UserUpdateResponse updateProfile(@AuthenticationPrincipal Jwt jwt,
             @RequestBody @Valid UserUpdateRequest request
     ) {
-        Long userId = Long.parseLong(jwt.getSubject());
+        Long userId = JwtRoleHelper.getUserId(jwt);
         return userService.updateProfile(userId, request);
     }
 
@@ -105,7 +106,7 @@ public class UserController {
     @SecurityRequirement(name = "bearerAuth")
     public UserBossResponse approveBoss(@AuthenticationPrincipal Jwt jwt,
                                       @RequestBody @Valid UserBossRequest request){
-        Long userId = Long.parseLong(jwt.getSubject());
+        Long userId = JwtRoleHelper.getUserId(jwt);
         return userService.approveBoss(userId, request);
     }
 }

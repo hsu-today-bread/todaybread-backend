@@ -37,6 +37,7 @@ public enum ErrorCode {
     COMMON_REQUEST_VALIDATION_FAILED("COMMON_001", "요청값 검증에 실패했습니다.", HttpStatus.BAD_REQUEST),
     COMMON_HTTP_METHOD_NOT_ALLOWED("COMMON_002", "허용되지 않은 HTTP 메서드입니다.", HttpStatus.METHOD_NOT_ALLOWED),
     COMMON_INTERNAL_SERVER_ERROR("COMMON_003", "서버 내부 오류입니다.", HttpStatus.INTERNAL_SERVER_ERROR),
+    COMMON_ACCESS_DENIED("COMMON_004", "접근 권한이 없습니다.", HttpStatus.FORBIDDEN),
 
     /**
      * ============================
@@ -61,6 +62,15 @@ public enum ErrorCode {
     KEYWORD_LENGTH_LIMIT("KEYWORD_003", "키워드는 최대 10자까지 입력할 수 있습니다.", HttpStatus.BAD_REQUEST),
     KEYWORD_NOT_FOUND("KEYWORD_004", "키워드를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     KEYWORD_FORBIDDEN("KEYWORD_005", "해당 키워드에 대한 권한이 없습니다.", HttpStatus.FORBIDDEN),
+
+    /**
+     * ============================
+     * 가게 오류
+     * ============================
+     */
+    STORE_BOSS_REQUIRED("STORE_001", "사장님 등록 후 이용 가능한 기능입니다.", HttpStatus.FORBIDDEN),
+    STORE_ALREADY_EXISTS("STORE_002", "이미 등록된 가게가 있습니다.", HttpStatus.CONFLICT),
+    STORE_PHONE_EXISTS("STORE_003", "가게 전화번호가 중복이 됩니다.",HttpStatus.CONFLICT),
 
     /**
      * ============================
