@@ -26,15 +26,10 @@ public class StoreService {
     /**
      * 사장님 탭 진입 상태를 조회합니다.
      * @param userId 유저 ID
-     * @param isBoss 사장님 여부
      * @return 가게 등록 응답 DTO
      */
     @Transactional(readOnly = true)
-    public StoreStatusResponse getStoreStatus(Long userId, boolean isBoss){
-        if (!isBoss) {
-            throw new CustomException(ErrorCode.STORE_BOSS_REQUIRED);
-        }
-
+    public StoreStatusResponse getStoreStatus(Long userId){
         boolean hasStore = storeRepository.existsByUserIdAndIsActiveTrue(userId);
 
         return StoreStatusResponse.ok(true, hasStore);
@@ -45,15 +40,11 @@ public class StoreService {
      * 이후 가게를 등록합니다.
      *
      * @param userId 유저 ID
-     * @param isBoss 사장님 여부
      * @param request 요청 DTO
      * @return 응답 DTO
      */
     @Transactional
-    public StoreAddResponse addStore(Long userId, boolean isBoss, StoreAddRequest request) {
-        if (!isBoss) {
-            throw new CustomException(ErrorCode.STORE_BOSS_REQUIRED);
-        }
+    public StoreAddResponse addStore(Long userId, StoreAddRequest request) {
         if (storeRepository.existsByUserIdAndIsActiveTrue(userId)) {
             throw new CustomException(ErrorCode.STORE_ALREADY_EXISTS);
         }
@@ -73,6 +64,7 @@ public class StoreService {
                 .build();
 
         storeRepository.save(storeEntity);
+
         return StoreAddResponse.ok();
     }
 

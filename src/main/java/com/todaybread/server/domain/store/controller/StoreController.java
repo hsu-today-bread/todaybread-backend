@@ -8,6 +8,7 @@ import com.todaybread.server.domain.store.service.StoreService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @Validated
 @SecurityRequirement(name = "bearerAuth")
+@PreAuthorize("hasRole('BOSS')")
 public class StoreController {
 
     private final StoreService storeService;
@@ -37,8 +39,7 @@ public class StoreController {
     @GetMapping("/status")
     public StoreStatusResponse getStoreStatus(@AuthenticationPrincipal Jwt jwt) {
         Long userId = JwtRoleHelper.getUserId(jwt);
-        boolean isBoss = JwtRoleHelper.isBoss(jwt);
-        return storeService.getStoreStatus(userId, isBoss);
+        return storeService.getStoreStatus(userId);
     }
 
     /**
@@ -51,8 +52,6 @@ public class StoreController {
     public StoreAddResponse addStore(@AuthenticationPrincipal Jwt jwt,
                                      @RequestBody @Valid StoreAddRequest request) {
         Long userId = JwtRoleHelper.getUserId(jwt);
-        boolean isBoss = JwtRoleHelper.isBoss(jwt);
-        return storeService.addStore(userId, isBoss, request);
+        return storeService.addStore(userId, request);
     }
-
 }

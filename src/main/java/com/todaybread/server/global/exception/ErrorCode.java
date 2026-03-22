@@ -37,6 +37,7 @@ public enum ErrorCode {
     COMMON_REQUEST_VALIDATION_FAILED("COMMON_001", "요청값 검증에 실패했습니다.", HttpStatus.BAD_REQUEST),
     COMMON_HTTP_METHOD_NOT_ALLOWED("COMMON_002", "허용되지 않은 HTTP 메서드입니다.", HttpStatus.METHOD_NOT_ALLOWED),
     COMMON_INTERNAL_SERVER_ERROR("COMMON_003", "서버 내부 오류입니다.", HttpStatus.INTERNAL_SERVER_ERROR),
+    COMMON_ACCESS_DENIED("COMMON_004", "접근 권한이 없습니다.", HttpStatus.FORBIDDEN),
 
     /**
      * ============================

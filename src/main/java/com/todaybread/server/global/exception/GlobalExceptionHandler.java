@@ -1,8 +1,10 @@
 package com.todaybread.server.global.exception;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -56,6 +58,22 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException ex) {
         return toResponse(ErrorCode.COMMON_REQUEST_VALIDATION_FAILED);
+    }
+
+    /**
+     * 접근 권한이 없는 요청을 처리합니다.
+     * store 도메인은 사장님 전용 메시지를 우선 반환합니다.
+     * @param ex 접근 거부 예외
+     * @param request 현재 HTTP 요청
+     * @return 403 FORBIDDEN
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex,
+            HttpServletRequest request) {
+        if (request.getRequestURI().startsWith("/api/store")) {
+            return toResponse(ErrorCode.STORE_BOSS_REQUIRED);
+        }
+        return toResponse(ErrorCode.COMMON_ACCESS_DENIED);
     }
 
     /**
