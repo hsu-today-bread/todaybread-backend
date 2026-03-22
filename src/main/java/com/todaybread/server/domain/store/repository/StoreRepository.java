@@ -12,5 +12,6 @@ import java.util.Optional;
 @Resource
 public interface StoreRepository extends JpaRepository<StoreEntity, Long> {
     boolean existsByUserIdAndIsActiveTrue(Long userId);
+    boolean existsByPhoneNumber(String phoneNumber);
     Optional<StoreEntity> findByUserIdAndIsActiveTrue(Long userId);
 }

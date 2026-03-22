@@ -1,6 +1,8 @@
 package com.todaybread.server.domain.store.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
 import java.sql.Time;
 
 /**
@@ -22,10 +24,10 @@ public record StoreAddRequest (
         @NotBlank String description,
         @NotBlank String addressLine1,
         @NotBlank String addressLine2,
-        @NotBlank double latitude,
-        @NotBlank double longitude,
-        @NotBlank Time endTime,
-        @NotBlank Time lastOrderTime,
+        @NotNull double latitude,
+        @NotNull double longitude,
+        @NotNull Time endTime,
+        @NotNull Time lastOrderTime,
         @NotBlank String orderTime
         ) {
 }

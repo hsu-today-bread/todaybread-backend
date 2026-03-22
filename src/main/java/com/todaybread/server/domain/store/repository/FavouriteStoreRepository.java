@@ -8,5 +8,5 @@ import org.springframework.stereotype.Repository;
  * 단골 가게 설정을 위한 리포지터리입니다.
  */
 @Repository
-public interface FavouriteStoreService extends JpaRepository<FavouriteStoreEntity, Long> {
+public interface FavouriteStoreRepository extends JpaRepository<FavouriteStoreEntity, Long> {
 }

@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.sql.Time;
 import java.time.LocalTime;
 
 /**
@@ -47,10 +48,10 @@ public class StoreEntity extends BaseEntity {
     private BigDecimal longitude;
 
     @Column(name = "end_time", nullable = false)
-    private LocalTime endTime;
+    private Time endTime;
 
     @Column(name = "last_order_time", nullable = false)
-    private LocalTime lastOrderTime;
+    private Time lastOrderTime;
 
     @Column(name = "order_time", nullable = false)
     private String orderTime;

@@ -9,6 +9,7 @@ import com.todaybread.server.domain.store.repository.StoreRepository;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,6 +56,10 @@ public class StoreService {
     public StoreAddResponse addStore(Long userId, StoreAddRequest request) {
         if (storeRepository.existsByUserIdAndIsActiveTrue(userId)) {
             throw new CustomException(ErrorCode.STORE_ALREADY_EXISTS);
+        }
+
+        if (storeRepository.existsByPhoneNumber(request.phone())){
+            throw new CustomException(ErrorCode.STORE_PHONE_EXISTS);
         }
 
         StoreEntity storeEntity = StoreEntity.builder()
