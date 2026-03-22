@@ -2,21 +2,21 @@ package com.todaybread.server.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.todaybread.server.config.jwt.JwtTokenService;
+import com.todaybread.server.global.exception.ErrorCode;
+import com.todaybread.server.global.exception.ErrorResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
-import com.todaybread.server.global.exception.ErrorCode;
-import com.todaybread.server.global.exception.ErrorResponse;
-import org.springframework.security.core.AuthenticationException;
 
 /**
  * Spring Security 관련 빈을 등록하는 설정 클래스입니다.

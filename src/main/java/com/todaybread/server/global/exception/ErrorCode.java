@@ -64,6 +64,14 @@ public enum ErrorCode {
 
     /**
      * ============================
+     * 가게 오류
+     * ============================
+     */
+    STORE_BOSS_REQUIRED("STORE_001", "사장님 등록 후 이용 가능한 기능입니다.", HttpStatus.FORBIDDEN),
+    STORE_ALREADY_EXISTS("STORE_002", "이미 등록된 가게가 있습니다.", HttpStatus.CONFLICT),
+
+    /**
+     * ============================
      * JWT 토큰 관련 오류
      * ============================
      */
