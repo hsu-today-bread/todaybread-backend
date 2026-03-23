@@ -76,4 +76,33 @@ public class StoreEntity extends BaseEntity {
         this.orderTime = orderTime;
         this.isActive = true;
     }
+
+    /**
+     * 가게 정보를 업데이트 시 사용합니다.
+     * @param name 이름
+     * @param phone 전화번호
+     * @param description 설명
+     * @param addressLine1 주소1
+     * @param addressLine2 주소2
+     * @param latitude 위도
+     * @param longitude 경도
+     * @param endTime 마감 시간
+     * @param lastOrderTime 라스트 오더 시간
+     * @param orderTime 일반 영업 시간
+     */
+    public void updateInfo(String name, String phone, String description,
+                           String addressLine1, String addressLine2, BigDecimal latitude,
+                           BigDecimal longitude, Time endTime, Time lastOrderTime,
+                           String orderTime){
+        this.name = name;
+        this.phoneNumber = phone;
+        this.description = description;
+        this.addressLine1 = addressLine1;
+        this.addressLine2 = addressLine2;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.endTime = endTime;
+        this.lastOrderTime = lastOrderTime;
+        this.orderTime = orderTime;
+    }
 }

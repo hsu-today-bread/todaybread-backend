@@ -55,4 +55,17 @@ public class StoreController {
         Long userId = JwtRoleHelper.getUserId(jwt);
         return storeService.addStore(userId, request);
     }
+
+    /**
+     * 가게 정보를 업데이트합니다.
+     * @param jwt JWT 토큰
+     * @param request 요청 DTO
+     * @return 응답 DTO
+     */
+    @PostMapping("/edit-info")
+    public StoreCommonResponse updateStore(@AuthenticationPrincipal Jwt jwt,
+                                           @RequestBody @Valid StoreCommonRequest request) {
+        Long userId = JwtRoleHelper.getUserId(jwt);
+        return storeService.updateStore(userId, request);
+    }
 }
