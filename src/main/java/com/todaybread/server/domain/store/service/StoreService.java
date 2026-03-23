@@ -1,7 +1,6 @@
 package com.todaybread.server.domain.store.service;
 
 import com.todaybread.server.domain.store.dto.StoreCommonRequest;
-import com.todaybread.server.domain.store.dto.StoreAddResponse;
 import com.todaybread.server.domain.store.dto.StoreCommonResponse;
 import com.todaybread.server.domain.store.dto.StoreStatusResponse;
 import com.todaybread.server.domain.store.entity.StoreEntity;
@@ -51,7 +50,7 @@ public class StoreService {
      * @return 응답 DTO
      */
     @Transactional
-    public StoreAddResponse addStore(Long userId, StoreCommonRequest request) {
+    public StoreCommonResponse addStore(Long userId, StoreCommonRequest request) {
         if (storeRepository.existsByUserIdAndIsActiveTrue(userId)) {
             throw new CustomException(ErrorCode.STORE_ALREADY_EXISTS);
         }
@@ -76,7 +75,7 @@ public class StoreService {
 
         storeRepository.save(storeEntity);
 
-        return StoreAddResponse.ok(StoreCommonResponse.from(storeEntity));
+        return StoreCommonResponse.from(storeEntity);
     }
 
     /**

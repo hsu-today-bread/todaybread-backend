@@ -2,7 +2,6 @@ package com.todaybread.server.domain.store.controller;
 
 import com.todaybread.server.config.jwt.JwtRoleHelper;
 import com.todaybread.server.domain.store.dto.StoreCommonRequest;
-import com.todaybread.server.domain.store.dto.StoreAddResponse;
 import com.todaybread.server.domain.store.dto.StoreCommonResponse;
 import com.todaybread.server.domain.store.dto.StoreStatusResponse;
 import com.todaybread.server.domain.store.service.StoreService;
@@ -13,11 +12,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * store 도메인을 처리합니다.
@@ -50,7 +45,7 @@ public class StoreController {
      * @return 응답 DTO
      */
     @PostMapping("/add-store")
-    public StoreAddResponse addStore(@AuthenticationPrincipal Jwt jwt,
+    public StoreCommonResponse addStore(@AuthenticationPrincipal Jwt jwt,
                                      @RequestBody @Valid StoreCommonRequest request) {
         Long userId = JwtRoleHelper.getUserId(jwt);
         return storeService.addStore(userId, request);
@@ -62,7 +57,7 @@ public class StoreController {
      * @param request 요청 DTO
      * @return 응답 DTO
      */
-    @PostMapping("/edit-info")
+    @PutMapping("/update-store")
     public StoreCommonResponse updateStore(@AuthenticationPrincipal Jwt jwt,
                                            @RequestBody @Valid StoreCommonRequest request) {
         Long userId = JwtRoleHelper.getUserId(jwt);
