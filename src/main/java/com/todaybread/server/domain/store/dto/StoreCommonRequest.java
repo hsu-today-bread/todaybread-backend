@@ -21,7 +21,7 @@ import java.sql.Time;
  * @param lastOrderTime 라스트 오더 시간
  * @param orderTime 전체적인 영업 시간
  */
-public record StoreAddRequest (
+public record StoreCommonRequest(
         @NotBlank String name,
         @NotBlank String phone,
         @NotBlank String description,

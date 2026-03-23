@@ -71,6 +71,7 @@ public enum ErrorCode {
     STORE_BOSS_REQUIRED("STORE_001", "사장님 등록 후 이용 가능한 기능입니다.", HttpStatus.FORBIDDEN),
     STORE_ALREADY_EXISTS("STORE_002", "이미 등록된 가게가 있습니다.", HttpStatus.CONFLICT),
     STORE_PHONE_EXISTS("STORE_003", "가게 전화번호가 중복이 됩니다.",HttpStatus.CONFLICT),
+    STORE_NOT_FOUND("STORE_004","가게를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
 
     /**
      * ============================

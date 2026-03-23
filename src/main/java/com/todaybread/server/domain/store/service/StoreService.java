@@ -1,8 +1,7 @@
 package com.todaybread.server.domain.store.service;
 
-import com.todaybread.server.domain.store.dto.StoreAddRequest;
-import com.todaybread.server.domain.store.dto.StoreAddResponse;
-import com.todaybread.server.domain.store.dto.StoreInfo;
+import com.todaybread.server.domain.store.dto.StoreCommonRequest;
+import com.todaybread.server.domain.store.dto.StoreCommonResponse;
 import com.todaybread.server.domain.store.dto.StoreStatusResponse;
 import com.todaybread.server.domain.store.entity.StoreEntity;
 import com.todaybread.server.domain.store.repository.StoreRepository;
@@ -39,7 +38,7 @@ public class StoreService {
 
         // 가게가 있는 경우
         StoreEntity storeEntity = storeEntityOptional.get();
-        return StoreStatusResponse.hasStore(StoreInfo.getStoreInfo(storeEntity));
+        return StoreStatusResponse.hasStore(StoreCommonResponse.from(storeEntity));
     }
 
     /**
@@ -51,7 +50,7 @@ public class StoreService {
      * @return 응답 DTO
      */
     @Transactional
-    public StoreAddResponse addStore(Long userId, StoreAddRequest request) {
+    public StoreCommonResponse addStore(Long userId, StoreCommonRequest request) {
         if (storeRepository.existsByUserIdAndIsActiveTrue(userId)) {
             throw new CustomException(ErrorCode.STORE_ALREADY_EXISTS);
         }
@@ -76,7 +75,36 @@ public class StoreService {
 
         storeRepository.save(storeEntity);
 
-        return StoreAddResponse.ok(StoreInfo.getStoreInfo(storeEntity));
+        return StoreCommonResponse.from(storeEntity);
     }
 
+    /**
+     * 가게 정보를 업데이트 합니다.
+     * 중복 검사도 진행합니다.
+     *
+     * @param userId 유저 ID
+     * @param request 요청 DTO
+     * @return 공통 응답 DTO
+     */
+    @Transactional
+    public StoreCommonResponse updateStore(Long userId, StoreCommonRequest request) {
+        Optional<StoreEntity> storeEntityOptional = storeRepository.findByUserIdAndIsActiveTrue(userId);
+
+        if (storeEntityOptional.isEmpty()) {
+            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
+        }
+        StoreEntity storeEntity = storeEntityOptional.get();
+        String phone = request.phone();
+
+        if (!storeEntity.getPhoneNumber().equals(phone)
+                && storeRepository.existsByPhoneNumber(phone)) {
+            throw new CustomException(ErrorCode.STORE_PHONE_EXISTS);
+        }
+
+        storeEntity.updateInfo(request.name(), request.phone(), request.description(),
+                request.addressLine1(), request.addressLine2(), request.latitude(),
+                request.longitude(),request.endTime(),request.lastOrderTime(),request.orderTime());
+
+        return StoreCommonResponse.from(storeEntity);
+    }
 }
