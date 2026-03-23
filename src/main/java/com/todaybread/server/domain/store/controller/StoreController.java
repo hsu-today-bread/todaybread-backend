@@ -1,8 +1,9 @@
 package com.todaybread.server.domain.store.controller;
 
 import com.todaybread.server.config.jwt.JwtRoleHelper;
-import com.todaybread.server.domain.store.dto.StoreAddRequest;
+import com.todaybread.server.domain.store.dto.StoreCommonRequest;
 import com.todaybread.server.domain.store.dto.StoreAddResponse;
+import com.todaybread.server.domain.store.dto.StoreCommonResponse;
 import com.todaybread.server.domain.store.dto.StoreStatusResponse;
 import com.todaybread.server.domain.store.service.StoreService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -50,7 +51,7 @@ public class StoreController {
      */
     @PostMapping("/add-store")
     public StoreAddResponse addStore(@AuthenticationPrincipal Jwt jwt,
-                                     @RequestBody @Valid StoreAddRequest request) {
+                                     @RequestBody @Valid StoreCommonRequest request) {
         Long userId = JwtRoleHelper.getUserId(jwt);
         return storeService.addStore(userId, request);
     }

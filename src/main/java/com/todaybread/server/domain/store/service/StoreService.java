@@ -1,8 +1,8 @@
 package com.todaybread.server.domain.store.service;
 
-import com.todaybread.server.domain.store.dto.StoreAddRequest;
+import com.todaybread.server.domain.store.dto.StoreCommonRequest;
 import com.todaybread.server.domain.store.dto.StoreAddResponse;
-import com.todaybread.server.domain.store.dto.StoreInfo;
+import com.todaybread.server.domain.store.dto.StoreCommonResponse;
 import com.todaybread.server.domain.store.dto.StoreStatusResponse;
 import com.todaybread.server.domain.store.entity.StoreEntity;
 import com.todaybread.server.domain.store.repository.StoreRepository;
@@ -39,7 +39,7 @@ public class StoreService {
 
         // 가게가 있는 경우
         StoreEntity storeEntity = storeEntityOptional.get();
-        return StoreStatusResponse.hasStore(StoreInfo.getStoreInfo(storeEntity));
+        return StoreStatusResponse.hasStore(StoreCommonResponse.getStoreInfo(storeEntity));
     }
 
     /**
@@ -51,7 +51,7 @@ public class StoreService {
      * @return 응답 DTO
      */
     @Transactional
-    public StoreAddResponse addStore(Long userId, StoreAddRequest request) {
+    public StoreAddResponse addStore(Long userId, StoreCommonRequest request) {
         if (storeRepository.existsByUserIdAndIsActiveTrue(userId)) {
             throw new CustomException(ErrorCode.STORE_ALREADY_EXISTS);
         }
@@ -76,7 +76,7 @@ public class StoreService {
 
         storeRepository.save(storeEntity);
 
-        return StoreAddResponse.ok(StoreInfo.getStoreInfo(storeEntity));
+        return StoreAddResponse.ok(StoreCommonResponse.getStoreInfo(storeEntity));
     }
 
 }

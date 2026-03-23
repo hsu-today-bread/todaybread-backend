@@ -7,7 +7,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.sql.Time;
 
-public record StoreInfo(
+public record StoreCommonResponse(
         String name,
         String phone,
         String description,
@@ -23,8 +23,8 @@ public record StoreInfo(
         Time lastOrderTime,
         String orderTime
 ) {
-    public static StoreInfo getStoreInfo(StoreEntity storeEntity) {
-        return new StoreInfo(
+    public static StoreCommonResponse getStoreInfo(StoreEntity storeEntity) {
+        return new StoreCommonResponse(
                 storeEntity.getName(),
                 storeEntity.getPhoneNumber(),
                 storeEntity.getDescription(),
