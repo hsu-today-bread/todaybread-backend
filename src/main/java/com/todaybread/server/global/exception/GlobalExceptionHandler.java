@@ -9,6 +9,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 /**
  * 런타임 에러, 특정 에러 상황 발생 시, 해당 에러의 처리를 담당합니다.
@@ -85,6 +86,17 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ErrorResponse> handleMethodNotAllowed(HttpRequestMethodNotSupportedException ex) {
         return toResponse(ErrorCode.COMMON_HTTP_METHOD_NOT_ALLOWED);
+    }
+
+    /**
+     * 파일 업로드 크기 초과 시 처리합니다.
+     * Spring의 multipart 설정(max-file-size, max-request-size)을 초과할 때 발생합니다.
+     * @param ex 업로드 크기 초과 예외
+     * @return 400 BAD_REQUEST + STORE_IMAGE_005
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException ex) {
+        return toResponse(ErrorCode.STORE_IMAGE_SIZE_EXCEEDED);
     }
 
     /**
