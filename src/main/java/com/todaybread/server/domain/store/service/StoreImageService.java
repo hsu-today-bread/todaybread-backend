@@ -7,6 +7,7 @@ import com.todaybread.server.domain.store.repository.StoreImageRepository;
 import com.todaybread.server.domain.store.repository.StoreRepository;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
+import com.todaybread.server.global.storage.FileStorage;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +37,7 @@ public class StoreImageService {
 
     private final StoreRepository storeRepository;
     private final StoreImageRepository storeImageRepository;
-    private final FileStorageService fileStorageService;
+    private final FileStorage fileStorage;
 
     /**
      * 가게 이미지를 일괄 교체합니다 (Replace All 패턴).
@@ -67,14 +68,14 @@ public class StoreImageService {
                 MultipartFile file = files.get(i);
                 int displayOrder = i + 1;
 
-                String storedFilename = fileStorageService.store(file, store.getId(), displayOrder);
+                String storedFilename = fileStorage.store(file, store.getId(), displayOrder);
                 storedFilenames.add(storedFilename);
 
                 StoreImageEntity entity = StoreImageEntity.builder()
                         .storeId(store.getId())
                         .originalFilename(file.getOriginalFilename())
                         .storedFilename(storedFilename)
-                        .filePath(fileStorageService.getFileUrl(storedFilename))
+                        .filePath(fileStorage.getFileUrl(storedFilename))
                         .displayOrder(displayOrder)
                         .build();
                 entities.add(entity);
@@ -94,7 +95,7 @@ public class StoreImageService {
         for (StoreImageEntity entity : savedEntities) {
             StoreImageResponse response = new StoreImageResponse(
                     entity.getId(),
-                    fileStorageService.getFileUrl(entity.getStoredFilename()),
+                    fileStorage.getFileUrl(entity.getStoredFilename()),
                     entity.getOriginalFilename(),
                     entity.getDisplayOrder()
             );
@@ -118,7 +119,7 @@ public class StoreImageService {
         for (StoreImageEntity entity : images) {
             StoreImageResponse response = new StoreImageResponse(
                     entity.getId(),
-                    fileStorageService.getFileUrl(entity.getStoredFilename()),
+                    fileStorage.getFileUrl(entity.getStoredFilename()),
                     entity.getOriginalFilename(),
                     entity.getDisplayOrder()
             );
@@ -164,7 +165,7 @@ public class StoreImageService {
 
         for (StoreImageEntity image : existingImages) {
             try {
-                fileStorageService.delete(image.getStoredFilename());
+                fileStorage.delete(image.getStoredFilename());
             } catch (Exception e) {
                 log.warn("기존 이미지 파일 삭제 실패 (계속 진행): {}", image.getStoredFilename(), e);
             }
@@ -179,7 +180,7 @@ public class StoreImageService {
     private void cleanupStoredFiles(List<String> storedFilenames) {
         for (String filename : storedFilenames) {
             try {
-                fileStorageService.delete(filename);
+                fileStorage.delete(filename);
             } catch (Exception e) {
                 log.warn("저장 실패 후 파일 정리 중 오류: {}", filename, e);
             }
