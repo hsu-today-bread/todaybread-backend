@@ -91,14 +91,17 @@ public class StoreImageService {
         }
 
         // 5. 응답 반환
-        return savedEntities.stream()
-                .map(entity -> new StoreImageResponse(
-                        entity.getId(),
-                        fileStorageService.getFileUrl(entity.getStoredFilename()),
-                        entity.getOriginalFilename(),
-                        entity.getDisplayOrder()
-                ))
-                .toList();
+        List<StoreImageResponse> responses = new ArrayList<>();
+        for (StoreImageEntity entity : savedEntities) {
+            StoreImageResponse response = new StoreImageResponse(
+                    entity.getId(),
+                    fileStorageService.getFileUrl(entity.getStoredFilename()),
+                    entity.getOriginalFilename(),
+                    entity.getDisplayOrder()
+            );
+            responses.add(response);
+        }
+        return responses;
     }
 
     /**
@@ -111,14 +114,17 @@ public class StoreImageService {
      */
     @Transactional(readOnly = true)
     public List<StoreImageSummary> getImagesByStoreId(Long storeId) {
-        return storeImageRepository.findByStoreIdOrderByDisplayOrderAsc(storeId)
-                .stream()
-                .map(entity -> new StoreImageSummary(
-                        entity.getId(),
-                        fileStorageService.getFileUrl(entity.getStoredFilename()),
-                        entity.getDisplayOrder()
-                ))
-                .toList();
+        List<StoreImageEntity> images = storeImageRepository.findByStoreIdOrderByDisplayOrderAsc(storeId);
+        List<StoreImageSummary> summaries = new ArrayList<>();
+        for (StoreImageEntity entity : images) {
+            StoreImageSummary summary = new StoreImageSummary(
+                    entity.getId(),
+                    fileStorageService.getFileUrl(entity.getStoredFilename()),
+                    entity.getDisplayOrder()
+            );
+            summaries.add(summary);
+        }
+        return summaries;
     }
 
     /**
