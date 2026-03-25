@@ -13,11 +13,11 @@ import java.util.List;
 public record StoreStatusResponse(
         boolean hasStore,
         StoreCommonResponse storeCommonResponse,
-        List<StoreImageSummary> images
+        List<StoreImageResponse> images
 ) {
     public static StoreStatusResponse hasStore(
             StoreCommonResponse storeCommonResponse,
-            List<StoreImageSummary> images) {
+            List<StoreImageResponse> images) {
         return new StoreStatusResponse(true, storeCommonResponse, images);
     }
     public static StoreStatusResponse hasNoStore() {

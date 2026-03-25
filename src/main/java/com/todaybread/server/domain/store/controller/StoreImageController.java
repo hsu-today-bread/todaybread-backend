@@ -6,7 +6,6 @@ import com.todaybread.server.domain.store.service.StoreImageService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -36,11 +35,10 @@ public class StoreImageController {
      * @return 저장된 이미지 목록
      */
     @PostMapping(value = "/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<List<StoreImageResponse>> uploadImages(
+    public List<StoreImageResponse> uploadImages(
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam("images") List<MultipartFile> images) {
         Long userId = JwtRoleHelper.getUserId(jwt);
-        List<StoreImageResponse> responses = storeImageService.replaceImages(userId, images);
-        return ResponseEntity.ok(responses);
+        return storeImageService.replaceImages(userId, images);
     }
 }

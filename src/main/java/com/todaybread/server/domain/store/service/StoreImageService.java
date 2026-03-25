@@ -1,7 +1,6 @@
 package com.todaybread.server.domain.store.service;
 
 import com.todaybread.server.domain.store.dto.StoreImageResponse;
-import com.todaybread.server.domain.store.dto.StoreImageSummary;
 import com.todaybread.server.domain.store.entity.StoreEntity;
 import com.todaybread.server.domain.store.entity.StoreImageEntity;
 import com.todaybread.server.domain.store.repository.StoreImageRepository;
@@ -113,18 +112,19 @@ public class StoreImageService {
      * @return 이미지 요약 목록
      */
     @Transactional(readOnly = true)
-    public List<StoreImageSummary> getImagesByStoreId(Long storeId) {
+    public List<StoreImageResponse> getImagesByStoreId(Long storeId) {
         List<StoreImageEntity> images = storeImageRepository.findByStoreIdOrderByDisplayOrderAsc(storeId);
-        List<StoreImageSummary> summaries = new ArrayList<>();
+        List<StoreImageResponse> responses = new ArrayList<>();
         for (StoreImageEntity entity : images) {
-            StoreImageSummary summary = new StoreImageSummary(
+            StoreImageResponse response = new StoreImageResponse(
                     entity.getId(),
                     fileStorageService.getFileUrl(entity.getStoredFilename()),
+                    entity.getOriginalFilename(),
                     entity.getDisplayOrder()
             );
-            summaries.add(summary);
+            responses.add(response);
         }
-        return summaries;
+        return responses;
     }
 
     /**
