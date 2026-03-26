@@ -324,6 +324,14 @@ docker compose ps
 
 `todaybread-mysql`이 `running (healthy)` 상태면 성공입니다.
 
+MySQL CLI에 바로 접속하려면 프로젝트 스크립트를 사용할 수 있습니다:
+```bash
+./scripts/mysql-connect.sh
+```
+
+이 스크립트는 컨테이너 안의 `mysql` 클라이언트를 `utf8mb4`로 실행합니다.
+그래서 터미널에서도 한글이 `????`가 아니라 정상 출력됩니다.
+
 ---
 
 ## 6단계: Spring Boot 실행
@@ -482,12 +490,29 @@ Hibernate가 테이블을 직접 건드리지 않고, 엔티티와 테이블이 
 
 ### MySQL 직접 접속
 
+가장 간단한 방법은 프로젝트 스크립트를 사용하는 것입니다:
+
 ```bash
-docker exec -it todaybread-mysql mysql -u {MYSQL_USER 값} -p
+./scripts/mysql-connect.sh
+```
+
+기본값:
+- 컨테이너: `todaybread-mysql`
+- 데이터베이스: `todaybread`
+- 사용자: `todaybread`
+- 문자셋: `utf8mb4`
+
+직접 명령어로 접속하고 싶다면 아래처럼 실행하세요:
+
+```bash
+docker exec -it todaybread-mysql mysql --default-character-set=utf8mb4 -u {MYSQL_USER 값} -p
 ```
 
 비밀번호 입력 프롬프트가 나오면 `MYSQL_PASSWORD` 값을 입력하세요.
 기본값을 쓰고 있다면 `todaybread`를 입력하면 됩니다.
+
+> `--default-character-set=utf8mb4`를 붙여야 터미널 조회 결과도 한글이 정상 출력됩니다.
+> 이 옵션이 없으면 DB에는 한글이 정상 저장되어 있어도 `????`로 보일 수 있습니다.
 
 접속 후 유용한 SQL:
 ```sql
@@ -521,7 +546,10 @@ docker compose up -d
 # 3. 상태 확인
 docker compose ps
 
-# 4. Spring Boot 실행 (IntelliJ 또는 터미널)
+# 4. MySQL CLI가 필요하면 utf8mb4 스크립트로 접속
+./scripts/mysql-connect.sh
+
+# 5. Spring Boot 실행 (IntelliJ 또는 터미널)
 ./gradlew bootRun
 ```
 
