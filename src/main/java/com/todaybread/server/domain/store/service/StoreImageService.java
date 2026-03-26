@@ -9,6 +9,7 @@ import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
 import com.todaybread.server.global.storage.FileStorage;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -91,17 +92,7 @@ public class StoreImageService {
         }
 
         // 5. 응답 반환
-        List<StoreImageResponse> responses = new ArrayList<>();
-        for (StoreImageEntity entity : savedEntities) {
-            StoreImageResponse response = new StoreImageResponse(
-                    entity.getId(),
-                    fileStorage.getFileUrl(entity.getStoredFilename()),
-                    entity.getOriginalFilename(),
-                    entity.getDisplayOrder()
-            );
-            responses.add(response);
-        }
-        return responses;
+        return getStoreImageResponses(savedEntities);
     }
 
     /**
@@ -115,12 +106,20 @@ public class StoreImageService {
     @Transactional(readOnly = true)
     public List<StoreImageResponse> getImagesByStoreId(Long storeId) {
         List<StoreImageEntity> images = storeImageRepository.findByStoreIdOrderByDisplayOrderAsc(storeId);
+        return getStoreImageResponses(images);
+    }
+
+    /**
+     * 이미지 엔티티에서 응답으로 변환합니다
+     * @param images 이미지 엔티티 리스트
+     * @return 이미지 응답 형식
+     */
+    private List<StoreImageResponse> getStoreImageResponses(List<StoreImageEntity> images) {
         List<StoreImageResponse> responses = new ArrayList<>();
         for (StoreImageEntity entity : images) {
             StoreImageResponse response = new StoreImageResponse(
                     entity.getId(),
                     fileStorage.getFileUrl(entity.getStoredFilename()),
-                    entity.getOriginalFilename(),
                     entity.getDisplayOrder()
             );
             responses.add(response);
