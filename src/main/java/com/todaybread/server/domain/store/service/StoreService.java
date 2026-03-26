@@ -21,6 +21,7 @@ import java.util.Optional;
 public class StoreService {
 
     private final StoreRepository storeRepository;
+    private final StoreImageService storeImageService;
 
     /**
      * 사장님 탭 진입 상태를 조회합니다.
@@ -38,7 +39,8 @@ public class StoreService {
 
         // 가게가 있는 경우
         StoreEntity storeEntity = storeEntityOptional.get();
-        return StoreStatusResponse.hasStore(StoreCommonResponse.from(storeEntity));
+        var images = storeImageService.getImagesByStoreId(storeEntity.getId());
+        return StoreStatusResponse.hasStore(StoreCommonResponse.from(storeEntity), images);
     }
 
     /**
