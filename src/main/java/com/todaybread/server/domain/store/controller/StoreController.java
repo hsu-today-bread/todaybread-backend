@@ -50,7 +50,7 @@ public class StoreController {
         Long userId = JwtRoleHelper.getUserId(jwt);
         return storeService.addStore(userId, request);
     }
-
+    
     /**
      * 가게 정보를 업데이트합니다.
      * @param jwt JWT 토큰
