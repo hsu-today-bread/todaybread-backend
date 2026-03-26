@@ -9,7 +9,6 @@ import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
 import com.todaybread.server.global.storage.FileStorage;
 import lombok.RequiredArgsConstructor;
-import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -31,7 +30,7 @@ public class StoreImageService {
     private static final Logger log = LoggerFactory.getLogger(StoreImageService.class);
 
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
-            "image/jpeg", "image/png", "image/gif", "image/webp"
+            "image/jpeg", "image/png", "image/webp","image/jpg"
     );
     private static final long MAX_FILE_SIZE = 10L * 1024 * 1024; // 10MB
     private static final int MAX_FILE_COUNT = 5;
