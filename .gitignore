@@ -41,3 +41,7 @@ out/
 
 # Uploaded files
 uploads/
+
+# Custom local files
+custom/
+.kiro/

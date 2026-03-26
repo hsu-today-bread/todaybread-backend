@@ -46,8 +46,9 @@ docker compose up -d
 
 | 문서 | 설명 |
 |------|------|
-| [DB 환경 설정 가이드](DB-SETUP.md) | Docker, .env, Flyway, Spring Boot 연결 설정 |
-| [컨벤션](CONVENTION.md) | 코드 컨벤션, 협업 컨벤션, 에러 코드 규격 |
+| [DB 환경 설정 가이드](docs/DB-SETUP.md) | Docker, .env, Flyway, Spring Boot 연결 설정 |
+| [컨벤션](docs/CONVENTION.md) | 코드 컨벤션, 협업 컨벤션, 에러 코드 규격 |
+|[JWT 가이드 문서](docs/JWT-GUIDE.md) | 원활한 JWT 토큰 사용을 위한 문서|
 
 ---
 
@@ -57,6 +58,7 @@ docker compose up -d
 .
 ├── docker-compose.yml                     # MySQL Docker 실행 설정
 ├── build.gradle                           # Gradle 빌드 설정
+├── docs/                                  # 각종 문서 폴더
 ├── scripts/
 │   └── mysql-connect.sh                   # utf8mb4로 MySQL CLI 접속
 ├── src/main/java/com/todaybread/server/
