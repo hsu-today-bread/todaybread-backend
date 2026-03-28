@@ -17,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -32,7 +33,7 @@ public class StoreImageService {
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
             "image/jpeg", "image/png", "image/webp","image/jpg"
     );
-    private static final long MAX_FILE_SIZE = 10L * 1024 * 1024; // 10MB
+    private static final long MAX_FILE_SIZE = 5L * 1024 * 1024; // 5MB
     private static final int MAX_FILE_COUNT = 5;
 
     private final StoreRepository storeRepository;
@@ -50,8 +51,12 @@ public class StoreImageService {
     @Transactional
     public List<StoreImageResponse> replaceImages(Long userId, List<MultipartFile> files) {
         // 1. userId로 가게 조회
-        StoreEntity store = storeRepository.findByUserIdAndIsActiveTrue(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+        Optional<StoreEntity> storeOptional = storeRepository.findByUserIdAndIsActiveTrue(userId);
+
+        if (storeOptional.isEmpty()) {
+            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
+        }
+        StoreEntity store = storeOptional.get();
 
         // 2. 파일 검증
         validateFiles(files);
@@ -66,7 +71,7 @@ public class StoreImageService {
             List<StoreImageEntity> entities = new ArrayList<>();
             for (int i = 0; i < files.size(); i++) {
                 MultipartFile file = files.get(i);
-                int displayOrder = i + 1;
+                int displayOrder = i;
 
                 String storedFilename = fileStorage.store(file, store.getId(), displayOrder);
                 storedFilenames.add(storedFilename);

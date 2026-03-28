@@ -2,6 +2,7 @@ package com.todaybread.server.domain.store.service;
 
 import com.todaybread.server.domain.store.dto.StoreCommonRequest;
 import com.todaybread.server.domain.store.dto.StoreCommonResponse;
+import com.todaybread.server.domain.store.dto.StoreInfoResponse;
 import com.todaybread.server.domain.store.dto.StoreStatusResponse;
 import com.todaybread.server.domain.store.entity.StoreEntity;
 import com.todaybread.server.domain.store.repository.StoreRepository;
@@ -26,21 +27,36 @@ public class StoreService {
     /**
      * 사장님 탭 진입 상태를 조회합니다.
      * @param userId 유저 ID
-     * @return 가게 등록 응답 DTO
+     * @return 가게 등록 여부
      */
     @Transactional(readOnly = true)
     public StoreStatusResponse getStoreStatus(Long userId){
         Optional<StoreEntity> storeEntityOptional = storeRepository.findByUserIdAndIsActiveTrue(userId);
 
-        // 가게가 없다면...
         if (storeEntityOptional.isEmpty()) {
-            return StoreStatusResponse.hasNoStore();
+            return StoreStatusResponse.notRegistered();
         }
+        return StoreStatusResponse.registered();
+    }
 
-        // 가게가 있는 경우
+    /**
+     * 매장 정보와 이미지를 한번에 조회합니다.
+     * @param userId 유저 ID
+     * @return 매장 정보 + 이미지 목록
+     */
+    @Transactional(readOnly = true)
+    public StoreInfoResponse getStoreInfo(Long userId) {
+        Optional<StoreEntity> storeEntityOptional = storeRepository.findByUserIdAndIsActiveTrue(userId);
+
+        if (storeEntityOptional.isEmpty()) {
+            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
+        }
         StoreEntity storeEntity = storeEntityOptional.get();
+
+        StoreCommonResponse storeResponse = StoreCommonResponse.from(storeEntity);
         var images = storeImageService.getImagesByStoreId(storeEntity.getId());
-        return StoreStatusResponse.hasStore(StoreCommonResponse.from(storeEntity), images);
+
+        return StoreInfoResponse.of(storeResponse, images);
     }
 
     /**

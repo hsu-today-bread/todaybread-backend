@@ -47,7 +47,7 @@ public class LocalFileStorage implements FileStorage {
      *
      * @param file 업로드된 원본 파일
      * @param storeId 가게 ID
-     * @param displayOrder 이미지 표시 순서
+     * @param displayOrder 이미지 표시 순서 (0 = 대표 이미지)
      * @return 저장된 파일명
      * @throws CustomException 파일 저장 중 IO 오류가 발생한 경우
      */
