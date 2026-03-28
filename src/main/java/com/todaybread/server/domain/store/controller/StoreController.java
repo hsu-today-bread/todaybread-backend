@@ -45,7 +45,7 @@ public class StoreController {
      * @param jwt JWT 토큰
      * @return 매장 정보 + 이미지 목록
      */
-    @GetMapping("/info")
+    @GetMapping("/my-store")
     public StoreInfoResponse getStoreInfo(@AuthenticationPrincipal Jwt jwt) {
         Long userId = JwtRoleHelper.getUserId(jwt);
         return storeService.getStoreInfo(userId);
