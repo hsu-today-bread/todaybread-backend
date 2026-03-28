@@ -5,7 +5,7 @@ package com.todaybread.server.domain.store.dto;
  *
  * @param id 이미지 ID
  * @param imageUrl 이미지 접근 URL
- * @param displayOrder 표시 순서 (1 = 대표 이미지)
+ * @param displayOrder 표시 순서 (0 = 대표 이미지)
  */
 public record StoreImageResponse(
         Long id,

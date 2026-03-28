@@ -3,6 +3,7 @@ package com.todaybread.server.domain.store.controller;
 import com.todaybread.server.config.jwt.JwtRoleHelper;
 import com.todaybread.server.domain.store.dto.StoreCommonRequest;
 import com.todaybread.server.domain.store.dto.StoreCommonResponse;
+import com.todaybread.server.domain.store.dto.StoreInfoResponse;
 import com.todaybread.server.domain.store.dto.StoreStatusResponse;
 import com.todaybread.server.domain.store.service.StoreService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * store 도메인을 처리합니다.
+ * 사장님 전용 컨트롤러 입니다.
  */
 @RestController
 @RequestMapping("/api/store")
@@ -36,6 +38,17 @@ public class StoreController {
     public StoreStatusResponse getStoreStatus(@AuthenticationPrincipal Jwt jwt) {
         Long userId = JwtRoleHelper.getUserId(jwt);
         return storeService.getStoreStatus(userId);
+    }
+
+    /**
+     * 사장님이 매장 정보와 이미지를 한번에 조회합니다.
+     * @param jwt JWT 토큰
+     * @return 매장 정보 + 이미지 목록
+     */
+    @GetMapping("/my-store")
+    public StoreInfoResponse getStoreInfo(@AuthenticationPrincipal Jwt jwt) {
+        Long userId = JwtRoleHelper.getUserId(jwt);
+        return storeService.getStoreInfo(userId);
     }
 
     /**

@@ -81,7 +81,7 @@ public enum ErrorCode {
     STORE_IMAGE_NOT_FOUND("STORE_IMAGE_001", "이미지를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     STORE_IMAGE_LIMIT_EXCEEDED("STORE_IMAGE_002", "이미지는 최대 5장까지 등록할 수 있습니다.", HttpStatus.BAD_REQUEST),
     STORE_IMAGE_INVALID_TYPE("STORE_IMAGE_004", "허용되지 않는 파일 형식입니다. (jpeg, png, gif, webp만 가능)", HttpStatus.BAD_REQUEST),
-    STORE_IMAGE_SIZE_EXCEEDED("STORE_IMAGE_005", "파일 크기는 10MB를 초과할 수 없습니다.", HttpStatus.BAD_REQUEST),
+    STORE_IMAGE_SIZE_EXCEEDED("STORE_IMAGE_005", "파일 크기는 5MB를 초과할 수 없습니다.", HttpStatus.BAD_REQUEST),
     STORE_IMAGE_STORAGE_FAILED("STORE_IMAGE_007", "파일 저장에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
 
     /**

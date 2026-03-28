@@ -18,7 +18,7 @@ public interface FileStorage {
      *
      * @param file 업로드된 원본 파일
      * @param storeId 가게 ID
-     * @param displayOrder 이미지 표시 순서
+     * @param displayOrder 이미지 표시 순서 (0 = 대표 이미지)
      * @return 저장소 내부에서 관리할 저장 파일명
      */
     String store(MultipartFile file, Long storeId, int displayOrder);
