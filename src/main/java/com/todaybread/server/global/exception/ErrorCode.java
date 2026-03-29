@@ -38,6 +38,7 @@ public enum ErrorCode {
     COMMON_HTTP_METHOD_NOT_ALLOWED("COMMON_002", "허용되지 않은 HTTP 메서드입니다.", HttpStatus.METHOD_NOT_ALLOWED),
     COMMON_INTERNAL_SERVER_ERROR("COMMON_003", "서버 내부 오류입니다.", HttpStatus.INTERNAL_SERVER_ERROR),
     COMMON_ACCESS_DENIED("COMMON_004", "접근 권한이 없습니다.", HttpStatus.FORBIDDEN),
+    COMMON_FILE_SIZE_EXCEEDED("COMMON_005", "파일 크기는 5MB를 초과할 수 없습니다.", HttpStatus.BAD_REQUEST),
 
     /**
      * ============================
@@ -83,6 +84,20 @@ public enum ErrorCode {
     STORE_IMAGE_INVALID_TYPE("STORE_IMAGE_004", "허용되지 않는 파일 형식입니다. (jpeg, png, gif, webp만 가능)", HttpStatus.BAD_REQUEST),
     STORE_IMAGE_SIZE_EXCEEDED("STORE_IMAGE_005", "파일 크기는 5MB를 초과할 수 없습니다.", HttpStatus.BAD_REQUEST),
     STORE_IMAGE_STORAGE_FAILED("STORE_IMAGE_007", "파일 저장에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
+
+    /**
+     * ============================
+     * 음식 관련 오류
+     * ============================
+     */
+    BREAD_NOT_FOUND("BREAD_001","상품을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    BREAD_ACCESS_DENIED("BREAD_002","상품에 접근할 권한이 없습니다.", HttpStatus.FORBIDDEN),
+    BREAD_INSUFFICIENT_QUANTITY("BREAD_003","해당 상품의 재고가 부족합니다.",HttpStatus.CONFLICT),
+    BREAD_INVALID_PRICE("BREAD_004", "가격은 0원 이상이여야 합니다.", HttpStatus.BAD_REQUEST),
+
+    BREAD_IMAGE_INVALID_TYPE("BREAD_IMAGE_001","허용되지 않는 파일 형식입니다. (jpeg, png, gif, webp만 가능)",HttpStatus.BAD_REQUEST),
+    BREAD_IMAGE_SIZE_EXCEEDED("BREAD_IMAGE_002","파일 크기는 5MB를 넘을 수 없습니다.", HttpStatus.BAD_REQUEST),
+    BREAD_IMAGE_STORAGE_FAILED("BREAD_IMAGE_003","파일 저장에 실패했습니다.",HttpStatus.INTERNAL_SERVER_ERROR),
 
     /**
      * ============================

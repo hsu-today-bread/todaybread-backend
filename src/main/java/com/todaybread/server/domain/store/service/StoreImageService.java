@@ -31,7 +31,7 @@ public class StoreImageService {
     private static final Logger log = LoggerFactory.getLogger(StoreImageService.class);
 
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
-            "image/jpeg", "image/png", "image/webp","image/jpg"
+            "image/jpeg", "image/png", "image/webp", "image/jpg", "image/gif"
     );
     private static final long MAX_FILE_SIZE = 5L * 1024 * 1024; // 5MB
     private static final int MAX_FILE_COUNT = 5;
@@ -73,14 +73,13 @@ public class StoreImageService {
                 MultipartFile file = files.get(i);
                 int displayOrder = i;
 
-                String storedFilename = fileStorage.store(file, store.getId(), displayOrder);
+                String storedFilename = fileStorage.store(file, "store", store.getId());
                 storedFilenames.add(storedFilename);
 
                 StoreImageEntity entity = StoreImageEntity.builder()
                         .storeId(store.getId())
                         .originalFilename(file.getOriginalFilename())
                         .storedFilename(storedFilename)
-                        .filePath(fileStorage.getFileUrl(storedFilename))
                         .displayOrder(displayOrder)
                         .build();
                 entities.add(entity);
