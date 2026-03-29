@@ -14,15 +14,15 @@ public interface FileStorage {
      * 업로드된 파일을 실제 저장소에 저장합니다.
      * 구현체는 저장 위치에 맞는 방식으로 파일을 저장한 뒤, 내부 식별자로 사용할
      * 저장 파일명을 반환해야 합니다.
-     * 저장 파일명 규칙: {@code {domain}_{entityId}_{index}.{확장자}}
+     * 저장 파일명 규칙: {@code {domain}_{entityId}_{UUID}.{확장자}}
+     * UUID를 사용하여 파일명 충돌을 방지합니다.
      *
      * @param file 업로드된 원본 파일
      * @param domain 도메인 식별자 (예: "store", "bread")
      * @param entityId 엔티티 ID
-     * @param index 이미지 순서 (0부터 시작)
      * @return 저장소 내부에서 관리할 저장 파일명
      */
-    String store(MultipartFile file, String domain, Long entityId, int index);
+    String store(MultipartFile file, String domain, Long entityId);
 
     /**
      * 저장소에 있는 파일을 삭제합니다.

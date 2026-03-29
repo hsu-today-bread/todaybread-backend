@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * 음식 사진 엔티티를 정의합니다.
+ * URL은 storedFilename 기반으로 FileStorage에서 동적 생성합니다.
  */
 @Entity
 @Table(name = "bread_image")
@@ -21,7 +22,7 @@ public class BreadImageEntity extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "bread_id", nullable = false)
+    @Column(name = "bread_id", nullable = false, unique = true)
     private Long breadId;
 
     @Column(name = "original_filename", nullable = false)
@@ -30,29 +31,12 @@ public class BreadImageEntity extends BaseEntity {
     @Column(name = "stored_filename", nullable = false, unique = true)
     private String storedFilename;
 
-    @Column(name = "file_path", nullable = false, length = 500)
-    private String filePath;
-
     @Builder
     public BreadImageEntity(Long breadId,
                             String originalFilename,
-                            String storedFilename,
-                            String filePath) {
+                            String storedFilename) {
         this.breadId = breadId;
         this.originalFilename = originalFilename;
         this.storedFilename = storedFilename;
-        this.filePath = filePath;
-    }
-
-    /**
-     * 이미지를 업데이트합니다.
-     * @param originalFilename 실제 파일 이름
-     * @param storedFilename 저장 파일 이름
-     * @param filePath 경로
-     */
-    public void updateImage(String originalFilename, String storedFilename, String filePath) {
-        this.originalFilename = originalFilename;
-        this.storedFilename = storedFilename;
-        this.filePath = filePath;
     }
 }

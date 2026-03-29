@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.UUID;
 
 /**
  * {@link FileStorage}의 로컬 파일 시스템 구현체입니다.
@@ -43,20 +44,21 @@ public class LocalFileStorage implements FileStorage {
      * 파일을 로컬 디스크에 저장합니다.
      *
      * 저장 전에 업로드 디렉터리가 없으면 생성하고, 저장 파일명은
-     * {@code {domain}_{entityId}_{index}.{확장자}} 규칙으로 만듭니다.
+     * {@code {domain}_{entityId}_{UUID}.{확장자}} 규칙으로 만듭니다.
+     * UUID를 사용하여 같은 확장자로 교체해도 파일명이 겹치지 않습니다.
      *
      * @param file 업로드된 원본 파일
      * @param domain 도메인 식별자 (예: "store", "bread")
      * @param entityId 엔티티 ID
-     * @param index 이미지 순서 (0부터 시작)
      * @return 저장된 파일명
      * @throws CustomException 파일 저장 중 IO 오류가 발생한 경우
      */
     @Override
-    public String store(MultipartFile file, String domain, Long entityId, int index) {
+    public String store(MultipartFile file, String domain, Long entityId) {
         String originalFilename = file.getOriginalFilename();
         String extension = StringUtils.getFilenameExtension(originalFilename);
-        String storedFilename = domain + "_" + entityId + "_" + index + "." + extension;
+        String uuid = UUID.randomUUID().toString().replace("-", "");
+        String storedFilename = domain + "_" + entityId + "_" + uuid + "." + extension;
 
         try {
             Files.createDirectories(uploadDir);

@@ -23,7 +23,7 @@ public record BreadCommonResponse(
         int remainingQuantity,
         String description,
         String imageUrl
-){
+) {
     public static BreadCommonResponse fromEntity(BreadEntity entity, String imageUrl) {
         return new BreadCommonResponse(
                 entity.getId(),
@@ -35,13 +35,5 @@ public record BreadCommonResponse(
                 entity.getDescription(),
                 imageUrl
         );
-    }
-
-    public static BreadCommonResponse fromEntity(BreadEntity entity) {
-        return fromEntity(entity, null);
-    }
-
-    public static BreadCommonResponse deletedOrSoldout(){
-        return new BreadCommonResponse(null, null, null, 0, 0, 0, null, null);
     }
 }

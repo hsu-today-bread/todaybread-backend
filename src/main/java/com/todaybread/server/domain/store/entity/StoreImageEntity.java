@@ -30,20 +30,16 @@ public class StoreImageEntity extends BaseEntity {
     @Column(name = "stored_filename", nullable = false, unique = true)
     private String storedFilename;
 
-    @Column(name = "file_path", nullable = false, length = 500)
-    private String filePath;
-
     @Column(name = "display_order", nullable = false)
     private Integer displayOrder;
 
     @Builder
     private StoreImageEntity(Long storeId, String originalFilename,
-                             String storedFilename, String filePath,
+                             String storedFilename,
                              Integer displayOrder) {
         this.storeId = storeId;
         this.originalFilename = originalFilename;
         this.storedFilename = storedFilename;
-        this.filePath = filePath;
         this.displayOrder = displayOrder;
     }
 }

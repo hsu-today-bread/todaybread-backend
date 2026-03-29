@@ -14,4 +14,5 @@ public interface StoreRepository extends JpaRepository<StoreEntity, Long> {
     boolean existsByUserIdAndIsActiveTrue(Long userId);
     boolean existsByPhoneNumber(String phoneNumber);
     Optional<StoreEntity> findByUserIdAndIsActiveTrue(Long userId);
+    Optional<StoreEntity> findByIdAndIsActiveTrue(Long id);
 }

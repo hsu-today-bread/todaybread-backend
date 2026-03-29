@@ -92,11 +92,11 @@ public class GlobalExceptionHandler {
      * 파일 업로드 크기 초과 시 처리합니다.
      * Spring의 multipart 설정(max-file-size, max-request-size)을 초과할 때 발생합니다.
      * @param ex 업로드 크기 초과 예외
-     * @return 400 BAD_REQUEST + STORE_IMAGE_005
+     * @return 400 BAD_REQUEST + COMMON_005
      */
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ErrorResponse> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException ex) {
-        return toResponse(ErrorCode.STORE_IMAGE_SIZE_EXCEEDED);
+        return toResponse(ErrorCode.COMMON_FILE_SIZE_EXCEEDED);
     }
 
     /**
