@@ -1,0 +1,26 @@
+/*
+ 음식 및 음식 이미지 SQL
+ */
+CREATE TABLE bread (
+    id  BIGINT  AUTO_INCREMENT PRIMARY KEY,
+    store_id BIGINT NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    original_price INT NOT NULL,
+    sale_price INT NOT NULL,
+    remaining_quantity INT NOT NULL,
+    description varchar(255),
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    CONSTRAINT fk_bread_store FOREIGN KEY (store_id) REFERENCES store(id) ON DELETE CASCADE
+);
+
+CREATE TABLE bread_image (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    stock_id BIGINT NOT NULL UNIQUE,
+    original_filename VARCHAR(255) NOT NULL,
+    stored_filename VARCHAR(255) NOT NULL UNIQUE,
+    file_path VARCHAR(500) NOT NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    CONSTRAINT fk_bread_image_bread FOREIGN KEY (bread_id) REFERENCES bread(id) ON DELETE CASCADE
+);

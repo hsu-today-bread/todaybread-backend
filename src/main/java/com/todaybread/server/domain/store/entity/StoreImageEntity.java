@@ -17,6 +17,7 @@ import lombok.NoArgsConstructor;
 public class StoreImageEntity extends BaseEntity {
 
     @Id
+    @Column(name = "id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 

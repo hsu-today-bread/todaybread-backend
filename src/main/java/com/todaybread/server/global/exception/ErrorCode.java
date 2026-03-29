@@ -86,6 +86,19 @@ public enum ErrorCode {
 
     /**
      * ============================
+     * 음식 관련 오류
+     * ============================
+     */
+    BREAD_NOT_FOUND("BREAD_001","상품을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    BREAD_ACCESS_DENIED("BREAD_002","상품에 접근할 권한이 없습니다.", HttpStatus.FORBIDDEN),
+    BREAD_INSUFFICIENT_QUANTITY("BREAD_003","해당 상품의 재고가 부족합니다.",HttpStatus.CONFLICT),
+
+    BREAD_IMAGE_INVALID_TYPE("BREAD_IMAGE_001","허용되지 않는 파일 형식입니다. (jpeg, png, gif, webp만 가능)",HttpStatus.BAD_REQUEST),
+    BREAD_IMAGE_SIZE_EXCEEDED("BREAD_IMAGE_002","파일 크기는 5MB를 넘을 수 없습니다.", HttpStatus.BAD_REQUEST),
+    BREAD_IMAGE_STORAGE_FAILED("BREAD_IMAGE_003","파일 저장에 실패했습니다.",HttpStatus.INTERNAL_SERVER_ERROR),
+
+    /**
+     * ============================
      * JWT 토큰 관련 오류
      * ============================
      */

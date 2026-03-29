@@ -73,7 +73,7 @@ public class StoreImageService {
                 MultipartFile file = files.get(i);
                 int displayOrder = i;
 
-                String storedFilename = fileStorage.store(file, store.getId(), displayOrder);
+                String storedFilename = fileStorage.store(file, "store", store.getId(), displayOrder);
                 storedFilenames.add(storedFilename);
 
                 StoreImageEntity entity = StoreImageEntity.builder()
