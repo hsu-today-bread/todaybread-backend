@@ -13,6 +13,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
@@ -99,6 +101,48 @@ public class StoreImageService {
     }
 
     /**
+     * 소유권 검증 없이 이미지를 저장합니다.
+     * 이미 소유권이 검증된 서비스 내부 호출용입니다 (가게 등록 시).
+     *
+     * @param storeId 가게 ID
+     * @param files 업로드할 이미지 파일 목록
+     * @return 저장된 이미지 목록
+     */
+    @Transactional
+    public List<StoreImageResponse> saveImages(Long storeId, List<MultipartFile> files) {
+        validateFiles(files);
+
+        List<String> storedFilenames = new ArrayList<>();
+        List<StoreImageEntity> savedEntities;
+        try {
+            List<StoreImageEntity> entities = new ArrayList<>();
+            for (int displayOrder = 0; displayOrder < files.size(); displayOrder++) {
+                MultipartFile file = files.get(displayOrder);
+
+                String storedFilename = fileStorage.store(file, "store", storeId);
+                storedFilenames.add(storedFilename);
+
+                StoreImageEntity entity = StoreImageEntity.builder()
+                        .storeId(storeId)
+                        .originalFilename(file.getOriginalFilename())
+                        .storedFilename(storedFilename)
+                        .displayOrder(displayOrder)
+                        .build();
+                entities.add(entity);
+            }
+            savedEntities = storeImageRepository.saveAll(entities);
+        } catch (Exception e) {
+            cleanupStoredFiles(storedFilenames);
+            if (e instanceof CustomException) {
+                throw e;
+            }
+            throw new CustomException(ErrorCode.STORE_IMAGE_STORAGE_FAILED);
+        }
+
+        return getStoreImageResponses(savedEntities);
+    }
+
+    /**
      * 가게 ID로 이미지 목록을 조회합니다.
      * display_order 오름차순으로 정렬된 이미지 목록을 반환합니다.
      * 이미지가 없으면 빈 목록을 반환합니다.
@@ -159,21 +203,33 @@ public class StoreImageService {
     }
 
     /**
-     * 기존 이미지를 삭제합니다 (파일 + DB).
-     * 파일 삭제 실패 시 로깅 후 계속 진행합니다.
+     * 기존 이미지를 삭제합니다 (DB 즉시 삭제, 파일은 커밋 후 삭제).
+     * 롤백 시 파일이 유지되도록 afterCommit 패턴을 사용합니다.
      */
     private void deleteExistingImages(Long storeId) {
         List<StoreImageEntity> existingImages = storeImageRepository.findByStoreIdOrderByDisplayOrderAsc(storeId);
 
+        List<String> filesToDelete = new ArrayList<>();
         for (StoreImageEntity image : existingImages) {
-            try {
-                fileStorage.delete(image.getStoredFilename());
-            } catch (Exception e) {
-                log.warn("기존 이미지 파일 삭제 실패 (계속 진행): {}", image.getStoredFilename(), e);
-            }
+            filesToDelete.add(image.getStoredFilename());
         }
 
         storeImageRepository.deleteByStoreId(storeId);
+
+        if (!filesToDelete.isEmpty()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    for (String filename : filesToDelete) {
+                        try {
+                            fileStorage.delete(filename);
+                        } catch (Exception e) {
+                            log.warn("기존 이미지 파일 삭제 실패 (커밋 후): {}", filename, e);
+                        }
+                    }
+                }
+            });
+        }
     }
 
     /**

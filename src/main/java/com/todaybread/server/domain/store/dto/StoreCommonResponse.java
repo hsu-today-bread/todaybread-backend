@@ -9,6 +9,7 @@ import java.sql.Time;
 
 /**
  * 가게 관련 공통 응답을 위해 사용됩니다.
+ * @param id 가게 ID
  * @param name 이름
  * @param phone 전화번호
  * @param description 설명
@@ -21,6 +22,7 @@ import java.sql.Time;
  * @param orderTime 일반적인 영업 시간
  */
 public record StoreCommonResponse(
+        Long id,
         String name,
         String phone,
         String description,
@@ -38,6 +40,7 @@ public record StoreCommonResponse(
 ) {
     public static StoreCommonResponse from(StoreEntity storeEntity) {
         return new StoreCommonResponse(
+                storeEntity.getId(),
                 storeEntity.getName(),
                 storeEntity.getPhoneNumber(),
                 storeEntity.getDescription(),

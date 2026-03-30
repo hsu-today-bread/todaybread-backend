@@ -61,21 +61,23 @@ public class StoreBossController {
     }
 
     /**
-     * 가게 등록을 처리합니다.
+     * 가게를 등록합니다 (정보 + 이미지 1~5장).
      * @param jwt JWT 토큰
-     * @param request 요청 DTO
-     * @return 응답 DTO
+     * @param request 가게 등록 요청
+     * @param images 가게 이미지 (최소 1장, 최대 5장)
+     * @return 가게 정보 + 이미지 응답
      */
-    @Operation(summary = "가게 등록")
-    @PostMapping
-    public StoreCommonResponse addStore(@AuthenticationPrincipal Jwt jwt,
-                                     @RequestBody @Valid StoreCommonRequest request) {
+    @Operation(summary = "가게 등록 (정보 + 이미지)")
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public StoreInfoResponse addStore(@AuthenticationPrincipal Jwt jwt,
+                                      @RequestPart("request") @Valid StoreCommonRequest request,
+                                      @RequestPart("images") List<MultipartFile> images) {
         Long userId = JwtRoleHelper.getUserId(jwt);
-        return storeService.addStore(userId, request);
+        return storeService.addStore(userId, request, images);
     }
     
     /**
-     * 가게 정보를 업데이트합니다.
+     * 가게 정보를 수정합니다 (이미지 제외).
      * @param jwt JWT 토큰
      * @param request 요청 DTO
      * @return 응답 DTO
@@ -89,14 +91,14 @@ public class StoreBossController {
     }
 
     /**
-     * 가게 이미지를 일괄 업로드합니다 (Replace All 패턴).
+     * 가게 이미지를 일괄 교체합니다 (Replace All 패턴, 1~5장).
      * @param jwt JWT 토큰
      * @param images 업로드할 이미지 파일 목록
      * @return 저장된 이미지 목록
      */
-    @Operation(summary = "가게 이미지 일괄 업로드")
-    @PostMapping(value = "/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public List<StoreImageResponse> uploadImages(@AuthenticationPrincipal Jwt jwt,
+    @Operation(summary = "가게 이미지 교체")
+    @PutMapping(value = "/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public List<StoreImageResponse> updateImages(@AuthenticationPrincipal Jwt jwt,
                                                   @RequestParam("images") List<MultipartFile> images) {
         Long userId = JwtRoleHelper.getUserId(jwt);
         return storeImageService.replaceImages(userId, images);

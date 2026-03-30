@@ -11,7 +11,9 @@ import com.todaybread.server.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -30,7 +32,7 @@ public class StoreService {
      * @return 가게 등록 여부
      */
     @Transactional(readOnly = true)
-    public StoreStatusResponse getStoreStatus(Long userId){
+    public StoreStatusResponse getStoreStatus(Long userId) {
         Optional<StoreEntity> storeEntityOptional = storeRepository.findByUserIdAndIsActiveTrue(userId);
 
         if (storeEntityOptional.isEmpty()) {
@@ -46,12 +48,7 @@ public class StoreService {
      */
     @Transactional(readOnly = true)
     public StoreInfoResponse getStoreInfo(Long userId) {
-        Optional<StoreEntity> storeEntityOptional = storeRepository.findByUserIdAndIsActiveTrue(userId);
-
-        if (storeEntityOptional.isEmpty()) {
-            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
-        }
-        StoreEntity storeEntity = storeEntityOptional.get();
+        StoreEntity storeEntity = getStoreByUserId(userId);
 
         StoreCommonResponse storeResponse = StoreCommonResponse.from(storeEntity);
         var images = storeImageService.getImagesByStoreId(storeEntity.getId());
@@ -61,19 +58,20 @@ public class StoreService {
 
     /**
      * 가게 등록 요청을 처리합니다.
-     * 이후 가게를 등록합니다.
+     * 가게 정보와 이미지를 함께 저장합니다.
      *
      * @param userId 유저 ID
      * @param request 요청 DTO
-     * @return 응답 DTO
+     * @param images 이미지 파일 목록 (1~5장)
+     * @return 가게 정보 + 이미지 응답
      */
     @Transactional
-    public StoreCommonResponse addStore(Long userId, StoreCommonRequest request) {
+    public StoreInfoResponse addStore(Long userId, StoreCommonRequest request, List<MultipartFile> images) {
         if (storeRepository.existsByUserIdAndIsActiveTrue(userId)) {
             throw new CustomException(ErrorCode.STORE_ALREADY_EXISTS);
         }
 
-        if (storeRepository.existsByPhoneNumber(request.phone())){
+        if (storeRepository.existsByPhoneNumber(request.phone())) {
             throw new CustomException(ErrorCode.STORE_PHONE_EXISTS);
         }
 
@@ -93,7 +91,11 @@ public class StoreService {
 
         storeRepository.save(storeEntity);
 
-        return StoreCommonResponse.from(storeEntity);
+        // 이미지 저장 (소유권 검증 생략 — 방금 생성한 가게)
+        var savedImages = storeImageService.saveImages(storeEntity.getId(), images);
+
+        StoreCommonResponse storeResponse = StoreCommonResponse.from(storeEntity);
+        return StoreInfoResponse.of(storeResponse, savedImages);
     }
 
     /**
@@ -106,12 +108,7 @@ public class StoreService {
      */
     @Transactional
     public StoreCommonResponse updateStore(Long userId, StoreCommonRequest request) {
-        Optional<StoreEntity> storeEntityOptional = storeRepository.findByUserIdAndIsActiveTrue(userId);
-
-        if (storeEntityOptional.isEmpty()) {
-            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
-        }
-        StoreEntity storeEntity = storeEntityOptional.get();
+        StoreEntity storeEntity = getStoreByUserId(userId);
         String phone = request.phone();
 
         if (!storeEntity.getPhoneNumber().equals(phone)
@@ -121,8 +118,23 @@ public class StoreService {
 
         storeEntity.updateInfo(request.name(), request.phone(), request.description(),
                 request.addressLine1(), request.addressLine2(), request.latitude(),
-                request.longitude(),request.endTime(),request.lastOrderTime(),request.orderTime());
+                request.longitude(), request.endTime(), request.lastOrderTime(), request.orderTime());
 
         return StoreCommonResponse.from(storeEntity);
+    }
+
+    /**
+     * 사장님의 활성 가게를 조회합니다.
+     *
+     * @param userId 사장님 ID
+     * @return 가게 엔티티
+     */
+    private StoreEntity getStoreByUserId(Long userId) {
+        Optional<StoreEntity> storeEntityOptional = storeRepository.findByUserIdAndIsActiveTrue(userId);
+
+        if (storeEntityOptional.isEmpty()) {
+            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
+        }
+        return storeEntityOptional.get();
     }
 }
