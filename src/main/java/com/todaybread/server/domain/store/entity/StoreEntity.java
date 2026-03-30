@@ -14,7 +14,10 @@ import java.sql.Time;
  * store 도메인 엔티티입니다.
  */
 @Entity
-@Table(name = "store")
+@Table(name = "store", indexes = {
+        @Index(name = "idx_store_lat_lng", columnList = "latitude, longitude"),
+        @Index(name = "idx_store_is_active", columnList = "is_active")
+})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class StoreEntity extends BaseEntity {
