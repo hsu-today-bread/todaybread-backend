@@ -71,7 +71,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex,
             HttpServletRequest request) {
-        if (request.getRequestURI().startsWith("/api/store")) {
+        if (request.getRequestURI().startsWith("/api/boss")) {
             return toResponse(ErrorCode.STORE_BOSS_REQUIRED);
         }
         return toResponse(ErrorCode.COMMON_ACCESS_DENIED);

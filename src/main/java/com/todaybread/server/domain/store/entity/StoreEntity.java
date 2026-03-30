@@ -25,7 +25,7 @@ public class StoreEntity extends BaseEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(name ="name", nullable = false, length = 100)
+    @Column(name = "name", nullable = false, length = 100)
     private String name;
 
     @Column(name = "phone_number", nullable = false, length = 30, unique = true)
@@ -34,7 +34,7 @@ public class StoreEntity extends BaseEntity {
     @Column(name = "description", nullable = false)
     private String description;
 
-    @Column(name = "address_line1", nullable =false, length = 200)
+    @Column(name = "address_line1", nullable = false, length = 200)
     private String addressLine1;
 
     @Column(name = "address_line2", nullable = false, length = 200)
@@ -93,7 +93,7 @@ public class StoreEntity extends BaseEntity {
     public void updateInfo(String name, String phone, String description,
                            String addressLine1, String addressLine2, BigDecimal latitude,
                            BigDecimal longitude, Time endTime, Time lastOrderTime,
-                           String orderTime){
+                           String orderTime) {
         this.name = name;
         this.phoneNumber = phone;
         this.description = description;
