@@ -10,4 +10,6 @@ import java.util.List;
  */
 public interface BreadRepository extends JpaRepository<BreadEntity, Long> {
     List<BreadEntity> findByStoreId(Long storeId);
+
+    List<BreadEntity> findByStoreIdIn(List<Long> storeIds);
 }

@@ -1,5 +1,6 @@
 package com.todaybread.server.domain.store.controller;
 
+import com.todaybread.server.domain.store.dto.StoreDetailResponse;
 import com.todaybread.server.domain.store.service.StoreService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -19,7 +20,12 @@ public class StoreController {
 
     private final StoreService storeService;
 
-    // 향후 유저용 가게 조회 API 추가 예정
-    // GET /api/store/nearby?lat=...&lng=...&radius=...
-    // GET /api/store/{storeId}
+    /**
+     * 가게 상세 정보를 조회합니다.
+     */
+    @Operation(summary = "가게 상세 조회")
+    @GetMapping("/{storeId}")
+    public StoreDetailResponse getStoreDetail(@PathVariable Long storeId) {
+        return storeService.getStoreDetail(storeId);
+    }
 }

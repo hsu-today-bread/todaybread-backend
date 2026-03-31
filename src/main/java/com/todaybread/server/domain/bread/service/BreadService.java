@@ -2,8 +2,10 @@ package com.todaybread.server.domain.bread.service;
 
 import com.todaybread.server.domain.bread.dto.BreadCommonRequest;
 import com.todaybread.server.domain.bread.dto.BreadCommonResponse;
+import com.todaybread.server.domain.bread.dto.BreadDetailResponse;
 import com.todaybread.server.domain.bread.dto.BreadStockUpdateRequest;
 import com.todaybread.server.domain.bread.dto.BreadSuccessResponse;
+import com.todaybread.server.domain.bread.dto.NearbyBreadResponse;
 import com.todaybread.server.domain.bread.entity.BreadEntity;
 import com.todaybread.server.domain.bread.repository.BreadRepository;
 import com.todaybread.server.domain.store.entity.StoreEntity;
@@ -15,10 +17,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Bread 도메인 서비스 계층입니다.
@@ -159,6 +166,132 @@ public class BreadService {
         List<BreadEntity> breadEntityList = breadRepository.findByStoreId(storeEntity.getId());
 
         return toBreadResponse(breadEntityList);
+    }
+
+    /**
+     * 빵 상세 정보를 조회합니다.
+     *
+     * @param breadId 빵 ID
+     * @return 빵 상세 응답
+     */
+    @Transactional(readOnly = true)
+    public BreadDetailResponse getBreadDetail(Long breadId) {
+        BreadEntity breadEntity = breadRepository.findById(breadId)
+                .orElseThrow(() -> new CustomException(ErrorCode.BREAD_NOT_FOUND));
+
+        StoreEntity storeEntity = storeRepository.findByIdAndIsActiveTrue(breadEntity.getStoreId())
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+
+        String imageUrl = breadImageService.getImageUrl(breadEntity.getId());
+
+        return BreadDetailResponse.of(breadEntity, storeEntity, imageUrl);
+    }
+
+    /**
+     * 유저 좌표 기준 반경 내 활성 가게의 빵 목록을 조회합니다.
+     * 가게당 대표 빵 1개(할인가 최저)를 선택하고, sort 파라미터에 따라 정렬합니다.
+     *
+     * @param lat      유저 위도
+     * @param lng      유저 경도
+     * @param radiusKm 검색 반경 (km)
+     * @param sort     정렬 기준 (none, distance, price, discount)
+     * @return 근처 빵 응답 리스트
+     */
+    @Transactional(readOnly = true)
+    public List<NearbyBreadResponse> getNearbyBreads(BigDecimal lat, BigDecimal lng,
+                                                     int radiusKm, String sort) {
+        // 1. Bounding Box 계산
+        double latDouble = lat.doubleValue();
+        double deltaLat = radiusKm / 111.0;
+        double deltaLng = radiusKm / (111.0 * Math.cos(Math.toRadians(latDouble)));
+
+        BigDecimal minLat = lat.subtract(BigDecimal.valueOf(deltaLat));
+        BigDecimal maxLat = lat.add(BigDecimal.valueOf(deltaLat));
+        BigDecimal minLng = lng.subtract(BigDecimal.valueOf(deltaLng));
+        BigDecimal maxLng = lng.add(BigDecimal.valueOf(deltaLng));
+
+        // 2. 반경 내 활성 가게 + 거리 조회 (Haversine)
+        List<Object[]> storeResults = storeRepository.findActiveStoresWithinRadius(
+                lat, lng, radiusKm, minLat, maxLat, minLng, maxLng);
+
+        if (storeResults.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 3. Object[] 파싱: store id (index 0) + distance (마지막 컬럼)
+        Map<Long, Double> storeDistanceMap = new HashMap<>();
+        List<Long> storeIds = new ArrayList<>();
+        for (Object[] row : storeResults) {
+            Long storeId = ((Number) row[0]).longValue();
+            Double distance = ((Number) row[row.length - 1]).doubleValue();
+            storeDistanceMap.put(storeId, distance);
+            storeIds.add(storeId);
+        }
+
+        // 4. StoreEntity 일괄 조회
+        List<StoreEntity> storeEntities = storeRepository.findAllById(storeIds);
+        Map<Long, StoreEntity> storeMap = new HashMap<>();
+        for (StoreEntity store : storeEntities) {
+            storeMap.put(store.getId(), store);
+        }
+
+        // 5. 해당 가게들의 빵 일괄 조회
+        List<BreadEntity> allBreads = breadRepository.findByStoreIdIn(storeIds);
+        if (allBreads.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 6. 가게별 빵 그룹핑 후 대표 빵 1개 선택 (할인가 최저)
+        Map<Long, List<BreadEntity>> breadsByStore = allBreads.stream()
+                .collect(Collectors.groupingBy(BreadEntity::getStoreId));
+
+        List<BreadEntity> representativeBreads = new ArrayList<>();
+        for (Map.Entry<Long, List<BreadEntity>> entry : breadsByStore.entrySet()) {
+            entry.getValue().stream()
+                    .min(Comparator.comparingInt(BreadEntity::getSalePrice))
+                    .ifPresent(representativeBreads::add);
+        }
+
+        // 7. 이미지 일괄 조회 (N+1 방지)
+        List<Long> breadIds = representativeBreads.stream()
+                .map(BreadEntity::getId)
+                .collect(Collectors.toList());
+        Map<Long, String> imageUrlMap = breadImageService.getImageUrls(breadIds);
+
+        // 8. NearbyBreadResponse 변환
+        List<NearbyBreadResponse> responses = new ArrayList<>();
+        for (BreadEntity bread : representativeBreads) {
+            StoreEntity store = storeMap.get(bread.getStoreId());
+            if (store == null) {
+                continue;
+            }
+            double distance = storeDistanceMap.getOrDefault(store.getId(), 0.0);
+            String imageUrl = imageUrlMap.get(bread.getId());
+            responses.add(NearbyBreadResponse.of(bread, store, imageUrl, distance));
+        }
+
+        // 9. sort 파라미터에 따라 정렬
+        switch (sort) {
+            case "distance":
+                responses.sort(Comparator.comparingDouble(NearbyBreadResponse::distance));
+                break;
+            case "price":
+                responses.sort(Comparator.comparingInt(NearbyBreadResponse::salePrice));
+                break;
+            case "discount":
+                responses.sort(Comparator.comparingDouble(
+                        (NearbyBreadResponse r) -> {
+                            if (r.originalPrice() == 0) return 0.0;
+                            return (double) (r.originalPrice() - r.salePrice()) / r.originalPrice();
+                        }).reversed());
+                break;
+            default:
+                // none: 셔플하여 특정 가게 독점 방지
+                Collections.shuffle(responses);
+                break;
+        }
+
+        return responses;
     }
 
     /*

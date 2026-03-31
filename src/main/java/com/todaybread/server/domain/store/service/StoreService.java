@@ -1,7 +1,11 @@
 package com.todaybread.server.domain.store.service;
 
+import com.todaybread.server.domain.bread.dto.BreadCommonResponse;
+import com.todaybread.server.domain.bread.service.BreadService;
 import com.todaybread.server.domain.store.dto.StoreCommonRequest;
 import com.todaybread.server.domain.store.dto.StoreCommonResponse;
+import com.todaybread.server.domain.store.dto.StoreDetailResponse;
+import com.todaybread.server.domain.store.dto.StoreImageResponse;
 import com.todaybread.server.domain.store.dto.StoreInfoResponse;
 import com.todaybread.server.domain.store.dto.StoreStatusResponse;
 import com.todaybread.server.domain.store.entity.StoreEntity;
@@ -25,6 +29,7 @@ public class StoreService {
 
     private final StoreRepository storeRepository;
     private final StoreImageService storeImageService;
+    private final BreadService breadService;
 
     /**
      * 사장님 탭 진입 상태를 조회합니다.
@@ -54,6 +59,25 @@ public class StoreService {
         var images = storeImageService.getImagesByStoreId(storeEntity.getId());
 
         return StoreInfoResponse.of(storeResponse, images);
+    }
+
+    /**
+     * 가게 상세 정보를 조회합니다.
+     * 가게 정보, 이미지 목록, 빵 목록을 한번에 반환합니다.
+     *
+     * @param storeId 가게 ID
+     * @return 가게 상세 응답
+     */
+    @Transactional(readOnly = true)
+    public StoreDetailResponse getStoreDetail(Long storeId) {
+        StoreEntity storeEntity = storeRepository.findByIdAndIsActiveTrue(storeId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+
+        StoreCommonResponse storeResponse = StoreCommonResponse.from(storeEntity);
+        List<StoreImageResponse> images = storeImageService.getImagesByStoreId(storeId);
+        List<BreadCommonResponse> breads = breadService.getBreadsFromStore(storeId);
+
+        return StoreDetailResponse.of(storeResponse, images, breads);
     }
 
     /**
