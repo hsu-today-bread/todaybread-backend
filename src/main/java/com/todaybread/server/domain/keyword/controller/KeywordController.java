@@ -1,6 +1,6 @@
 package com.todaybread.server.domain.keyword.controller;
 
-import com.todaybread.server.config.jwt.JwtRoleHelper;
+import com.todaybread.server.global.util.JwtRoleHelper;
 import com.todaybread.server.domain.keyword.dto.KeywordCreateRequest;
 import com.todaybread.server.domain.keyword.dto.KeywordCreateResponse;
 import com.todaybread.server.domain.keyword.dto.KeywordDeleteResponse;

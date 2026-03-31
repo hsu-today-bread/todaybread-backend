@@ -13,6 +13,12 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenApiConfig {
 
+    /**
+     * OpenAPI 스웨거 문서 설정을 생성합니다.
+     * JWT Bearer 인증 스키마를 포함합니다.
+     *
+     * @return OpenAPI 설정 객체
+     */
     @Bean
     public OpenAPI openAPI() {
         return new OpenAPI()

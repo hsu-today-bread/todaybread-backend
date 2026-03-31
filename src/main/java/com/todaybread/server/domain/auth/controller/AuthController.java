@@ -1,10 +1,11 @@
 package com.todaybread.server.domain.auth.controller;
 
-import com.todaybread.server.config.jwt.JwtRoleHelper;
+import com.todaybread.server.global.util.JwtRoleHelper;
 import com.todaybread.server.domain.auth.dto.LogoutResponse;
 import com.todaybread.server.domain.auth.dto.TokenReissueRequest;
 import com.todaybread.server.domain.auth.dto.TokenResponse;
 import com.todaybread.server.domain.auth.service.AuthService;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class AuthController {
      * @param request 기존 refresh 토큰
      * @return token response
      */
+    @Operation(summary = "토큰 재발급")
     @PostMapping("/reissue")
     public TokenResponse reissue(@RequestBody @Valid TokenReissueRequest request) {
         String oldRefreshToken = request.refreshToken();
@@ -38,8 +40,11 @@ public class AuthController {
 
     /**
      * 로그아웃 엔드포인트
+     *
      * @param jwt 프론트에서 유지 중이던 JWT 토큰
+     * @return 로그아웃 응답
      */
+    @Operation(summary = "로그아웃")
     @PostMapping("/logout")
     @SecurityRequirement(name = "bearerAuth")
     public LogoutResponse logout(@AuthenticationPrincipal Jwt jwt) {

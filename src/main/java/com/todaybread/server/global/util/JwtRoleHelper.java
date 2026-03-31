@@ -1,4 +1,4 @@
-package com.todaybread.server.config.jwt;
+package com.todaybread.server.global.util;
 
 import org.springframework.security.oauth2.jwt.Jwt;
 
@@ -12,10 +12,22 @@ public final class JwtRoleHelper {
     private JwtRoleHelper() {
     }
 
+    /**
+     * 인증된 JWT에서 유저 ID를 추출합니다.
+     *
+     * @param jwt 인증된 JWT 토큰
+     * @return 유저 ID
+     */
     public static Long getUserId(Jwt jwt) {
         return Long.parseLong(jwt.getSubject());
     }
 
+    /**
+     * 인증된 JWT에서 사장님 여부를 확인합니다.
+     *
+     * @param jwt 인증된 JWT 토큰
+     * @return 사장님이면 true, 아니면 false
+     */
     public static boolean isBoss(Jwt jwt) {
         return BOSS_ROLE.equals(jwt.getClaimAsString("role"));
     }

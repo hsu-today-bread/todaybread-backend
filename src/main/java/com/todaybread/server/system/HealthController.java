@@ -11,6 +11,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class HealthController {
 
+    /**
+     * 서버 상태를 확인합니다.
+     *
+     * @return 서버 상태 문자열 ("UP")
+     */
     @GetMapping("/health")
     public String getServerStatus(){
         return "UP";

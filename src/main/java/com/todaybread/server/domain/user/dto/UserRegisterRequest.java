@@ -10,12 +10,12 @@ import jakarta.validation.constraints.NotBlank;
  * @param nickname 닉네임
  * @param name 이름
  * @param password 패스워드
- * @param phone 전화번호
+ * @param phoneNumber 전화번호
  */
 public record UserRegisterRequest(
         @NotBlank @Email String email,
         @NotBlank String nickname,
         @NotBlank String name,
         @NotBlank String password,
-        @NotBlank String phone) {
+        @NotBlank String phoneNumber) {
 }

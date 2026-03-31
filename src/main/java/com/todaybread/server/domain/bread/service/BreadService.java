@@ -9,6 +9,7 @@ import com.todaybread.server.domain.bread.dto.NearbyBreadResponse;
 import com.todaybread.server.domain.bread.entity.BreadEntity;
 import com.todaybread.server.domain.bread.repository.BreadRepository;
 import com.todaybread.server.domain.store.entity.StoreEntity;
+import com.todaybread.server.domain.store.repository.StoreDistanceProjection;
 import com.todaybread.server.domain.store.repository.StoreRepository;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
@@ -211,21 +212,19 @@ public class BreadService {
         BigDecimal maxLng = lng.add(BigDecimal.valueOf(deltaLng));
 
         // 2. 반경 내 활성 가게 + 거리 조회 (Haversine)
-        List<Object[]> storeResults = storeRepository.findActiveStoresWithinRadius(
+        List<StoreDistanceProjection> storeResults = storeRepository.findActiveStoresWithinRadius(
                 lat, lng, radiusKm, minLat, maxLat, minLng, maxLng);
 
         if (storeResults.isEmpty()) {
             return Collections.emptyList();
         }
 
-        // 3. Object[] 파싱: store id (index 0) + distance (마지막 컬럼)
+        // 3. Projection에서 storeId와 distance 추출
         Map<Long, Double> storeDistanceMap = new HashMap<>();
         List<Long> storeIds = new ArrayList<>();
-        for (Object[] row : storeResults) {
-            Long storeId = ((Number) row[0]).longValue();
-            Double distance = ((Number) row[row.length - 1]).doubleValue();
-            storeDistanceMap.put(storeId, distance);
-            storeIds.add(storeId);
+        for (StoreDistanceProjection row : storeResults) {
+            storeDistanceMap.put(row.getStoreId(), row.getDistance());
+            storeIds.add(row.getStoreId());
         }
 
         // 4. StoreEntity 일괄 조회
@@ -307,12 +306,7 @@ public class BreadService {
      * @return 가게 엔티티
      */
     private StoreEntity getStoreByUserId(Long userId) {
-        Optional<StoreEntity> storeEntityOptional = storeRepository.findByUserIdAndIsActiveTrue(userId);
-
-        if (storeEntityOptional.isEmpty()) {
-            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
-        }
-        return storeEntityOptional.get();
+        return storeRepository.getByUserIdAndIsActiveTrue(userId);
     }
 
     /**

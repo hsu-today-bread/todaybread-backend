@@ -1,6 +1,6 @@
 package com.todaybread.server.domain.bread.controller;
 
-import com.todaybread.server.config.jwt.JwtRoleHelper;
+import com.todaybread.server.global.util.JwtRoleHelper;
 import com.todaybread.server.domain.bread.dto.BreadCommonRequest;
 import com.todaybread.server.domain.bread.dto.BreadCommonResponse;
 import com.todaybread.server.domain.bread.dto.BreadStockUpdateRequest;

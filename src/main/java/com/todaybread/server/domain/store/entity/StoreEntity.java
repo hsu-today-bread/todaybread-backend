@@ -34,7 +34,7 @@ public class StoreEntity extends BaseEntity {
     @Column(name = "phone_number", nullable = false, length = 30, unique = true)
     private String phoneNumber;
 
-    @Column(name = "description", nullable = false)
+    @Column(name = "description", nullable = false, length = 255)
     private String description;
 
     @Column(name = "address_line1", nullable = false, length = 200)
@@ -55,7 +55,7 @@ public class StoreEntity extends BaseEntity {
     @Column(name = "last_order_time", nullable = false)
     private Time lastOrderTime;
 
-    @Column(name = "order_time", nullable = false)
+    @Column(name = "order_time", nullable = false, length = 255)
     private String orderTime;
 
     @Column(name = "is_active", nullable = false)

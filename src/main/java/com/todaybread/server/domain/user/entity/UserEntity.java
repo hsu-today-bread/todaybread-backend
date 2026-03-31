@@ -35,7 +35,7 @@ public class UserEntity extends BaseEntity {
     private String nickname;
 
     @Column(name = "phone_number", nullable = false, unique = true, length = 30)
-    private String phone;
+    private String phoneNumber;
 
     @Column(name = "is_boss", nullable = false)
     private boolean boss = false;
@@ -46,15 +46,15 @@ public class UserEntity extends BaseEntity {
      * @param passwordHash 해쉬된 비밀번호
      * @param name 이름
      * @param nickname 닉네임
-     * @param phone 핸드폰 넘버
+     * @param phoneNumber 핸드폰 넘버
      */
     @Builder
-    private UserEntity(String email, String passwordHash, String name, String nickname, String phone){
+    private UserEntity(String email, String passwordHash, String name, String nickname, String phoneNumber){
         this.email = email;
         this.name = name;
         this.passwordHash = passwordHash;
         this.nickname = nickname;
-        this.phone = phone;
+        this.phoneNumber = phoneNumber;
     }
 
     /**
@@ -78,12 +78,12 @@ public class UserEntity extends BaseEntity {
      *
      * @param name 이름
      * @param nickname 닉네임
-     * @param phone 전화번호
+     * @param phoneNumber 전화번호
      */
-    public void updateProfile(String name, String nickname, String phone){
+    public void updateProfile(String name, String nickname, String phoneNumber){
         this.name = name;
         this.nickname = nickname;
-        this.phone = phone;
+        this.phoneNumber = phoneNumber;
     }
 
 }

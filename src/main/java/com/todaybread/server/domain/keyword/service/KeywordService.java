@@ -57,8 +57,10 @@ public class KeywordService {
     /**
      * 키워드를 등록합니다.
      * 정규화 → KeywordEntity 조회/생성 → 중복 검증 → 개수 검증 → UserKeywordEntity 생성
-     * @param userId 유저 아이디
+     *
+     * @param userId  유저 아이디
      * @param request 요청 DTO
+     * @return 등록 결과 응답
      */
     @Transactional
     public KeywordCreateResponse createKeyword(Long userId, KeywordCreateRequest request) {

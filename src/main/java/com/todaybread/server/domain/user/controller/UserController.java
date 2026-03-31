@@ -1,7 +1,8 @@
 package com.todaybread.server.domain.user.controller;
 
-import com.todaybread.server.config.jwt.JwtRoleHelper;
+import com.todaybread.server.global.util.JwtRoleHelper;
 import com.todaybread.server.domain.user.dto.*;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import com.todaybread.server.domain.user.service.UserService;
 import jakarta.validation.Valid;
@@ -30,6 +31,7 @@ public class UserController {
      * @param request 회원 정보가 있는 DTO
      * @return 회원 가입 상태에 대한 응답
      */
+    @Operation(summary = "회원가입")
     @PostMapping("/register")
     public UserRegisterResponse registerUser(@RequestBody @Valid UserRegisterRequest request) {
         return userService.register(request);
@@ -41,6 +43,7 @@ public class UserController {
      * @param request 로그인 정보 DTO
      * @return 로그인 응답
      */
+    @Operation(summary = "로그인")
     @PostMapping("/login")
     public UserLoginResponse loginUser(@RequestBody @Valid UserLoginRequest request){
         return userService.login(request);
@@ -52,6 +55,7 @@ public class UserController {
      * @param value 이메일
      * @return 중복 여부 체크 후, true, false 반환
      */
+    @Operation(summary = "이메일 중복 확인")
     @GetMapping("/exist/email")
     public boolean checkEmail(@RequestParam("value") @NotBlank @Email String value) {
         return userService.checkEmail(value);
@@ -63,6 +67,7 @@ public class UserController {
      * @param value 닉네임
      * @return true/false
      */
+    @Operation(summary = "닉네임 중복 확인")
     @GetMapping("/exist/nickname")
     public boolean checkNickname(@RequestParam("value") @NotBlank String value) {
         return userService.checkNickname(value);
@@ -74,6 +79,7 @@ public class UserController {
      * @param value 전화번호
      * @return true/false
      */
+    @Operation(summary = "전화번호 중복 확인")
     @GetMapping("/exist/phone")
     public boolean checkPhone(@RequestParam("value") @NotBlank String value) {
         return userService.checkPhone(value);
@@ -86,6 +92,7 @@ public class UserController {
      * @param request 요청 DTO
      * @return 응답 DTO
      */
+    @Operation(summary = "프로필 수정")
     @PatchMapping("/update-profile")
     @SecurityRequirement(name = "bearerAuth")
     public UserUpdateResponse updateProfile(@AuthenticationPrincipal Jwt jwt,
@@ -102,6 +109,7 @@ public class UserController {
      * @param request 요청 DTO
      * @return 응답 DTO
      */
+    @Operation(summary = "사장님 등록")
     @PostMapping("/boss-approve")
     @SecurityRequirement(name = "bearerAuth")
     public UserBossResponse approveBoss(@AuthenticationPrincipal Jwt jwt,

@@ -39,6 +39,8 @@ public enum ErrorCode {
     COMMON_INTERNAL_SERVER_ERROR("COMMON_003", "서버 내부 오류입니다.", HttpStatus.INTERNAL_SERVER_ERROR),
     COMMON_ACCESS_DENIED("COMMON_004", "접근 권한이 없습니다.", HttpStatus.FORBIDDEN),
     COMMON_FILE_SIZE_EXCEEDED("COMMON_005", "파일 크기는 5MB를 초과할 수 없습니다.", HttpStatus.BAD_REQUEST),
+    COMMON_IMAGE_INVALID_TYPE("COMMON_006", "허용되지 않는 파일 형식입니다. (jpeg, png, gif, webp만 가능)", HttpStatus.BAD_REQUEST),
+    COMMON_IMAGE_STORAGE_FAILED("COMMON_007", "파일 저장에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
 
     /**
      * ============================
@@ -48,7 +50,7 @@ public enum ErrorCode {
     USER_REGISTER_EMAIL_ALREADY_EXISTS("USER_001", "이미 가입한 이메일입니다.", HttpStatus.CONFLICT),
     USER_REGISTER_PHONE_ALREADY_EXISTS("USER_002", "이미 가입한 전화번호입니다.", HttpStatus.CONFLICT),
     USER_REGISTER_NICKNAME_ALREADY_EXISTS("USER_003", "이미 사용중인 닉네임입니다.", HttpStatus.CONFLICT),
-    USER_LOGIN_USER_NOT_FOUND("USER_004", "사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    USER_NOT_FOUND("USER_004", "사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     USER_RECOVERY_NOT_FOUND("USER_005","가입 정보를 찾을 수 없습니다.",HttpStatus.NOT_FOUND),
     USER_BOSS_ALREADY_APPROVED("USER_006", "이미 사장님 등록이 완료된 상태입니다.", HttpStatus.CONFLICT),
     USER_BOSS_NUMBER_FORMAT_ERROR("USER_007","사업자 번호 형식이 맞지 않습니다.",HttpStatus.BAD_REQUEST),
@@ -81,9 +83,6 @@ public enum ErrorCode {
      */
     STORE_IMAGE_NOT_FOUND("STORE_IMAGE_001", "이미지를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     STORE_IMAGE_LIMIT_EXCEEDED("STORE_IMAGE_002", "이미지는 최대 5장까지 등록할 수 있습니다.", HttpStatus.BAD_REQUEST),
-    STORE_IMAGE_INVALID_TYPE("STORE_IMAGE_004", "허용되지 않는 파일 형식입니다. (jpeg, png, gif, webp만 가능)", HttpStatus.BAD_REQUEST),
-    STORE_IMAGE_SIZE_EXCEEDED("STORE_IMAGE_005", "파일 크기는 5MB를 초과할 수 없습니다.", HttpStatus.BAD_REQUEST),
-    STORE_IMAGE_STORAGE_FAILED("STORE_IMAGE_007", "파일 저장에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
 
     /**
      * ============================
@@ -101,10 +100,6 @@ public enum ErrorCode {
     BREAD_ACCESS_DENIED("BREAD_002","상품에 접근할 권한이 없습니다.", HttpStatus.FORBIDDEN),
     BREAD_INSUFFICIENT_QUANTITY("BREAD_003","해당 상품의 재고가 부족합니다.",HttpStatus.CONFLICT),
     BREAD_INVALID_PRICE("BREAD_004", "가격은 0원 이상이여야 합니다.", HttpStatus.BAD_REQUEST),
-
-    BREAD_IMAGE_INVALID_TYPE("BREAD_IMAGE_001","허용되지 않는 파일 형식입니다. (jpeg, png, gif, webp만 가능)",HttpStatus.BAD_REQUEST),
-    BREAD_IMAGE_SIZE_EXCEEDED("BREAD_IMAGE_002","파일 크기는 5MB를 넘을 수 없습니다.", HttpStatus.BAD_REQUEST),
-    BREAD_IMAGE_STORAGE_FAILED("BREAD_IMAGE_003","파일 저장에 실패했습니다.",HttpStatus.INTERNAL_SERVER_ERROR),
 
     /**
      * ============================

@@ -78,6 +78,15 @@ public class BreadEntity extends BaseEntity {
         this.remainingQuantity = number;
     }
 
+    /**
+     * 빵 정보를 업데이트합니다.
+     *
+     * @param name              이름
+     * @param originalPrice     원가
+     * @param salePrice         할인가
+     * @param remainingQuantity 재고
+     * @param description       설명
+     */
     public void updateInfo(String name, int originalPrice,
                                   int salePrice, int remainingQuantity,
                                   String description) {

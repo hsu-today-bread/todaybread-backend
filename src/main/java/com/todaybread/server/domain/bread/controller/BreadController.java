@@ -31,6 +31,12 @@ public class BreadController {
 
     /**
      * 유저 좌표 기준 반경 내 근처 빵 목록을 조회합니다.
+     *
+     * @param lat    유저 위도
+     * @param lng    유저 경도
+     * @param radius 검색 반경 (km, 기본값 1)
+     * @param sort   정렬 기준 (none, distance, price, discount)
+     * @return 근처 빵 응답 리스트
      */
     @Operation(summary = "근처 빵 목록 조회")
     @GetMapping("/nearby")
@@ -44,6 +50,9 @@ public class BreadController {
 
     /**
      * 빵 상세 정보를 조회합니다.
+     *
+     * @param breadId 빵 ID
+     * @return 빵 상세 응답
      */
     @Operation(summary = "빵 상세 조회")
     @GetMapping("/detail/{breadId}")
@@ -53,6 +62,9 @@ public class BreadController {
 
     /**
      * 특정 가게의 메뉴 목록을 조회합니다.
+     *
+     * @param storeId 가게 ID
+     * @return 빵 공통 응답 리스트
      */
     @Operation(summary = "가게 메뉴 목록 조회")
     @GetMapping("/{storeId}")

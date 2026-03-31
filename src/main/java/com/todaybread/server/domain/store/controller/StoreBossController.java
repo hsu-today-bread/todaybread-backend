@@ -1,6 +1,6 @@
 package com.todaybread.server.domain.store.controller;
 
-import com.todaybread.server.config.jwt.JwtRoleHelper;
+import com.todaybread.server.global.util.JwtRoleHelper;
 import com.todaybread.server.domain.store.dto.StoreCommonRequest;
 import com.todaybread.server.domain.store.dto.StoreCommonResponse;
 import com.todaybread.server.domain.store.dto.StoreImageResponse;

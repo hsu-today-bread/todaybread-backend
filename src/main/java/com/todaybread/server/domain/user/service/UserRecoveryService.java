@@ -52,7 +52,7 @@ public class UserRecoveryService {
      */
     @Transactional(readOnly = true)
     public UserFindEmailResponse findEmailByPhone(String phone) {
-        Optional<UserEntity> userEntityOptional = userRepository.findByPhone(phone);
+        Optional<UserEntity> userEntityOptional = userRepository.findByPhoneNumber(phone);
         if (userEntityOptional.isEmpty()) {
             throw new CustomException(ErrorCode.USER_RECOVERY_NOT_FOUND);
         }
@@ -72,7 +72,7 @@ public class UserRecoveryService {
      */
     @Transactional(readOnly = true)
     public VerifyIdentityResponse verifyIdentity(String phone, String email) {
-        Optional<UserEntity> userEntityOptional = userRepository.findByPhoneAndEmail(phone, email);
+        Optional<UserEntity> userEntityOptional = userRepository.findByPhoneNumberAndEmail(phone, email);
 
         if (userEntityOptional.isEmpty()) {
             throw new CustomException(ErrorCode.USER_RECOVERY_NOT_FOUND);

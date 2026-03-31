@@ -81,7 +81,7 @@ public class AuthService {
 
         Optional<UserEntity> userEntityOptional = userRepository.findById(userId);
         if (userEntityOptional.isEmpty()) {
-            throw new CustomException(ErrorCode.USER_LOGIN_USER_NOT_FOUND);
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
         }
 
         UserEntity userEntity = userEntityOptional.get();

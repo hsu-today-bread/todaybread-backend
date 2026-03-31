@@ -1,11 +1,11 @@
-package com.todaybread.server.domain.store.controller;
+package com.todaybread.server.domain.wishlist.controller;
 
-import com.todaybread.server.config.jwt.JwtRoleHelper;
+import com.todaybread.server.global.util.JwtRoleHelper;
 import com.todaybread.server.domain.keyword.dto.KeywordResponse;
 import com.todaybread.server.domain.keyword.service.KeywordService;
 import com.todaybread.server.domain.store.dto.FavouriteStoreResponse;
-import com.todaybread.server.domain.store.dto.WishlistResponse;
 import com.todaybread.server.domain.store.service.FavouriteStoreService;
+import com.todaybread.server.domain.wishlist.dto.WishlistResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
