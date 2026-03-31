@@ -215,6 +215,7 @@ public class StoreImageService {
         }
 
         storeImageRepository.deleteByStoreId(storeId);
+        storeImageRepository.flush();
 
         if (!filesToDelete.isEmpty()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
