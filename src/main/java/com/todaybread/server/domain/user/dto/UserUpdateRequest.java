@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 
 /**
  * 유저 정보 업데이트를 위한 요청 DTO
+ *
  * @param nickname 닉네임
  * @param name 이름
  * @param phoneNumber 휴대전화번호

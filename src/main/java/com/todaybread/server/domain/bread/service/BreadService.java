@@ -18,6 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.todaybread.server.domain.bread.dto.BreadSortType;
+
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -195,12 +197,12 @@ public class BreadService {
      * @param lat      유저 위도
      * @param lng      유저 경도
      * @param radiusKm 검색 반경 (km)
-     * @param sort     정렬 기준 (none, distance, price, discount)
+     * @param sortType 정렬 기준
      * @return 근처 빵 응답 리스트
      */
     @Transactional(readOnly = true)
     public List<NearbyBreadResponse> getNearbyBreads(BigDecimal lat, BigDecimal lng,
-                                                     int radiusKm, String sort) {
+                                                     int radiusKm, BreadSortType sortType) {
         // 1. Bounding Box 계산
         double latDouble = lat.doubleValue();
         double deltaLat = radiusKm / 111.0;
@@ -269,15 +271,15 @@ public class BreadService {
             responses.add(NearbyBreadResponse.of(bread, store, imageUrl, distance));
         }
 
-        // 9. sort 파라미터에 따라 정렬
-        switch (sort) {
-            case "distance":
+        // 9. sortType에 따라 정렬
+        switch (sortType) {
+            case DISTANCE:
                 responses.sort(Comparator.comparingDouble(NearbyBreadResponse::distance));
                 break;
-            case "price":
+            case PRICE:
                 responses.sort(Comparator.comparingInt(NearbyBreadResponse::salePrice));
                 break;
-            case "discount":
+            case DISCOUNT:
                 responses.sort(Comparator.comparingDouble(
                         (NearbyBreadResponse r) -> {
                             if (r.originalPrice() == 0) return 0.0;
@@ -285,7 +287,6 @@ public class BreadService {
                         }).reversed());
                 break;
             default:
-                // none: 셔플하여 특정 가게 독점 방지
                 Collections.shuffle(responses);
                 break;
         }

@@ -27,6 +27,7 @@ public class AuthController {
 
     /**
      * 토큰 재발급을 위한 엔드 포인트입니다.
+     *
      * @param request 기존 refresh 토큰
      * @return token response
      */

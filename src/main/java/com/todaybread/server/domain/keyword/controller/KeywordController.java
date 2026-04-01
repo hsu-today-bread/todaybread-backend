@@ -30,6 +30,7 @@ public class KeywordController {
 
     /**
      * 키워드를 등록합니다.
+     *
      * @param jwt 인증된 사용자의 JWT 토큰
      * @param request 키워드 등록 요청 DTO
      * @return 등록 결과 응답
@@ -43,6 +44,7 @@ public class KeywordController {
 
     /**
      * 인증된 사용자의 키워드 목록을 조회합니다.
+     *
      * @param jwt 인증된 사용자의 JWT 토큰
      * @return 키워드 응답 DTO 목록
      */
@@ -54,6 +56,7 @@ public class KeywordController {
 
     /**
      * 키워드를 삭제합니다.
+     *
      * @param jwt 인증된 사용자의 JWT 토큰
      * @param userKeywordId 삭제할 사용자-키워드 관계 ID
      * @return 삭제 결과 응답

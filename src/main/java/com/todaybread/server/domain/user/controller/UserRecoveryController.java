@@ -22,6 +22,7 @@ public class UserRecoveryController {
 
     /**
      * 전화번호 이메일 찾기를 담당하는 컨트롤러입니다.
+     *
      * @param phone 전화번호
      * @return 응답 DTO
      */
@@ -33,6 +34,7 @@ public class UserRecoveryController {
 
     /**
      * 본인 확인을 담당합니다.
+     *
      * @param phone 전화번호
      * @param email 이메일
      * @return 응답 DTO
@@ -46,6 +48,7 @@ public class UserRecoveryController {
 
     /**
      * 비밀번호 재설정을 담당합니다.
+     *
      * @param request 요청 DTO
      * @return 응답 DTO
      */

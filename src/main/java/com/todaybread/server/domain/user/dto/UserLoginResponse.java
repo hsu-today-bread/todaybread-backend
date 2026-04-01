@@ -23,6 +23,7 @@ public record UserLoginResponse(
 
     /**
      * 헬퍼 메서드입니다.
+     *
      * @param accessToken  발급된 access token
      * @param refreshToken 발급된 refresh token
      * @param user         유저 엔티티

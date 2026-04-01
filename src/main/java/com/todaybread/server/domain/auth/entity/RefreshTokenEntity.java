@@ -36,6 +36,7 @@ public class RefreshTokenEntity extends BaseEntity {
 
     /**
      * 빌더 메서드입니다.
+     *
      * @param userId 유저 ID
      * @param token refresh 토큰
      * @param expiresAt 만료일

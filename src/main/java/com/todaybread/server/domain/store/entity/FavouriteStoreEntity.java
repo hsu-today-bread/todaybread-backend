@@ -11,7 +11,9 @@ import lombok.NoArgsConstructor;
  * favourite_store 테이블 엔티티를 정의합니다.
  */
 @Entity
-@Table(name = "favourite_store")
+@Table(name = "favourite_store",
+        uniqueConstraints = @UniqueConstraint(name = "uk_favourite_store_user_id_store_id",
+                columnNames = {"user_id", "store_id"}))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class FavouriteStoreEntity extends BaseEntity {

@@ -97,8 +97,9 @@ public class FavouriteStoreService {
                 .map(FavouriteStoreEntity::getStoreId)
                 .toList();
 
-        // 가게 일괄 조회
+        // 가게 일괄 조회 (활성 가게만 포함)
         Map<Long, StoreEntity> storeMap = storeRepository.findAllById(storeIds).stream()
+                .filter(StoreEntity::getIsActive)
                 .collect(Collectors.toMap(StoreEntity::getId, Function.identity()));
 
         // 빵 일괄 조회 → 가게별 그룹핑

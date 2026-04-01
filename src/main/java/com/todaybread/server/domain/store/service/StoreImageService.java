@@ -151,7 +151,8 @@ public class StoreImageService {
     }
 
     /**
-     * 이미지 엔티티에서 응답으로 변환합니다
+     * 이미지 엔티티에서 응답으로 변환합니다.
+     *
      * @param images 이미지 엔티티 리스트
      * @return 이미지 응답 형식
      */

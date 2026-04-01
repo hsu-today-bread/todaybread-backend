@@ -42,6 +42,7 @@ public class UserEntity extends BaseEntity {
 
     /**
      * 빌더 입니다. ID를 제외하고 모든 정보를 받습니다.
+     *
      * @param email 이메일
      * @param passwordHash 해쉬된 비밀번호
      * @param name 이름

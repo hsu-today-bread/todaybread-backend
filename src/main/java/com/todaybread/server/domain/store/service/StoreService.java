@@ -32,6 +32,7 @@ public class StoreService {
 
     /**
      * 사장님 탭 진입 상태를 조회합니다.
+     *
      * @param userId 유저 ID
      * @return 가게 등록 여부
      */
@@ -45,6 +46,7 @@ public class StoreService {
 
     /**
      * 매장 정보와 이미지를 한번에 조회합니다.
+     *
      * @param userId 유저 ID
      * @return 매장 정보 + 이미지 목록
      */

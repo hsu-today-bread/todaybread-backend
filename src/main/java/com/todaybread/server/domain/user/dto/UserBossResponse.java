@@ -2,6 +2,7 @@ package com.todaybread.server.domain.user.dto;
 
 /**
  * 사업자 등록 후 응답 DTo
+ *
  * @param success true
  * @param message 메세지
  * @param accessToken access token

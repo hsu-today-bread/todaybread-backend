@@ -82,6 +82,7 @@ public class StoreEntity extends BaseEntity {
 
     /**
      * 가게 정보를 업데이트 시 사용합니다.
+     *
      * @param name 이름
      * @param phone 전화번호
      * @param description 설명

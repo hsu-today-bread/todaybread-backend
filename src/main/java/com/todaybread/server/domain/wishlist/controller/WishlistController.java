@@ -31,6 +31,7 @@ public class WishlistController {
 
     /**
      * 찜목록을 통합 조회합니다 (키워드 + 단골 가게).
+     *
      * @param jwt 인증된 사용자의 JWT 토큰
      * @return 키워드 목록과 단골 가게 목록을 포함한 찜목록 응답
      */

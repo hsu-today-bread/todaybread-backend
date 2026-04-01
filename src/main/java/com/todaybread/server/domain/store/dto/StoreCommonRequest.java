@@ -10,6 +10,7 @@ import java.sql.Time;
 
 /**
  * 가게 등록을 위한 DTO
+ *
  * @param name 가게 이름
  * @param phone 가게 전화번호
  * @param description 가게 설명

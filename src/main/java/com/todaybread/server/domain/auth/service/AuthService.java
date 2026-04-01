@@ -99,6 +99,7 @@ public class AuthService {
 
     /**
      * 로그아웃을 처리합니다. 로그아웃 시, 리프레쉬 토큰을 지웁니다.
+     *
      * @param userId 유저 ID
      */
     @Transactional

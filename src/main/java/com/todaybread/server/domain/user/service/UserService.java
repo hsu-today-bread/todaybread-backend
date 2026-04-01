@@ -29,6 +29,7 @@ public class UserService {
 
     /**
      * 이메일 중복 여부를 체크합니다.
+     *
      * @param email 이메일
      * @return true/false
      */
@@ -39,6 +40,7 @@ public class UserService {
 
     /**
      * 전화번호 중복 여부를 체크합니다.
+     *
      * @param phone 전화번호
      * @return true/false
      */
@@ -49,6 +51,7 @@ public class UserService {
 
     /**
      * 닉네임 중복 여부를 체크합니다.
+     *
      * @param nickname 닉네임
      * @return true/false
      */

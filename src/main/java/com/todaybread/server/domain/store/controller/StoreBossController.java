@@ -38,6 +38,7 @@ public class StoreBossController {
 
     /**
      * 사장님 탭 진입 상태를 조회합니다.
+     *
      * @param jwt JWT 토큰
      * @return 사장님 여부 및 가게 등록 여부
      */
@@ -50,6 +51,7 @@ public class StoreBossController {
 
     /**
      * 사장님이 매장 정보와 이미지를 한번에 조회합니다.
+     *
      * @param jwt JWT 토큰
      * @return 매장 정보 + 이미지 목록
      */
@@ -62,6 +64,7 @@ public class StoreBossController {
 
     /**
      * 가게를 등록합니다 (정보 + 이미지 1~5장).
+     *
      * @param jwt JWT 토큰
      * @param request 가게 등록 요청
      * @param images 가게 이미지 (최소 1장, 최대 5장)
@@ -78,6 +81,7 @@ public class StoreBossController {
     
     /**
      * 가게 정보를 수정합니다 (이미지 제외).
+     *
      * @param jwt JWT 토큰
      * @param request 요청 DTO
      * @return 응답 DTO
@@ -92,6 +96,7 @@ public class StoreBossController {
 
     /**
      * 가게 이미지를 일괄 교체합니다 (Replace All 패턴, 1~5장).
+     *
      * @param jwt JWT 토큰
      * @param images 업로드할 이미지 파일 목록
      * @return 저장된 이미지 목록

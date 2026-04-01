@@ -2,6 +2,7 @@ package com.todaybread.server.domain.bread.controller;
 
 import com.todaybread.server.domain.bread.dto.BreadCommonResponse;
 import com.todaybread.server.domain.bread.dto.BreadDetailResponse;
+import com.todaybread.server.domain.bread.dto.BreadSortType;
 import com.todaybread.server.domain.bread.dto.NearbyBreadResponse;
 import com.todaybread.server.domain.bread.service.BreadService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -45,7 +46,7 @@ public class BreadController {
             @RequestParam @DecimalMin("-180") @DecimalMax("180") BigDecimal lng,
             @RequestParam(defaultValue = "1") @Min(1) @Max(10) int radius,
             @RequestParam(defaultValue = "none") String sort) {
-        return breadService.getNearbyBreads(lat, lng, radius, sort);
+        return breadService.getNearbyBreads(lat, lng, radius, BreadSortType.from(sort));
     }
 
     /**

@@ -36,6 +36,7 @@ public class SecurityConfig {
 
     /**
      * 사용자 비밀번호 인코딩을 실시합니다.
+     *
      * @return 인코더
      */
     @Bean
@@ -59,6 +60,7 @@ public class SecurityConfig {
     /**
      * JWT role claim을 Spring Security 권한으로 변환합니다.
      * 예: role=BOSS -> ROLE_BOSS
+     *
      * @return JWT 인증 변환기
      */
     @Bean
@@ -74,6 +76,7 @@ public class SecurityConfig {
 
     /**
      * 역할 계층을 정의합니다.
+     *
      * @return 역할 계층
      */
     @Bean
@@ -83,6 +86,7 @@ public class SecurityConfig {
 
     /**
      * 메서드 보안 표현식에 역할 계층을 적용합니다.
+     *
      * @param roleHierarchy 역할 계층
      * @return 메서드 보안 표현식 핸들러
      */
