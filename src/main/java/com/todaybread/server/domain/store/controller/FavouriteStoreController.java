@@ -1,6 +1,6 @@
 package com.todaybread.server.domain.store.controller;
 
-import com.todaybread.server.config.jwt.JwtRoleHelper;
+import com.todaybread.server.global.util.JwtRoleHelper;
 import com.todaybread.server.domain.store.dto.FavouriteStoreResponse;
 import com.todaybread.server.domain.store.dto.FavouriteStoreToggleRequest;
 import com.todaybread.server.domain.store.dto.FavouriteStoreToggleResponse;
@@ -30,6 +30,7 @@ public class FavouriteStoreController {
 
     /**
      * 단골 가게를 토글합니다 (추가/해제).
+     *
      * @param jwt 인증된 사용자의 JWT 토큰
      * @param request 단골 가게 토글 요청 DTO
      * @return 토글 결과 응답
@@ -44,6 +45,7 @@ public class FavouriteStoreController {
 
     /**
      * 인증된 사용자의 단골 가게 목록을 조회합니다.
+     *
      * @param jwt 인증된 사용자의 JWT 토큰
      * @return 단골 가게 응답 DTO 목록
      */

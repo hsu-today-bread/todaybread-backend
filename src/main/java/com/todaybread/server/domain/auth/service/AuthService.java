@@ -10,6 +10,7 @@ import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserRepository userRepository;
     private final JwtTokenService jwtTokenService;
+    private final PasswordEncoder passwordEncoder;
 
     @Value("${jwt.refresh-token-expiration}")
     private long refreshTokenExpiration;
@@ -39,32 +41,52 @@ public class AuthService {
      */
     @Transactional
     public void saveRefreshToken(Long userId, String token) {
+        String tokenHash = passwordEncoder.encode(token);
         LocalDateTime expiresAt = LocalDateTime.now().plusNanos(refreshTokenExpiration * 1_000_000);
         Optional<RefreshTokenEntity> refreshTokenOptional = refreshTokenRepository.findByUserId(userId);
 
         if (refreshTokenOptional.isPresent()) {
             RefreshTokenEntity entity = refreshTokenOptional.get();
-            entity.renew(token, expiresAt);
+            entity.renew(tokenHash, expiresAt);
             return;
         }
 
         RefreshTokenEntity entity = RefreshTokenEntity.builder()
                 .userId(userId)
-                .token(token)
+                .token(tokenHash)
                 .expiresAt(expiresAt)
                 .build();
         refreshTokenRepository.save(entity);
     }
 
     /**
-     * refresh 토큰을 받고 검증 후, 조회 후 새 토큰을 생성 해서 리턴합니다.
+     * refresh 토큰을 받고 검증 후, 새 토큰을 생성해서 리턴합니다.
+     * DB에는 해시된 토큰이 저장되어 있으므로, JWT에서 userId를 추출한 뒤
+     * 해당 유저의 저장된 해시와 비교합니다.
      *
      * @param oldRefreshToken 기존 사용자가 가지고 있던 refresh 토큰
      * @return 새 토큰 쌍 TokenResponse
      */
     @Transactional
     public TokenResponse reissue(String oldRefreshToken){
-        Optional<RefreshTokenEntity> refreshTokenOptional = refreshTokenRepository.findByToken(oldRefreshToken);
+        // JWT 파싱 및 서명 검증 후 userId 추출
+        Long userId;
+        try {
+            com.nimbusds.jwt.SignedJWT signedJWT = com.nimbusds.jwt.SignedJWT.parse(oldRefreshToken);
+            com.nimbusds.jose.crypto.MACVerifier verifier =
+                    new com.nimbusds.jose.crypto.MACVerifier(jwtTokenService.getSecretKey());
+            if (!signedJWT.verify(verifier)) {
+                throw new CustomException(ErrorCode.AUTH_REFRESH_TOKEN_INVALID);
+            }
+            userId = Long.parseLong(signedJWT.getJWTClaimsSet().getSubject());
+        } catch (CustomException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new CustomException(ErrorCode.AUTH_REFRESH_TOKEN_INVALID);
+        }
+
+        // userId로 저장된 해시 토큰 조회
+        Optional<RefreshTokenEntity> refreshTokenOptional = refreshTokenRepository.findByUserId(userId);
 
         if (refreshTokenOptional.isEmpty()) {
             throw new CustomException(ErrorCode.AUTH_REFRESH_TOKEN_INVALID);
@@ -72,16 +94,19 @@ public class AuthService {
 
         RefreshTokenEntity refreshTokenEntity = refreshTokenOptional.get();
 
+        // 해시 비교
+        if (!passwordEncoder.matches(oldRefreshToken, refreshTokenEntity.getToken())) {
+            throw new CustomException(ErrorCode.AUTH_REFRESH_TOKEN_INVALID);
+        }
+
         if (refreshTokenEntity.getExpiresAt().isBefore(LocalDateTime.now())) {
             refreshTokenRepository.delete(refreshTokenEntity);
             throw new CustomException(ErrorCode.AUTH_REFRESH_TOKEN_INVALID);
         }
 
-        Long userId = refreshTokenEntity.getUserId();
-
         Optional<UserEntity> userEntityOptional = userRepository.findById(userId);
         if (userEntityOptional.isEmpty()) {
-            throw new CustomException(ErrorCode.USER_LOGIN_USER_NOT_FOUND);
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
         }
 
         UserEntity userEntity = userEntityOptional.get();
@@ -99,6 +124,7 @@ public class AuthService {
 
     /**
      * 로그아웃을 처리합니다. 로그아웃 시, 리프레쉬 토큰을 지웁니다.
+     *
      * @param userId 유저 ID
      */
     @Transactional

@@ -22,6 +22,9 @@ public class StoreController {
 
     /**
      * 가게 상세 정보를 조회합니다.
+     *
+     * @param storeId 가게 ID
+     * @return 가게 상세 응답
      */
     @Operation(summary = "가게 상세 조회")
     @GetMapping("/{storeId}")

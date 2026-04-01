@@ -2,15 +2,34 @@ package com.todaybread.server.domain.store.repository;
 
 import com.todaybread.server.domain.store.entity.StoreImageEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
 /**
  * 가게 이미지 리포지터리입니다.
  */
-@Repository
 public interface StoreImageRepository extends JpaRepository<StoreImageEntity, Long> {
+
+    /**
+     * 가게 ID로 이미지 목록을 표시 순서 오름차순으로 조회합니다.
+     *
+     * @param storeId 가게 ID
+     * @return 이미지 엔티티 목록 (displayOrder 오름차순)
+     */
     List<StoreImageEntity> findByStoreIdOrderByDisplayOrderAsc(Long storeId);
+
+    /**
+     * 여러 가게 ID에 해당하는 이미지를 표시 순서 오름차순으로 일괄 조회합니다.
+     *
+     * @param storeIds 가게 ID 목록
+     * @return 이미지 엔티티 목록 (displayOrder 오름차순)
+     */
+    List<StoreImageEntity> findByStoreIdInOrderByStoreIdAscDisplayOrderAsc(List<Long> storeIds);
+
+    /**
+     * 가게 ID에 해당하는 이미지를 모두 삭제합니다.
+     *
+     * @param storeId 가게 ID
+     */
     void deleteByStoreId(Long storeId);
 }

@@ -10,7 +10,7 @@ import com.todaybread.server.domain.user.entity.UserEntity;
  * @param refreshToken refresh token
  * @param nickname     닉네임
  * @param name         이름
- * @param phone        전화번호
+ * @param phoneNumber  전화번호
  */
 public record UserLoginResponse(
         boolean success,
@@ -18,11 +18,12 @@ public record UserLoginResponse(
         String refreshToken,
         String nickname,
         String name,
-        String phone
+        String phoneNumber
 ) {
 
     /**
      * 헬퍼 메서드입니다.
+     *
      * @param accessToken  발급된 access token
      * @param refreshToken 발급된 refresh token
      * @param user         유저 엔티티
@@ -35,7 +36,7 @@ public record UserLoginResponse(
                 refreshToken,
                 user.getNickname(),
                 user.getName(),
-                user.getPhone()
+                user.getPhoneNumber()
         );
     }
 }

@@ -1,5 +1,7 @@
 package com.todaybread.server.domain.bread.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -20,4 +22,12 @@ public record BreadCommonRequest(
         @Min(0) int remainingQuantity,
         @NotBlank @Size(max = 255) String description
 ) {
+    /**
+     * 할인가는 원가 이하여야 합니다.
+     */
+    @JsonIgnore
+    @AssertTrue(message = "할인가는 원가 이하여야 합니다.")
+    public boolean isSalePriceValid() {
+        return salePrice <= originalPrice;
+    }
 }

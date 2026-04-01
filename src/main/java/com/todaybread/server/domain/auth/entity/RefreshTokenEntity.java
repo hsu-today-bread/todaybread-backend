@@ -28,7 +28,7 @@ public class RefreshTokenEntity extends BaseEntity {
     @Column(name = "user_id", nullable = false, unique = true)
     private Long userId;
 
-    @Column(name = "token", nullable = false, unique = true, length = 512)
+    @Column(name = "token", nullable = false, length = 512)
     private String token;
 
     @Column(name = "expires_at", nullable = false)
@@ -36,6 +36,7 @@ public class RefreshTokenEntity extends BaseEntity {
 
     /**
      * 빌더 메서드입니다.
+     *
      * @param userId 유저 ID
      * @param token refresh 토큰
      * @param expiresAt 만료일
@@ -47,6 +48,12 @@ public class RefreshTokenEntity extends BaseEntity {
         this.expiresAt = expiresAt;
     }
 
+    /**
+     * 리프레쉬 토큰을 갱신합니다.
+     *
+     * @param token     새 토큰 값
+     * @param expiresAt 새 만료일
+     */
     public void renew(String token, LocalDateTime expiresAt) {
         this.token = token;
         this.expiresAt = expiresAt;

@@ -5,6 +5,7 @@ import com.todaybread.server.domain.bread.repository.BreadImageRepository;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
 import com.todaybread.server.global.storage.FileStorage;
+import com.todaybread.server.global.storage.ImageValidationHelper;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +20,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 /**
  * Bread Image를 처리합니다.
@@ -30,11 +30,6 @@ import java.util.Set;
 public class BreadImageService {
 
     private static final Logger log = LoggerFactory.getLogger(BreadImageService.class);
-
-    private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
-            "image/jpeg", "image/png", "image/webp", "image/jpg", "image/gif"
-    );
-    private static final long MAX_FILE_SIZE = 5L * 1024 * 1024; // 5MB
 
     private final FileStorage fileStorage;
     private final BreadImageRepository breadImageRepository;
@@ -51,7 +46,7 @@ public class BreadImageService {
     @Transactional
     public String uploadImage(Long breadId, MultipartFile file) {
         // 1. 파일 검증
-        validateFile(file);
+        ImageValidationHelper.validateFile(file, ErrorCode.COMMON_IMAGE_INVALID_TYPE, ErrorCode.COMMON_FILE_SIZE_EXCEEDED);
 
         // 2. 새 이미지 먼저 저장 (파일시스템)
         String storedFilename;
@@ -59,7 +54,7 @@ public class BreadImageService {
             storedFilename = fileStorage.store(file, "bread", breadId);
         } catch (Exception e) {
             log.error("이미지 저장 실패: breadId={}", breadId, e);
-            throw new CustomException(ErrorCode.BREAD_IMAGE_STORAGE_FAILED);
+            throw new CustomException(ErrorCode.COMMON_IMAGE_STORAGE_FAILED);
         }
 
         // 롤백 시 새 파일 정리 (orphan file 방지)
@@ -172,21 +167,4 @@ public class BreadImageService {
         }
     }
 
-    /**
-     * 업로드 파일을 검증합니다.
-     */
-    private void validateFile(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new CustomException(ErrorCode.COMMON_REQUEST_VALIDATION_FAILED);
-        }
-
-        String contentType = file.getContentType();
-        if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType)) {
-            throw new CustomException(ErrorCode.BREAD_IMAGE_INVALID_TYPE);
-        }
-
-        if (file.getSize() > MAX_FILE_SIZE) {
-            throw new CustomException(ErrorCode.BREAD_IMAGE_SIZE_EXCEEDED);
-        }
-    }
 }

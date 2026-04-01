@@ -9,6 +9,7 @@ import com.todaybread.server.domain.bread.dto.NearbyBreadResponse;
 import com.todaybread.server.domain.bread.entity.BreadEntity;
 import com.todaybread.server.domain.bread.repository.BreadRepository;
 import com.todaybread.server.domain.store.entity.StoreEntity;
+import com.todaybread.server.domain.store.repository.StoreDistanceProjection;
 import com.todaybread.server.domain.store.repository.StoreRepository;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
@@ -16,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+
+import com.todaybread.server.domain.bread.dto.BreadSortType;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -194,16 +197,17 @@ public class BreadService {
      * @param lat      유저 위도
      * @param lng      유저 경도
      * @param radiusKm 검색 반경 (km)
-     * @param sort     정렬 기준 (none, distance, price, discount)
+     * @param sortType 정렬 기준
      * @return 근처 빵 응답 리스트
      */
     @Transactional(readOnly = true)
     public List<NearbyBreadResponse> getNearbyBreads(BigDecimal lat, BigDecimal lng,
-                                                     int radiusKm, String sort) {
-        // 1. Bounding Box 계산
+                                                     int radiusKm, BreadSortType sortType) {
+        // 1. Bounding Box 계산 (극단 위도에서 cos(lat)=0 방어)
         double latDouble = lat.doubleValue();
         double deltaLat = radiusKm / 111.0;
-        double deltaLng = radiusKm / (111.0 * Math.cos(Math.toRadians(latDouble)));
+        double cosLat = Math.cos(Math.toRadians(latDouble));
+        double deltaLng = (Math.abs(cosLat) < 1e-10) ? 180.0 : radiusKm / (111.0 * cosLat);
 
         BigDecimal minLat = lat.subtract(BigDecimal.valueOf(deltaLat));
         BigDecimal maxLat = lat.add(BigDecimal.valueOf(deltaLat));
@@ -211,21 +215,19 @@ public class BreadService {
         BigDecimal maxLng = lng.add(BigDecimal.valueOf(deltaLng));
 
         // 2. 반경 내 활성 가게 + 거리 조회 (Haversine)
-        List<Object[]> storeResults = storeRepository.findActiveStoresWithinRadius(
+        List<StoreDistanceProjection> storeResults = storeRepository.findActiveStoresWithinRadius(
                 lat, lng, radiusKm, minLat, maxLat, minLng, maxLng);
 
         if (storeResults.isEmpty()) {
             return Collections.emptyList();
         }
 
-        // 3. Object[] 파싱: store id (index 0) + distance (마지막 컬럼)
+        // 3. Projection에서 storeId와 distance 추출
         Map<Long, Double> storeDistanceMap = new HashMap<>();
         List<Long> storeIds = new ArrayList<>();
-        for (Object[] row : storeResults) {
-            Long storeId = ((Number) row[0]).longValue();
-            Double distance = ((Number) row[row.length - 1]).doubleValue();
-            storeDistanceMap.put(storeId, distance);
-            storeIds.add(storeId);
+        for (StoreDistanceProjection row : storeResults) {
+            storeDistanceMap.put(row.getStoreId(), row.getDistance());
+            storeIds.add(row.getStoreId());
         }
 
         // 4. StoreEntity 일괄 조회
@@ -241,15 +243,24 @@ public class BreadService {
             return Collections.emptyList();
         }
 
-        // 6. 가게별 빵 그룹핑 후 대표 빵 1개 선택 (할인가 최저)
+        // 6. 가게별 빵 그룹핑 후 대표 빵 1개 선택 (재고 있는 빵 우선, 할인가 최저)
         Map<Long, List<BreadEntity>> breadsByStore = allBreads.stream()
                 .collect(Collectors.groupingBy(BreadEntity::getStoreId));
 
         List<BreadEntity> representativeBreads = new ArrayList<>();
         for (Map.Entry<Long, List<BreadEntity>> entry : breadsByStore.entrySet()) {
-            entry.getValue().stream()
-                    .min(Comparator.comparingInt(BreadEntity::getSalePrice))
-                    .ifPresent(representativeBreads::add);
+            List<BreadEntity> breads = entry.getValue();
+            // 재고 있는 빵 중 할인가 최저 우선, 없으면 전체에서 할인가 최저
+            Optional<BreadEntity> inStock = breads.stream()
+                    .filter(b -> b.getRemainingQuantity() > 0)
+                    .min(Comparator.comparingInt(BreadEntity::getSalePrice));
+            if (inStock.isPresent()) {
+                representativeBreads.add(inStock.get());
+            } else {
+                breads.stream()
+                        .min(Comparator.comparingInt(BreadEntity::getSalePrice))
+                        .ifPresent(representativeBreads::add);
+            }
         }
 
         // 7. 이미지 일괄 조회 (N+1 방지)
@@ -270,15 +281,15 @@ public class BreadService {
             responses.add(NearbyBreadResponse.of(bread, store, imageUrl, distance));
         }
 
-        // 9. sort 파라미터에 따라 정렬
-        switch (sort) {
-            case "distance":
+        // 9. sortType에 따라 정렬
+        switch (sortType) {
+            case DISTANCE:
                 responses.sort(Comparator.comparingDouble(NearbyBreadResponse::distance));
                 break;
-            case "price":
+            case PRICE:
                 responses.sort(Comparator.comparingInt(NearbyBreadResponse::salePrice));
                 break;
-            case "discount":
+            case DISCOUNT:
                 responses.sort(Comparator.comparingDouble(
                         (NearbyBreadResponse r) -> {
                             if (r.originalPrice() == 0) return 0.0;
@@ -286,8 +297,7 @@ public class BreadService {
                         }).reversed());
                 break;
             default:
-                // none: 셔플하여 특정 가게 독점 방지
-                Collections.shuffle(responses);
+                responses.sort(Comparator.comparingDouble(NearbyBreadResponse::distance));
                 break;
         }
 
@@ -307,12 +317,8 @@ public class BreadService {
      * @return 가게 엔티티
      */
     private StoreEntity getStoreByUserId(Long userId) {
-        Optional<StoreEntity> storeEntityOptional = storeRepository.findByUserIdAndIsActiveTrue(userId);
-
-        if (storeEntityOptional.isEmpty()) {
-            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
-        }
-        return storeEntityOptional.get();
+        return storeRepository.findByUserIdAndIsActiveTrue(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
     }
 
     /**

@@ -9,6 +9,7 @@ import java.sql.Time;
 
 /**
  * 가게 관련 공통 응답을 위해 사용됩니다.
+ *
  * @param id 가게 ID
  * @param name 이름
  * @param phone 전화번호

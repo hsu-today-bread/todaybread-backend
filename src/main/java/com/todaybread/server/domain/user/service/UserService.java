@@ -29,6 +29,7 @@ public class UserService {
 
     /**
      * 이메일 중복 여부를 체크합니다.
+     *
      * @param email 이메일
      * @return true/false
      */
@@ -39,16 +40,18 @@ public class UserService {
 
     /**
      * 전화번호 중복 여부를 체크합니다.
+     *
      * @param phone 전화번호
      * @return true/false
      */
     @Transactional(readOnly = true)
     public boolean checkPhone(String phone) {
-        return userRepository.existsByPhone(phone);
+        return userRepository.existsByPhoneNumber(phone);
     }
 
     /**
      * 닉네임 중복 여부를 체크합니다.
+     *
      * @param nickname 닉네임
      * @return true/false
      */
@@ -68,7 +71,7 @@ public class UserService {
         if (checkEmail(request.email())){
             throw new CustomException(ErrorCode.USER_REGISTER_EMAIL_ALREADY_EXISTS);
         }
-        if (checkPhone(request.phone())){
+        if (checkPhone(request.phoneNumber())){
             throw new CustomException(ErrorCode.USER_REGISTER_PHONE_ALREADY_EXISTS);
         }
         if (checkNickname(request.nickname())){
@@ -84,7 +87,7 @@ public class UserService {
                 .passwordHash(passwordHash)
                 .name(request.name())
                 .nickname(request.nickname())
-                .phone(request.phone())
+                .phoneNumber(request.phoneNumber())
                 .build();
 
         userRepository.save(userEntity);
@@ -103,12 +106,12 @@ public class UserService {
 
         Optional<UserEntity> userEntityOptional = userRepository.findByEmail(request.email());
         if (userEntityOptional.isEmpty()) {
-            throw new CustomException(ErrorCode.USER_LOGIN_USER_NOT_FOUND);
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
         }
 
         UserEntity userEntity = userEntityOptional.get();
         if (!passwordEncoder.matches(request.password(), userEntity.getPasswordHash())) {
-            throw new CustomException(ErrorCode.USER_LOGIN_USER_NOT_FOUND);
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
         }
 
         Long userId = userEntity.getId();
@@ -135,25 +138,25 @@ public class UserService {
         Optional<UserEntity> userEntityOptional = userRepository.findById(userId);
 
         if (userEntityOptional.isEmpty()) {
-            throw new CustomException(ErrorCode.USER_LOGIN_USER_NOT_FOUND);
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
         }
 
         UserEntity userEntity = userEntityOptional.get();
 
         String nickname = request.nickname();
         String name = request.name();
-        String phone = request.phone();
+        String phoneNumber = request.phoneNumber();
 
         if (!userEntity.getNickname().equals(nickname) && checkNickname(nickname)) {
             throw new CustomException(ErrorCode.USER_REGISTER_NICKNAME_ALREADY_EXISTS);
         }
-        if (!userEntity.getPhone().equals(phone) && checkPhone(phone)) {
+        if (!userEntity.getPhoneNumber().equals(phoneNumber) && checkPhone(phoneNumber)) {
             throw new CustomException(ErrorCode.USER_REGISTER_PHONE_ALREADY_EXISTS);
         }
 
-        userEntity.updateProfile(name, nickname, phone);
+        userEntity.updateProfile(name, nickname, phoneNumber);
 
-        return UserUpdateResponse.ok(nickname, name, phone);
+        return UserUpdateResponse.ok(nickname, name, phoneNumber);
     }
 
     /**
@@ -170,7 +173,7 @@ public class UserService {
         Optional<UserEntity> userEntityOptional = userRepository.findById(userId);
 
         if (userEntityOptional.isEmpty()) {
-            throw new CustomException(ErrorCode.USER_LOGIN_USER_NOT_FOUND);
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
         }
         UserEntity userEntity = userEntityOptional.get();
 

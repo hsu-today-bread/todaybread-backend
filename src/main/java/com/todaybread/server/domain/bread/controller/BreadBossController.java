@@ -1,6 +1,6 @@
 package com.todaybread.server.domain.bread.controller;
 
-import com.todaybread.server.config.jwt.JwtRoleHelper;
+import com.todaybread.server.global.util.JwtRoleHelper;
 import com.todaybread.server.domain.bread.dto.BreadCommonRequest;
 import com.todaybread.server.domain.bread.dto.BreadCommonResponse;
 import com.todaybread.server.domain.bread.dto.BreadStockUpdateRequest;
@@ -35,6 +35,7 @@ public class BreadBossController {
 
     /**
      * 내 가게의 목록을 조회합니다.
+     *
      * @param jwt JWT 토큰
      * @return 빵 공통 응답 리스트
      */
@@ -47,6 +48,7 @@ public class BreadBossController {
 
     /**
      * 메뉴를 등록합니다.
+     *
      * @param jwt JWT 토큰
      * @param request 빵 추가 요청
      * @param image 빵 이미지
@@ -63,6 +65,7 @@ public class BreadBossController {
 
     /**
      * 메뉴 정보를 업데이트합니다 (이미지 포함 가능).
+     *
      * @param jwt JWT 토큰
      * @param breadId 빵 ID
      * @param request 업데이트 요청
@@ -81,6 +84,7 @@ public class BreadBossController {
 
     /**
      * 메뉴를 품절 처리 및 품절 해제 처리, 메뉴의 재고를 설정합니다.
+     *
      * @param jwt JWT 토큰
      * @param breadId 빵 ID
      * @param request 재고 수정 요청
@@ -97,6 +101,7 @@ public class BreadBossController {
 
     /**
      * 메뉴를 삭제합니다.
+     *
      * @param jwt JWT 토큰
      * @param breadId 빵 ID
      * @return 성공 응답

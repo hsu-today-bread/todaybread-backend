@@ -8,6 +8,7 @@ import com.todaybread.server.domain.store.repository.StoreRepository;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
 import com.todaybread.server.global.storage.FileStorage;
+import com.todaybread.server.global.storage.ImageValidationHelper;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +21,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 /**
  * 가게 이미지 서비스 계층입니다.
@@ -31,12 +31,6 @@ import java.util.Set;
 public class StoreImageService {
 
     private static final Logger log = LoggerFactory.getLogger(StoreImageService.class);
-
-    private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
-            "image/jpeg", "image/png", "image/webp", "image/jpg", "image/gif"
-    );
-    private static final long MAX_FILE_SIZE = 5L * 1024 * 1024; // 5MB
-    private static final int MAX_FILE_COUNT = 5;
 
     private final StoreRepository storeRepository;
     private final StoreImageRepository storeImageRepository;
@@ -61,7 +55,7 @@ public class StoreImageService {
         StoreEntity store = storeOptional.get();
 
         // 2. 파일 검증
-        validateFiles(files);
+        ImageValidationHelper.validateFiles(files, 5, ErrorCode.STORE_IMAGE_LIMIT_EXCEEDED, ErrorCode.COMMON_IMAGE_INVALID_TYPE, ErrorCode.COMMON_FILE_SIZE_EXCEEDED);
 
         // 3. 기존 이미지 삭제
         deleteExistingImages(store.getId());
@@ -93,7 +87,7 @@ public class StoreImageService {
             if (e instanceof CustomException) {
                 throw e;
             }
-            throw new CustomException(ErrorCode.STORE_IMAGE_STORAGE_FAILED);
+            throw new CustomException(ErrorCode.COMMON_IMAGE_STORAGE_FAILED);
         }
 
         // 5. 응답 반환
@@ -110,7 +104,7 @@ public class StoreImageService {
      */
     @Transactional
     public List<StoreImageResponse> saveImages(Long storeId, List<MultipartFile> files) {
-        validateFiles(files);
+        ImageValidationHelper.validateFiles(files, 5, ErrorCode.STORE_IMAGE_LIMIT_EXCEEDED, ErrorCode.COMMON_IMAGE_INVALID_TYPE, ErrorCode.COMMON_FILE_SIZE_EXCEEDED);
 
         List<String> storedFilenames = new ArrayList<>();
         List<StoreImageEntity> savedEntities;
@@ -136,7 +130,7 @@ public class StoreImageService {
             if (e instanceof CustomException) {
                 throw e;
             }
-            throw new CustomException(ErrorCode.STORE_IMAGE_STORAGE_FAILED);
+            throw new CustomException(ErrorCode.COMMON_IMAGE_STORAGE_FAILED);
         }
 
         return getStoreImageResponses(savedEntities);
@@ -157,7 +151,8 @@ public class StoreImageService {
     }
 
     /**
-     * 이미지 엔티티에서 응답으로 변환합니다
+     * 이미지 엔티티에서 응답으로 변환합니다.
+     *
      * @param images 이미지 엔티티 리스트
      * @return 이미지 응답 형식
      */
@@ -172,34 +167,6 @@ public class StoreImageService {
             responses.add(response);
         }
         return responses;
-    }
-
-    /**
-     * 업로드 파일 목록을 검증합니다.
-     */
-    private void validateFiles(List<MultipartFile> files) {
-        if (files == null || files.isEmpty()) {
-            throw new CustomException(ErrorCode.COMMON_REQUEST_VALIDATION_FAILED);
-        }
-
-        if (files.size() > MAX_FILE_COUNT) {
-            throw new CustomException(ErrorCode.STORE_IMAGE_LIMIT_EXCEEDED);
-        }
-
-        for (MultipartFile file : files) {
-            if (file.isEmpty()) {
-                throw new CustomException(ErrorCode.COMMON_REQUEST_VALIDATION_FAILED);
-            }
-
-            String contentType = file.getContentType();
-            if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType)) {
-                throw new CustomException(ErrorCode.STORE_IMAGE_INVALID_TYPE);
-            }
-
-            if (file.getSize() > MAX_FILE_SIZE) {
-                throw new CustomException(ErrorCode.STORE_IMAGE_SIZE_EXCEEDED);
-            }
-        }
     }
 
     /**

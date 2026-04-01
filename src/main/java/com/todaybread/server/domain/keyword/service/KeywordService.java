@@ -35,6 +35,7 @@ public class KeywordService {
     /**
      * 키워드 텍스트를 정규화합니다.
      * 앞뒤 공백을 제거하고, 영어 문자가 포함된 경우 소문자로 변환합니다.
+     *
      * @param text 키워드
      * @return 정규화된 키워드
      */
@@ -57,8 +58,10 @@ public class KeywordService {
     /**
      * 키워드를 등록합니다.
      * 정규화 → KeywordEntity 조회/생성 → 중복 검증 → 개수 검증 → UserKeywordEntity 생성
-     * @param userId 유저 아이디
+     *
+     * @param userId  유저 아이디
      * @param request 요청 DTO
+     * @return 등록 결과 응답
      */
     @Transactional
     public KeywordCreateResponse createKeyword(Long userId, KeywordCreateRequest request) {
@@ -112,6 +115,7 @@ public class KeywordService {
 
     /**
      * 사용자의 키워드 목록을 조회합니다.
+     *
      * @param userId 사용자 ID
      * @return 키워드 응답 DTO 목록 (등록된 키워드가 없으면 빈 목록)
      */
@@ -127,6 +131,7 @@ public class KeywordService {
 
     /**
      * 키워드를 삭제합니다.
+     *
      * @param userId 사용자 ID
      * @param userKeywordId 삭제할 UserKeyword ID
      * @return 삭제 결과 응답

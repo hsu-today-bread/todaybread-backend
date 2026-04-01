@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Min;
 
 /**
  * 재고 수정 요청 DTO
+ *
  * @param remainingQuantity 수정된 재고
  */
 public record BreadStockUpdateRequest(

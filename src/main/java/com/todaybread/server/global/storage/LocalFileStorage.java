@@ -67,7 +67,7 @@ public class LocalFileStorage implements FileStorage {
             return storedFilename;
         } catch (IOException e) {
             log.error("파일 저장 실패: {}", storedFilename, e);
-            throw new CustomException(ErrorCode.STORE_IMAGE_STORAGE_FAILED);
+            throw new CustomException(ErrorCode.COMMON_IMAGE_STORAGE_FAILED);
         }
     }
 

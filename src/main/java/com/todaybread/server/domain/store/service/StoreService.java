@@ -18,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
  * store 도메인 서비스 계층입니다.
@@ -33,27 +32,28 @@ public class StoreService {
 
     /**
      * 사장님 탭 진입 상태를 조회합니다.
+     *
      * @param userId 유저 ID
      * @return 가게 등록 여부
      */
     @Transactional(readOnly = true)
     public StoreStatusResponse getStoreStatus(Long userId) {
-        Optional<StoreEntity> storeEntityOptional = storeRepository.findByUserIdAndIsActiveTrue(userId);
-
-        if (storeEntityOptional.isEmpty()) {
-            return StoreStatusResponse.notRegistered();
+        if (storeRepository.existsByUserIdAndIsActiveTrue(userId)) {
+            return StoreStatusResponse.registered();
         }
-        return StoreStatusResponse.registered();
+        return StoreStatusResponse.notRegistered();
     }
 
     /**
      * 매장 정보와 이미지를 한번에 조회합니다.
+     *
      * @param userId 유저 ID
      * @return 매장 정보 + 이미지 목록
      */
     @Transactional(readOnly = true)
     public StoreInfoResponse getStoreInfo(Long userId) {
-        StoreEntity storeEntity = getStoreByUserId(userId);
+        StoreEntity storeEntity = storeRepository.findByUserIdAndIsActiveTrue(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
 
         StoreCommonResponse storeResponse = StoreCommonResponse.from(storeEntity);
         var images = storeImageService.getImagesByStoreId(storeEntity.getId());
@@ -132,7 +132,8 @@ public class StoreService {
      */
     @Transactional
     public StoreCommonResponse updateStore(Long userId, StoreCommonRequest request) {
-        StoreEntity storeEntity = getStoreByUserId(userId);
+        StoreEntity storeEntity = storeRepository.findByUserIdAndIsActiveTrue(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
         String phone = request.phone();
 
         if (!storeEntity.getPhoneNumber().equals(phone)
@@ -145,20 +146,5 @@ public class StoreService {
                 request.longitude(), request.endTime(), request.lastOrderTime(), request.orderTime());
 
         return StoreCommonResponse.from(storeEntity);
-    }
-
-    /**
-     * 사장님의 활성 가게를 조회합니다.
-     *
-     * @param userId 사장님 ID
-     * @return 가게 엔티티
-     */
-    private StoreEntity getStoreByUserId(Long userId) {
-        Optional<StoreEntity> storeEntityOptional = storeRepository.findByUserIdAndIsActiveTrue(userId);
-
-        if (storeEntityOptional.isEmpty()) {
-            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
-        }
-        return storeEntityOptional.get();
     }
 }

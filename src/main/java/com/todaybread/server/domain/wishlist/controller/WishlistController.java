@@ -1,11 +1,11 @@
-package com.todaybread.server.domain.store.controller;
+package com.todaybread.server.domain.wishlist.controller;
 
-import com.todaybread.server.config.jwt.JwtRoleHelper;
+import com.todaybread.server.global.util.JwtRoleHelper;
 import com.todaybread.server.domain.keyword.dto.KeywordResponse;
 import com.todaybread.server.domain.keyword.service.KeywordService;
 import com.todaybread.server.domain.store.dto.FavouriteStoreResponse;
-import com.todaybread.server.domain.store.dto.WishlistResponse;
 import com.todaybread.server.domain.store.service.FavouriteStoreService;
+import com.todaybread.server.domain.wishlist.dto.WishlistResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +31,7 @@ public class WishlistController {
 
     /**
      * 찜목록을 통합 조회합니다 (키워드 + 단골 가게).
+     *
      * @param jwt 인증된 사용자의 JWT 토큰
      * @return 키워드 목록과 단골 가게 목록을 포함한 찜목록 응답
      */

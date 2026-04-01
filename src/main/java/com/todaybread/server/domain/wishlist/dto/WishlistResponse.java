@@ -1,6 +1,7 @@
-package com.todaybread.server.domain.store.dto;
+package com.todaybread.server.domain.wishlist.dto;
 
 import com.todaybread.server.domain.keyword.dto.KeywordResponse;
+import com.todaybread.server.domain.store.dto.FavouriteStoreResponse;
 
 import java.util.List;
 
