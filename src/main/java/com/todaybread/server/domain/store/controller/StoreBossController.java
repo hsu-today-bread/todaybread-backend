@@ -104,7 +104,7 @@ public class StoreBossController {
     @Operation(summary = "가게 이미지 교체")
     @PutMapping(value = "/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public List<StoreImageResponse> updateImages(@AuthenticationPrincipal Jwt jwt,
-                                                  @RequestParam("images") List<MultipartFile> images) {
+                                                  @RequestPart("images") List<MultipartFile> images) {
         Long userId = JwtRoleHelper.getUserId(jwt);
         return storeImageService.replaceImages(userId, images);
     }

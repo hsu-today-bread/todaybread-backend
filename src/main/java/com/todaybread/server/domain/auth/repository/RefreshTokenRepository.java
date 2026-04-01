@@ -11,14 +11,6 @@ import java.util.Optional;
 public interface RefreshTokenRepository extends JpaRepository<RefreshTokenEntity, Long> {
 
     /**
-     * 리프레쉬 토큰 값으로 엔티티를 조회합니다.
-     *
-     * @param refreshToken 리프레쉬 토큰 문자열
-     * @return 토큰 엔티티 (없으면 빈 Optional)
-     */
-    Optional<RefreshTokenEntity> findByToken(String refreshToken);
-
-    /**
      * 유저 ID로 리프레쉬 토큰 엔티티를 조회합니다.
      *
      * @param userId 유저 ID

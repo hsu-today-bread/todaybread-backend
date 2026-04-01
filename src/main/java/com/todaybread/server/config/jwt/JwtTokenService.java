@@ -37,6 +37,10 @@ public class JwtTokenService {
             @Value("${jwt.secret}") String secret,
             @Value("${jwt.access-token-expiration}") long accessTokenExpiration,
             @Value("${jwt.refresh-token-expiration}") long refreshTokenExpiration) {
+        if (secret == null || secret.isBlank() || secret.startsWith("my-super-secret")) {
+            throw new IllegalStateException("JWT 시크릿이 설정되지 않았거나 기본값을 사용 중입니다. "
+                    + "환경변수 JWT_SECRET을 반드시 설정하세요.");
+        }
         byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
         this.secretKey = new SecretKeySpec(keyBytes, "HmacSHA256");
         this.accessTokenExpiration = accessTokenExpiration;

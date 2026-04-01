@@ -19,6 +19,14 @@ public interface StoreImageRepository extends JpaRepository<StoreImageEntity, Lo
     List<StoreImageEntity> findByStoreIdOrderByDisplayOrderAsc(Long storeId);
 
     /**
+     * 여러 가게 ID에 해당하는 이미지를 표시 순서 오름차순으로 일괄 조회합니다.
+     *
+     * @param storeIds 가게 ID 목록
+     * @return 이미지 엔티티 목록 (displayOrder 오름차순)
+     */
+    List<StoreImageEntity> findByStoreIdInOrderByStoreIdAscDisplayOrderAsc(List<Long> storeIds);
+
+    /**
      * 가게 ID에 해당하는 이미지를 모두 삭제합니다.
      *
      * @param storeId 가게 ID

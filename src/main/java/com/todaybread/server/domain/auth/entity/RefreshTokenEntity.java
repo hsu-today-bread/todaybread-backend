@@ -28,7 +28,7 @@ public class RefreshTokenEntity extends BaseEntity {
     @Column(name = "user_id", nullable = false, unique = true)
     private Long userId;
 
-    @Column(name = "token", nullable = false, unique = true, length = 512)
+    @Column(name = "token", nullable = false, length = 512)
     private String token;
 
     @Column(name = "expires_at", nullable = false)

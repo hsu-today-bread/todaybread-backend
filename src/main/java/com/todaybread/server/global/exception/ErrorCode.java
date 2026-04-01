@@ -41,6 +41,7 @@ public enum ErrorCode {
     COMMON_FILE_SIZE_EXCEEDED("COMMON_005", "파일 크기는 5MB를 초과할 수 없습니다.", HttpStatus.BAD_REQUEST),
     COMMON_IMAGE_INVALID_TYPE("COMMON_006", "허용되지 않는 파일 형식입니다. (jpeg, png, gif, webp만 가능)", HttpStatus.BAD_REQUEST),
     COMMON_IMAGE_STORAGE_FAILED("COMMON_007", "파일 저장에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
+    COMMON_DUPLICATE_CONFLICT("COMMON_008", "중복된 데이터가 존재합니다.", HttpStatus.CONFLICT),
 
     /**
      * ============================

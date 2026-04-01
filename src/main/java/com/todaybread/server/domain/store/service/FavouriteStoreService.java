@@ -5,13 +5,15 @@ import com.todaybread.server.domain.bread.repository.BreadRepository;
 import com.todaybread.server.domain.store.dto.FavouriteStoreResponse;
 import com.todaybread.server.domain.store.dto.FavouriteStoreToggleRequest;
 import com.todaybread.server.domain.store.dto.FavouriteStoreToggleResponse;
-import com.todaybread.server.domain.store.dto.StoreImageResponse;
 import com.todaybread.server.domain.store.entity.FavouriteStoreEntity;
 import com.todaybread.server.domain.store.entity.StoreEntity;
+import com.todaybread.server.domain.store.entity.StoreImageEntity;
 import com.todaybread.server.domain.store.repository.FavouriteStoreRepository;
+import com.todaybread.server.domain.store.repository.StoreImageRepository;
 import com.todaybread.server.domain.store.repository.StoreRepository;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
+import com.todaybread.server.global.storage.FileStorage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -38,7 +40,8 @@ public class FavouriteStoreService {
     private final FavouriteStoreRepository favouriteStoreRepository;
     private final StoreRepository storeRepository;
     private final BreadRepository breadRepository;
-    private final StoreImageService storeImageService;
+    private final StoreImageRepository storeImageRepository;
+    private final FileStorage fileStorage;
 
     /**
      * 단골 가게를 토글합니다 (추가/해제).
@@ -137,19 +140,18 @@ public class FavouriteStoreService {
     /**
      * 가게 ID 목록에 대해 대표 이미지 URL 맵을 구성합니다.
      * displayOrder=0인 이미지의 URL을 반환하며, 없으면 해당 가게는 맵에 포함되지 않습니다.
+     * 일괄 조회로 N+1 쿼리를 방지합니다.
      *
      * @param storeIds 가게 ID 목록
      * @return storeId → 대표 이미지 URL 매핑
      */
     private Map<Long, String> buildPrimaryImageMap(List<Long> storeIds) {
+        List<StoreImageEntity> allImages = storeImageRepository
+                .findByStoreIdInOrderByStoreIdAscDisplayOrderAsc(storeIds);
         Map<Long, String> result = new java.util.HashMap<>();
-        for (Long storeId : storeIds) {
-            List<StoreImageResponse> images = storeImageService.getImagesByStoreId(storeId);
-            for (StoreImageResponse image : images) {
-                if (image.displayOrder() == 0) {
-                    result.put(storeId, image.imageUrl());
-                    break;
-                }
+        for (StoreImageEntity image : allImages) {
+            if (image.getDisplayOrder() == 0) {
+                result.put(image.getStoreId(), fileStorage.getFileUrl(image.getStoredFilename()));
             }
         }
         return result;

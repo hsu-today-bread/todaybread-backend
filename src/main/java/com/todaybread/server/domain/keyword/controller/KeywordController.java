@@ -6,6 +6,7 @@ import com.todaybread.server.domain.keyword.dto.KeywordCreateResponse;
 import com.todaybread.server.domain.keyword.dto.KeywordDeleteResponse;
 import com.todaybread.server.domain.keyword.dto.KeywordResponse;
 import com.todaybread.server.domain.keyword.service.KeywordService;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ public class KeywordController {
      * @param request 키워드 등록 요청 DTO
      * @return 등록 결과 응답
      */
+    @Operation(summary = "키워드 등록")
     @PostMapping("/add")
     public KeywordCreateResponse createKeyword(@AuthenticationPrincipal Jwt jwt,
             @RequestBody @Valid KeywordCreateRequest request) {
@@ -48,6 +50,7 @@ public class KeywordController {
      * @param jwt 인증된 사용자의 JWT 토큰
      * @return 키워드 응답 DTO 목록
      */
+    @Operation(summary = "내 키워드 목록 조회")
     @GetMapping("/get-keyword")
     public List<KeywordResponse> getMyKeywords(@AuthenticationPrincipal Jwt jwt) {
         Long userId = JwtRoleHelper.getUserId(jwt);
@@ -61,6 +64,7 @@ public class KeywordController {
      * @param userKeywordId 삭제할 사용자-키워드 관계 ID
      * @return 삭제 결과 응답
      */
+    @Operation(summary = "키워드 삭제")
     @DeleteMapping("/delete/{userKeywordId}")
     public KeywordDeleteResponse deleteKeyword(@AuthenticationPrincipal Jwt jwt,
             @PathVariable Long userKeywordId) {

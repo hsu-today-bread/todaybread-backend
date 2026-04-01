@@ -3,13 +3,18 @@ package com.todaybread.server.global.exception;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 /**
  * 런타임 에러, 특정 에러 상황 발생 시, 해당 에러의 처리를 담당합니다.
@@ -66,6 +71,54 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * JSON 파싱 실패, 잘못된 요청 본문 형식 등을 처리합니다.
+     * 예: 잘못된 JSON, Time 역직렬화 실패 등
+     *
+     * @param ex 메시지 읽기 실패 예외
+     * @return 400 BAD_REQUEST + COMMON_001
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleHttpMessageNotReadable(HttpMessageNotReadableException ex) {
+        return toResponse(ErrorCode.COMMON_REQUEST_VALIDATION_FAILED);
+    }
+
+    /**
+     * PathVariable 또는 RequestParam 타입 변환 실패 시 처리합니다.
+     * 예: Long 파라미터에 문자열 전달
+     *
+     * @param ex 타입 불일치 예외
+     * @return 400 BAD_REQUEST + COMMON_001
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        return toResponse(ErrorCode.COMMON_REQUEST_VALIDATION_FAILED);
+    }
+
+    /**
+     * 필수 요청 파라미터 누락 시 처리합니다.
+     * 예: @RequestParam 필수 파라미터 미전달
+     *
+     * @param ex 파라미터 누락 예외
+     * @return 400 BAD_REQUEST + COMMON_001
+     */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingParam(MissingServletRequestParameterException ex) {
+        return toResponse(ErrorCode.COMMON_REQUEST_VALIDATION_FAILED);
+    }
+
+    /**
+     * Multipart 요청에서 필수 파트 누락 시 처리합니다.
+     * 예: @RequestPart("images") 파트 미전달
+     *
+     * @param ex 파트 누락 예외
+     * @return 400 BAD_REQUEST + COMMON_001
+     */
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ErrorResponse> handleMissingPart(MissingServletRequestPartException ex) {
+        return toResponse(ErrorCode.COMMON_REQUEST_VALIDATION_FAILED);
+    }
+
+    /**
      * 접근 권한이 없는 요청을 처리합니다.
      * store 도메인은 사장님 전용 메시지를 우선 반환합니다.
      *
@@ -104,6 +157,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ErrorResponse> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException ex) {
         return toResponse(ErrorCode.COMMON_FILE_SIZE_EXCEEDED);
+    }
+
+    /**
+     * DB 유니크 제약조건 위반 시 처리합니다.
+     * exists 확인 후 save 사이의 경쟁 상태(Race Condition)로 인한 중복 충돌을 409로 변환합니다.
+     *
+     * @param ex 데이터 무결성 위반 예외
+     * @return 409 CONFLICT + COMMON_008
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        log.warn("데이터 무결성 위반 (중복 충돌 가능성): {}", ex.getMessage());
+        return toResponse(ErrorCode.COMMON_DUPLICATE_CONFLICT);
     }
 
     /**

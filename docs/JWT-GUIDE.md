@@ -18,10 +18,15 @@
 ```
 /api/user/register
 /api/user/login
+/api/user/exist/**
 /api/auth/reissue
+/api/user/find-email
+/api/user/verify-identity
+/api/user/reset-password
 /api/system/health
 /swagger-ui/**
 /v3/api-docs/**
+/images/**
 ```
 
 위 경로 외의 모든 요청은 JWT 인증 필수입니다.

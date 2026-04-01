@@ -52,7 +52,8 @@ public class StoreService {
      */
     @Transactional(readOnly = true)
     public StoreInfoResponse getStoreInfo(Long userId) {
-        StoreEntity storeEntity = storeRepository.getByUserIdAndIsActiveTrue(userId);
+        StoreEntity storeEntity = storeRepository.findByUserIdAndIsActiveTrue(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
 
         StoreCommonResponse storeResponse = StoreCommonResponse.from(storeEntity);
         var images = storeImageService.getImagesByStoreId(storeEntity.getId());
@@ -131,7 +132,8 @@ public class StoreService {
      */
     @Transactional
     public StoreCommonResponse updateStore(Long userId, StoreCommonRequest request) {
-        StoreEntity storeEntity = storeRepository.getByUserIdAndIsActiveTrue(userId);
+        StoreEntity storeEntity = storeRepository.findByUserIdAndIsActiveTrue(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
         String phone = request.phone();
 
         if (!storeEntity.getPhoneNumber().equals(phone)

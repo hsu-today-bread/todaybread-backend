@@ -203,10 +203,11 @@ public class BreadService {
     @Transactional(readOnly = true)
     public List<NearbyBreadResponse> getNearbyBreads(BigDecimal lat, BigDecimal lng,
                                                      int radiusKm, BreadSortType sortType) {
-        // 1. Bounding Box 계산
+        // 1. Bounding Box 계산 (극단 위도에서 cos(lat)=0 방어)
         double latDouble = lat.doubleValue();
         double deltaLat = radiusKm / 111.0;
-        double deltaLng = radiusKm / (111.0 * Math.cos(Math.toRadians(latDouble)));
+        double cosLat = Math.cos(Math.toRadians(latDouble));
+        double deltaLng = (Math.abs(cosLat) < 1e-10) ? 180.0 : radiusKm / (111.0 * cosLat);
 
         BigDecimal minLat = lat.subtract(BigDecimal.valueOf(deltaLat));
         BigDecimal maxLat = lat.add(BigDecimal.valueOf(deltaLat));
@@ -242,15 +243,24 @@ public class BreadService {
             return Collections.emptyList();
         }
 
-        // 6. 가게별 빵 그룹핑 후 대표 빵 1개 선택 (할인가 최저)
+        // 6. 가게별 빵 그룹핑 후 대표 빵 1개 선택 (재고 있는 빵 우선, 할인가 최저)
         Map<Long, List<BreadEntity>> breadsByStore = allBreads.stream()
                 .collect(Collectors.groupingBy(BreadEntity::getStoreId));
 
         List<BreadEntity> representativeBreads = new ArrayList<>();
         for (Map.Entry<Long, List<BreadEntity>> entry : breadsByStore.entrySet()) {
-            entry.getValue().stream()
-                    .min(Comparator.comparingInt(BreadEntity::getSalePrice))
-                    .ifPresent(representativeBreads::add);
+            List<BreadEntity> breads = entry.getValue();
+            // 재고 있는 빵 중 할인가 최저 우선, 없으면 전체에서 할인가 최저
+            Optional<BreadEntity> inStock = breads.stream()
+                    .filter(b -> b.getRemainingQuantity() > 0)
+                    .min(Comparator.comparingInt(BreadEntity::getSalePrice));
+            if (inStock.isPresent()) {
+                representativeBreads.add(inStock.get());
+            } else {
+                breads.stream()
+                        .min(Comparator.comparingInt(BreadEntity::getSalePrice))
+                        .ifPresent(representativeBreads::add);
+            }
         }
 
         // 7. 이미지 일괄 조회 (N+1 방지)
@@ -287,7 +297,7 @@ public class BreadService {
                         }).reversed());
                 break;
             default:
-                Collections.shuffle(responses);
+                responses.sort(Comparator.comparingDouble(NearbyBreadResponse::distance));
                 break;
         }
 
@@ -307,7 +317,8 @@ public class BreadService {
      * @return 가게 엔티티
      */
     private StoreEntity getStoreByUserId(Long userId) {
-        return storeRepository.getByUserIdAndIsActiveTrue(userId);
+        return storeRepository.findByUserIdAndIsActiveTrue(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
     }
 
     /**
