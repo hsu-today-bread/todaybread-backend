@@ -1,5 +1,6 @@
 package com.todaybread.server.domain.user.service;
 
+import com.todaybread.server.domain.auth.repository.RefreshTokenRepository;
 import com.todaybread.server.domain.user.dto.*;
 import com.todaybread.server.domain.user.entity.UserEntity;
 import com.todaybread.server.domain.user.repository.UserRepository;
@@ -21,6 +22,7 @@ public class UserRecoveryService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     /**
      * 이메일의 일부를 마스킹하고, 이를 리턴합니다.
@@ -35,12 +37,10 @@ public class UserRecoveryService {
         String local = email.substring(0, atIndex);
         String domain = email.substring(atIndex);
 
-        if (local.length() <= 1) {
-            return "*" + domain;
-        } else if (local.length() <= 4) {
-            return local.charAt(0) + "*".repeat(local.length() - 1) + domain;
+        if (local.length() <= 2) {
+            return "*".repeat(local.length()) + domain;
         } else {
-            return local.substring(0, 3) + "*".repeat(local.length() - 3) + domain;
+            return local.charAt(0) + "*".repeat(local.length() - 2) + local.charAt(local.length() - 1) + domain;
         }
     }
 
@@ -96,6 +96,9 @@ public class UserRecoveryService {
 
         UserEntity userEntity = userEntityOptional.get();
         userEntity.changePassword(passwordEncoder.encode(request.newPassword()));
+
+        // 기존 Refresh Token 무효화 (비밀번호 변경 시 기존 세션 강제 종료)
+        refreshTokenRepository.deleteByUserId(userEntity.getId());
 
         return ResetPasswordResponse.ok();
     }

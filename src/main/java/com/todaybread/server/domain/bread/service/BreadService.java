@@ -8,9 +8,12 @@ import com.todaybread.server.domain.bread.dto.BreadSuccessResponse;
 import com.todaybread.server.domain.bread.dto.NearbyBreadResponse;
 import com.todaybread.server.domain.bread.entity.BreadEntity;
 import com.todaybread.server.domain.bread.repository.BreadRepository;
+import com.todaybread.server.domain.store.entity.StoreBusinessHoursEntity;
 import com.todaybread.server.domain.store.entity.StoreEntity;
+import com.todaybread.server.domain.store.repository.StoreBusinessHoursRepository;
 import com.todaybread.server.domain.store.repository.StoreDistanceProjection;
 import com.todaybread.server.domain.store.repository.StoreRepository;
+import com.todaybread.server.domain.store.util.SellingStatusUtil;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +24,9 @@ import org.springframework.web.multipart.MultipartFile;
 import com.todaybread.server.domain.bread.dto.BreadSortType;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -40,6 +46,8 @@ public class BreadService {
     private final BreadRepository breadRepository;
     private final BreadImageService breadImageService;
     private final StoreRepository storeRepository;
+    private final StoreBusinessHoursRepository storeBusinessHoursRepository;
+    private final Clock clock;
 
     /**
      * 요청자의 ID를 검증하고, 빵을 추가합니다.
@@ -179,20 +187,34 @@ public class BreadService {
      */
     @Transactional(readOnly = true)
     public BreadDetailResponse getBreadDetail(Long breadId) {
-        BreadEntity breadEntity = breadRepository.findById(breadId)
-                .orElseThrow(() -> new CustomException(ErrorCode.BREAD_NOT_FOUND));
+        Optional<BreadEntity> breadOpt = breadRepository.findById(breadId);
+        if (breadOpt.isEmpty()) {
+            throw new CustomException(ErrorCode.BREAD_NOT_FOUND);
+        }
+        BreadEntity breadEntity = breadOpt.get();
 
-        StoreEntity storeEntity = storeRepository.findByIdAndIsActiveTrue(breadEntity.getStoreId())
-                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+        Optional<StoreEntity> storeOpt = storeRepository.findByIdAndIsActiveTrue(breadEntity.getStoreId());
+        if (storeOpt.isEmpty()) {
+            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
+        }
+        StoreEntity storeEntity = storeOpt.get();
 
         String imageUrl = breadImageService.getImageUrl(breadEntity.getId());
 
-        return BreadDetailResponse.of(breadEntity, storeEntity, imageUrl);
+        // 오늘 요일의 영업시간 조회 및 판매 상태 판별
+        int todayDow = LocalDate.now(clock).getDayOfWeek().getValue();
+        StoreBusinessHoursEntity todayHours = storeBusinessHoursRepository
+                .findByStoreIdAndDayOfWeek(storeEntity.getId(), todayDow)
+                .orElse(null);
+        boolean hasStock = breadEntity.getRemainingQuantity() > 0;
+        boolean isSelling = SellingStatusUtil.isSelling(storeEntity.getIsActive(), todayHours, hasStock, LocalTime.now(clock));
+
+        return BreadDetailResponse.of(breadEntity, storeEntity, imageUrl, isSelling);
     }
 
     /**
-     * 유저 좌표 기준 반경 내 활성 가게의 빵 목록을 조회합니다.
-     * 가게당 대표 빵 1개(할인가 최저)를 선택하고, sort 파라미터에 따라 정렬합니다.
+     * 유저 좌표 기준 반경 내 활성 가게의 빵 목록을 모두 조회합니다.
+     * sort 파라미터에 따라 정렬합니다.
      *
      * @param lat      유저 위도
      * @param lng      유저 경도
@@ -230,10 +252,9 @@ public class BreadService {
             storeIds.add(row.getStoreId());
         }
 
-        // 4. StoreEntity 일괄 조회
-        List<StoreEntity> storeEntities = storeRepository.findAllById(storeIds);
+        // 4. StoreEntity 일괄 조회 (활성 가게만)
         Map<Long, StoreEntity> storeMap = new HashMap<>();
-        for (StoreEntity store : storeEntities) {
+        for (StoreEntity store : storeRepository.findByIdInAndIsActiveTrue(storeIds)) {
             storeMap.put(store.getId(), store);
         }
 
@@ -243,45 +264,47 @@ public class BreadService {
             return Collections.emptyList();
         }
 
-        // 6. 가게별 빵 그룹핑 후 대표 빵 1개 선택 (재고 있는 빵 우선, 할인가 최저)
-        Map<Long, List<BreadEntity>> breadsByStore = allBreads.stream()
-                .collect(Collectors.groupingBy(BreadEntity::getStoreId));
+        // 5.5. 영업시간 일괄 조회 및 그룹핑
+        List<StoreBusinessHoursEntity> allBusinessHours = storeBusinessHoursRepository.findByStoreIdIn(storeIds);
+        Map<Long, List<StoreBusinessHoursEntity>> businessHoursMap = allBusinessHours.stream()
+                .collect(Collectors.groupingBy(StoreBusinessHoursEntity::getStoreId));
+        int todayDayOfWeek = LocalDate.now(clock).getDayOfWeek().getValue();
+        LocalTime now = LocalTime.now(clock);
 
-        List<BreadEntity> representativeBreads = new ArrayList<>();
-        for (Map.Entry<Long, List<BreadEntity>> entry : breadsByStore.entrySet()) {
-            List<BreadEntity> breads = entry.getValue();
-            // 재고 있는 빵 중 할인가 최저 우선, 없으면 전체에서 할인가 최저
-            Optional<BreadEntity> inStock = breads.stream()
-                    .filter(b -> b.getRemainingQuantity() > 0)
-                    .min(Comparator.comparingInt(BreadEntity::getSalePrice));
-            if (inStock.isPresent()) {
-                representativeBreads.add(inStock.get());
-            } else {
-                breads.stream()
-                        .min(Comparator.comparingInt(BreadEntity::getSalePrice))
-                        .ifPresent(representativeBreads::add);
-            }
-        }
-
-        // 7. 이미지 일괄 조회 (N+1 방지)
-        List<Long> breadIds = representativeBreads.stream()
+        // 6. 이미지 일괄 조회 (N+1 방지)
+        List<Long> breadIds = allBreads.stream()
                 .map(BreadEntity::getId)
                 .collect(Collectors.toList());
         Map<Long, String> imageUrlMap = breadImageService.getImageUrls(breadIds);
 
-        // 8. NearbyBreadResponse 변환
+        // 7. NearbyBreadResponse 변환
         List<NearbyBreadResponse> responses = new ArrayList<>();
-        for (BreadEntity bread : representativeBreads) {
+        for (BreadEntity bread : allBreads) {
             StoreEntity store = storeMap.get(bread.getStoreId());
             if (store == null) {
                 continue;
             }
             double distance = storeDistanceMap.getOrDefault(store.getId(), 0.0);
             String imageUrl = imageUrlMap.get(bread.getId());
-            responses.add(NearbyBreadResponse.of(bread, store, imageUrl, distance));
+
+            // 오늘 요일의 영업시간 조회
+            StoreBusinessHoursEntity todayHours = null;
+            List<StoreBusinessHoursEntity> storeHours = businessHoursMap.get(store.getId());
+            if (storeHours != null) {
+                todayHours = storeHours.stream()
+                        .filter(h -> h.getDayOfWeek().equals(todayDayOfWeek))
+                        .findFirst()
+                        .orElse(null);
+            }
+
+            // 개별 빵의 재고로 판매 상태 판별
+            boolean hasStock = bread.getRemainingQuantity() > 0;
+            boolean isSelling = SellingStatusUtil.isSelling(store.getIsActive(), todayHours, hasStock, now);
+
+            responses.add(NearbyBreadResponse.of(bread, store, imageUrl, distance, isSelling));
         }
 
-        // 9. sortType에 따라 정렬
+        // 8. sortType에 따라 정렬
         switch (sortType) {
             case DISTANCE:
                 responses.sort(Comparator.comparingDouble(NearbyBreadResponse::distance));
@@ -297,7 +320,7 @@ public class BreadService {
                         }).reversed());
                 break;
             default:
-                responses.sort(Comparator.comparingDouble(NearbyBreadResponse::distance));
+                Collections.shuffle(responses);
                 break;
         }
 
@@ -317,8 +340,11 @@ public class BreadService {
      * @return 가게 엔티티
      */
     private StoreEntity getStoreByUserId(Long userId) {
-        return storeRepository.findByUserIdAndIsActiveTrue(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+        Optional<StoreEntity> storeOpt = storeRepository.findByUserIdAndIsActiveTrue(userId);
+        if (storeOpt.isEmpty()) {
+            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
+        }
+        return storeOpt.get();
     }
 
     /**

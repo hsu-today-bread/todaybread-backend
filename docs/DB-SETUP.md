@@ -400,6 +400,9 @@ V3__add_address_to_users.sql
 > 이미 적용된 SQL 파일(V1__init.sql 등)은 절대 수정하면 안 됩니다.
 > Flyway가 체크섬을 비교해서 변경을 감지하면 앱 시작이 실패합니다.
 > 변경이 필요하면 항상 새 버전의 SQL 파일을 추가하세요.
+>
+> 여러 `V` 파일에 흩어진 `ALTER`/`INDEX`를 신규 환경 기준으로 정리하고 싶다면,
+> 기존 `V` 파일을 수정하지 말고 `B12__baseline_schema.sql` 같은 baseline migration을 추가하세요.
 
 ---
 

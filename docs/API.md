@@ -35,7 +35,7 @@
 
 | 메서드 | 경로 | 설명 | 인증 |
 |--------|------|------|------|
-| `GET` | `/api/bread/nearby?lat=&lng=&radius=&sort=` | 근처 빵 목록 (위치 기반) | O |
+| `GET` | `/api/bread/nearby?lat=&lng=&radius=&sort=` | 근처 빵 목록 (위치 기반, 가게당 여러 개 가능) | O |
 | `GET` | `/api/bread/detail/{breadId}` | 빵 상세 조회 | O |
 | `GET` | `/api/bread/{storeId}` | 가게별 메뉴 목록 | O |
 

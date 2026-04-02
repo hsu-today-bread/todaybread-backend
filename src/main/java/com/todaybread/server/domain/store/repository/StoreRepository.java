@@ -83,4 +83,12 @@ public interface StoreRepository extends JpaRepository<StoreEntity, Long> {
             @Param("minLng") BigDecimal minLng,
             @Param("maxLng") BigDecimal maxLng
     );
+
+    /**
+     * 여러 가게 ID 중 활성 가게만 일괄 조회합니다.
+     *
+     * @param ids 가게 ID 목록
+     * @return 활성 가게 엔티티 목록
+     */
+    List<StoreEntity> findByIdInAndIsActiveTrue(List<Long> ids);
 }

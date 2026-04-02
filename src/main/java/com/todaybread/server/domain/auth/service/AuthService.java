@@ -72,16 +72,8 @@ public class AuthService {
         // JWT 파싱 및 서명 검증 후 userId 추출
         Long userId;
         try {
-            com.nimbusds.jwt.SignedJWT signedJWT = com.nimbusds.jwt.SignedJWT.parse(oldRefreshToken);
-            com.nimbusds.jose.crypto.MACVerifier verifier =
-                    new com.nimbusds.jose.crypto.MACVerifier(jwtTokenService.getSecretKey());
-            if (!signedJWT.verify(verifier)) {
-                throw new CustomException(ErrorCode.AUTH_REFRESH_TOKEN_INVALID);
-            }
-            userId = Long.parseLong(signedJWT.getJWTClaimsSet().getSubject());
-        } catch (CustomException e) {
-            throw e;
-        } catch (Exception e) {
+            userId = jwtTokenService.parseRefreshToken(oldRefreshToken);
+        } catch (IllegalArgumentException e) {
             throw new CustomException(ErrorCode.AUTH_REFRESH_TOKEN_INVALID);
         }
 
@@ -112,7 +104,7 @@ public class AuthService {
         UserEntity userEntity = userEntityOptional.get();
 
         String userEmail = userEntity.getEmail();
-        String userRole = userEntity.isBoss() ? "BOSS" : "USER";
+        String userRole = userEntity.getIsBoss() ? "BOSS" : "USER";
 
         String newRefreshToken = jwtTokenService.generateRefreshToken(userId);
         String newAccessToken = jwtTokenService.generateAccessToken(userId,userEmail,userRole);

@@ -116,7 +116,7 @@ public class UserService {
 
         Long userId = userEntity.getId();
         String userEmail = userEntity.getEmail();
-        String userRole = userEntity.isBoss() ? "BOSS" : "USER";
+        String userRole = userEntity.getIsBoss() ? "BOSS" : "USER";
 
         String accessToken = jwtTokenService.generateAccessToken(userId,userEmail,userRole);
         String refreshToken = jwtTokenService.generateRefreshToken(userId);
@@ -177,7 +177,7 @@ public class UserService {
         }
         UserEntity userEntity = userEntityOptional.get();
 
-        if (userEntity.isBoss()){
+        if (userEntity.getIsBoss()){
             throw new CustomException(ErrorCode.USER_BOSS_ALREADY_APPROVED);
         }
 
@@ -189,7 +189,7 @@ public class UserService {
         userEntity.approveBoss();
 
         String userEmail = userEntity.getEmail();
-        String userRole = userEntity.isBoss() ? "BOSS" : "USER";
+        String userRole = userEntity.getIsBoss() ? "BOSS" : "USER";
 
         String accessToken = jwtTokenService.generateAccessToken(userId,userEmail,userRole);
         String refreshToken = jwtTokenService.generateRefreshToken(userId);

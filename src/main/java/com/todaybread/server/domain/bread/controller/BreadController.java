@@ -31,7 +31,7 @@ public class BreadController {
     private final BreadService breadService;
 
     /**
-     * 유저 좌표 기준 반경 내 근처 빵 목록을 조회합니다.
+     * 유저 좌표 기준 반경 내 가게들의 빵 목록을 조회합니다.
      *
      * @param lat    유저 위도
      * @param lng    유저 경도

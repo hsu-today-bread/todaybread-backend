@@ -7,6 +7,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import java.time.Instant;
@@ -37,7 +38,7 @@ public class JwtTokenService {
             @Value("${jwt.secret}") String secret,
             @Value("${jwt.access-token-expiration}") long accessTokenExpiration,
             @Value("${jwt.refresh-token-expiration}") long refreshTokenExpiration) {
-        if (secret == null || secret.isBlank() || secret.startsWith("my-super-secret")) {
+        if (secret == null || secret.isBlank() || secret.startsWith("my-super-secret") || secret.length() < 32) {
             throw new IllegalStateException("JWT 시크릿이 설정되지 않았거나 기본값을 사용 중입니다. "
                     + "환경변수 JWT_SECRET을 반드시 설정하세요.");
         }
@@ -99,6 +100,30 @@ public class JwtTokenService {
             return signedJWT.serialize();
         } catch (JOSEException e) {
             throw new RuntimeException("JWT 토큰 서명 실패", e);
+        }
+    }
+
+    /**
+     * Refresh Token을 파싱하고 서명을 검증한 뒤 userId를 추출합니다.
+     * Body로 전달되는 Refresh Token은 Spring Security 파이프라인을 타지 않으므로
+     * 이 메서드에서 수동 검증합니다.
+     *
+     * @param token Refresh Token 문자열
+     * @return 토큰에 포함된 userId
+     * @throws IllegalArgumentException 토큰이 유효하지 않은 경우
+     */
+    public Long parseRefreshToken(String token) {
+        try {
+            SignedJWT signedJWT = SignedJWT.parse(token);
+            MACVerifier verifier = new MACVerifier(secretKey);
+            if (!signedJWT.verify(verifier)) {
+                throw new IllegalArgumentException("Refresh Token 서명 검증 실패");
+            }
+            return Long.parseLong(signedJWT.getJWTClaimsSet().getSubject());
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Refresh Token 파싱 실패", e);
         }
     }
 }

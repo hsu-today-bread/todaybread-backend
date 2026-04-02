@@ -37,7 +37,7 @@ public class KeywordController {
      * @return 등록 결과 응답
      */
     @Operation(summary = "키워드 등록")
-    @PostMapping("/add")
+    @PostMapping
     public KeywordCreateResponse createKeyword(@AuthenticationPrincipal Jwt jwt,
             @RequestBody @Valid KeywordCreateRequest request) {
         Long userId = JwtRoleHelper.getUserId(jwt);
@@ -51,7 +51,7 @@ public class KeywordController {
      * @return 키워드 응답 DTO 목록
      */
     @Operation(summary = "내 키워드 목록 조회")
-    @GetMapping("/get-keyword")
+    @GetMapping
     public List<KeywordResponse> getMyKeywords(@AuthenticationPrincipal Jwt jwt) {
         Long userId = JwtRoleHelper.getUserId(jwt);
         return keywordService.getMyKeywords(userId);
@@ -65,7 +65,7 @@ public class KeywordController {
      * @return 삭제 결과 응답
      */
     @Operation(summary = "키워드 삭제")
-    @DeleteMapping("/delete/{userKeywordId}")
+    @DeleteMapping("/{userKeywordId}")
     public KeywordDeleteResponse deleteKeyword(@AuthenticationPrincipal Jwt jwt,
             @PathVariable Long userKeywordId) {
         Long userId = JwtRoleHelper.getUserId(jwt);

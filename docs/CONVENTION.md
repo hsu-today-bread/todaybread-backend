@@ -63,7 +63,7 @@
 
 ### 9. DB 마이그레이션(Flyway) 규칙
 - 모든 스키마 변경은 SQL 파일로 관리하고 수동 DB 변경 금지
-- 마이그레이션 파일명 규칙: `V{버전}__{설명}.sql` (예: `V1__init_user_table.sql`)
+- 버전 마이그레이션 파일명 규칙: `V{버전}__{설명}.sql` (예: `V1__init_user_table.sql`)
 - 운영 반영 전 로컬/스테이징에서 동일 마이그레이션 검증
 - 롤백이 필요한 변경은 사전 대응 SQL 또는 대체 전략을 함께 준비
 - DB 제약조건과 인덱스 이름은 의미가 드러나도록 명시적으로 작성
@@ -79,7 +79,11 @@
   - `uk_store_stock_store_id`
   - `idx_store_user_id`
 
-### 10. 테스트 규칙
+### 10. API 엔드포인트 규칙
+- 동사형 지양
+- HTTP 메서드 자체로 행위 표현 지향
+
+### 11. 테스트 규칙
 - Service: 단위 테스트로 비즈니스 로직 검증
 - Repository: `@DataJpaTest`로 쿼리/매핑 검증
 - Controller: `@WebMvcTest` 또는 통합 테스트로 API 계약 검증
