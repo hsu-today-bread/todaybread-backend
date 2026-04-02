@@ -42,19 +42,23 @@ public final class SellingStatusUtil {
         LocalTime startTime = todayHours.getStartTime();
         LocalTime endTime = todayHours.getEndTime();
 
-        // startTime == endTime이면 24시간 영업
-        if (startTime.equals(endTime)) {
+        // lastOrderTime이 설정되어 있으면 주문 마감 기준으로 사용
+        LocalTime cutoffTime = todayHours.getLastOrderTime() != null
+                ? todayHours.getLastOrderTime() : endTime;
+
+        // startTime == cutoffTime이면 24시간 영업
+        if (startTime.equals(cutoffTime)) {
             return hasStock;
         }
 
         boolean withinBusinessHours;
 
-        if (!startTime.isAfter(endTime)) {
-            // 일반 영업: startTime <= now < endTime
-            withinBusinessHours = !now.isBefore(startTime) && now.isBefore(endTime);
+        if (!startTime.isAfter(cutoffTime)) {
+            // 일반 영업: startTime <= now < cutoffTime
+            withinBusinessHours = !now.isBefore(startTime) && now.isBefore(cutoffTime);
         } else {
-            // 자정 넘김 영업: now >= startTime OR now < endTime
-            withinBusinessHours = !now.isBefore(startTime) || now.isBefore(endTime);
+            // 자정 넘김 영업: now >= startTime OR now < cutoffTime
+            withinBusinessHours = !now.isBefore(startTime) || now.isBefore(cutoffTime);
         }
 
         return withinBusinessHours && hasStock;

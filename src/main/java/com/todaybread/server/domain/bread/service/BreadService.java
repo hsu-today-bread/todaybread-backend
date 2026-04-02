@@ -287,7 +287,8 @@ public class BreadService {
             double distance = storeDistanceMap.getOrDefault(store.getId(), 0.0);
             String imageUrl = imageUrlMap.get(bread.getId());
 
-            // 오늘 요일의 영업시간 조회
+            // 오늘 요일의 영업시간에서 lastOrderTime 추출
+            LocalTime lastOrderTime = null;
             StoreBusinessHoursEntity todayHours = null;
             List<StoreBusinessHoursEntity> storeHours = businessHoursMap.get(store.getId());
             if (storeHours != null) {
@@ -295,13 +296,16 @@ public class BreadService {
                         .filter(h -> h.getDayOfWeek().equals(todayDayOfWeek))
                         .findFirst()
                         .orElse(null);
+                if (todayHours != null) {
+                    lastOrderTime = todayHours.getLastOrderTime();
+                }
             }
 
             // 개별 빵의 재고로 판매 상태 판별
             boolean hasStock = bread.getRemainingQuantity() > 0;
             boolean isSelling = SellingStatusUtil.isSelling(store.getIsActive(), todayHours, hasStock, now);
 
-            responses.add(NearbyBreadResponse.of(bread, store, imageUrl, distance, isSelling));
+            responses.add(NearbyBreadResponse.of(bread, store, imageUrl, distance, isSelling, lastOrderTime));
         }
 
         // 8. sortType에 따라 정렬
