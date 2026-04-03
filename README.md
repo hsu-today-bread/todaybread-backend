@@ -29,16 +29,18 @@ git clone {repository-url}
 # 2. Docker 컨테이너 시작 (.env 없이도 기본값으로 동작)
 docker compose up -d
 
-# 3. 프론트 연동용 테스트 데이터 삽입 (선택)
+# 3. Spring Boot 실행 (IntelliJ 또는 터미널)
+#    첫 실행 시 Flyway가 테이블을 생성합니다.
+#    테이블 생성만 끝나면 서버를 계속 켜둘 필요는 없습니다.
+./gradlew bootRun
+
+# 4. 프론트 연동용 테스트 데이터 삽입 (선택)
 #    샘플 유저/사장님/가게/영업시간/빵 데이터를 넣습니다.
 ./scripts/test-data.sh
 
-# 4. MySQL 접속이 필요하면 프로젝트 스크립트 사용
+# 5. MySQL 접속이 필요하면 프로젝트 스크립트 사용
 #    utf8mb4로 접속해서 터미널에서도 한글이 깨지지 않음
 ./scripts/mysql-connect.sh
-
-# 5. Spring Boot 실행 (IntelliJ 또는 터미널)
-./gradlew bootRun
 ```
 
 > Swagger UI: http://localhost:8080/swagger-ui/index.html
@@ -48,8 +50,11 @@ docker compose up -d
 ## 개발용 테스트 데이터
 
 프론트 연동이나 Swagger/Postman 수동 확인용 샘플 데이터가 필요하면 아래 스크립트를 실행하세요.
+단, MySQL 테이블은 Flyway가 만들기 때문에 서버를 한 번 먼저 실행해야 합니다.
 
 ```bash
+./gradlew bootRun
+# Flyway 적용이 끝나면 종료해도 됨
 ./scripts/test-data.sh
 ```
 
@@ -70,12 +75,36 @@ docker compose up -d
 
 ---
 
+## DB GUI로 보기
+
+쿼리를 직접 치지 않고 테이블 데이터를 표처럼 보고 싶다면 DBeaver나 TablePlus 같은 DB GUI 툴을 사용하면 됩니다.
+
+권장 연결 정보:
+
+- Host: `127.0.0.1`
+- Port: `3306`
+- Database: `todaybread`
+- Username: `todaybread`
+- Password: `todaybread`
+
+DBeaver/MySQL 드라이버에서는 아래 속성을 같이 넣어두면 연결이 안정적입니다.
+
+- `allowPublicKeyRetrieval=true`
+- `useSSL=false`
+
+주의:
+
+- `todaybread` 계정은 애플리케이션용 계정이라 `mysql.user` 같은 시스템 테이블은 볼 수 없습니다.
+- DBeaver에서는 `Show all databases`를 끄고 `todaybread` 스키마만 보도록 설정하는 편이 낫습니다.
+
+---
+
 ## 문서
 
 | 문서 | 설명 |
 |------|------|
 | [API 문서](docs/API.md) | 전체 API 목록, 인증 구조, 프론트 연동용 샘플 계정 |
-| [DB 환경 설정 가이드](docs/DB-SETUP.md) | Docker, .env, Flyway, 테스트 데이터 스크립트 사용법 |
+| [DB 환경 설정 가이드](docs/DB-SETUP.md) | Docker, .env, Flyway, 테스트 데이터 스크립트, DBeaver 연결 가이드 |
 | [컨벤션](docs/CONVENTION.md) | 코드 컨벤션, 협업 컨벤션, 에러 코드 규격 |
 | [JWT 가이드 문서](docs/JWT-GUIDE.md) | JWT 토큰 발급/검증/재발급 흐름 |
 

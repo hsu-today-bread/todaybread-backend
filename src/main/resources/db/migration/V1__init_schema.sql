@@ -101,7 +101,7 @@ CREATE TABLE store_image (
 CREATE TABLE store_business_hours (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     store_id BIGINT NOT NULL,
-    day_of_week TINYINT NOT NULL,
+    day_of_week INT NOT NULL,
     is_closed BOOLEAN NOT NULL DEFAULT FALSE,
     start_time TIME NULL,
     end_time TIME NULL,

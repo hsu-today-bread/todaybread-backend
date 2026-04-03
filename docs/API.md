@@ -8,6 +8,7 @@
 개발용 테스트 데이터가 필요하면 먼저 아래 스크립트를 실행하세요:
 
 ```bash
+./gradlew bootRun
 ./scripts/test-data.sh
 ```
 
