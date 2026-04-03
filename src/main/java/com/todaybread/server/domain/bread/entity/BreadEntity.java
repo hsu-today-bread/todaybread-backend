@@ -41,7 +41,7 @@ public class BreadEntity extends BaseEntity {
     private String description;
 
     @Builder
-    public BreadEntity(Long storeId, String name, String description,
+    private BreadEntity(Long storeId, String name, String description,
                        int originalPrice, int salePrice, int remainingQuantity) {
        validateFields(originalPrice, salePrice, remainingQuantity);
        this.storeId = storeId;

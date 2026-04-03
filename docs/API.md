@@ -27,9 +27,17 @@
 | `GET` | `/api/user/exist/phone?value=` | 전화번호 중복 확인 | X |
 | `PATCH` | `/api/user/update-profile` | 프로필 수정 | O |
 | `POST` | `/api/user/boss-approve` | 사장님 등록 | O |
-| `GET` | `/api/user/find-email?phone=` | 이메일 찾기 | X |
+
+### 계정 복구 (User Recovery)
+
+> 아래 API는 인증 없이 접근 가능합니다. 현재 별도의 인증 토큰(OTP 등) 없이 동작하므로,
+> 운영 배포 전 Rate Limiting 또는 일회용 토큰 검증 추가를 권장합니다.
+
+| 메서드 | 경로 | 설명 | 인증 |
+|--------|------|------|------|
+| `GET` | `/api/user/find-email?phone=` | 이메일 찾기 (마스킹된 이메일 반환) | X |
 | `GET` | `/api/user/verify-identity?phone=&email=` | 본인 확인 | X |
-| `POST` | `/api/user/reset-password` | 비밀번호 재설정 | X |
+| `POST` | `/api/user/reset-password` | 비밀번호 재설정 (기존 세션 무효화 포함) | X |
 
 ### 빵 — 일반 유저 (Bread)
 
@@ -53,25 +61,25 @@
 
 | 메서드 | 경로 | 설명 | 인증 |
 |--------|------|------|------|
-| `GET` | `/api/store/{storeId}` | 가게 상세 조회 (정보 + 이미지 + 메뉴) | O |
+| `GET` | `/api/store/{storeId}` | 가게 상세 조회 (정보 + 이미지 + 메뉴 + 판매 상태) | O |
 
 ### 매장 — 사장님 (Store Boss)
 
 | 메서드 | 경로 | 설명 | 인증 | 권한 |
 |--------|------|------|------|------|
 | `GET` | `/api/boss/store/status` | 가게 등록 상태 조회 | O | BOSS |
-| `GET` | `/api/boss/store` | 내 가게 정보 + 이미지 조회 | O | BOSS |
-| `POST` | `/api/boss/store` | 가게 등록 (정보 + 이미지, multipart) | O | BOSS |
-| `PUT` | `/api/boss/store` | 가게 정보 수정 | O | BOSS |
+| `GET` | `/api/boss/store` | 내 가게 정보 + 이미지 + 영업시간 조회 | O | BOSS |
+| `POST` | `/api/boss/store` | 가게 등록 (정보 + 영업시간 7개 + 이미지, multipart) | O | BOSS |
+| `PUT` | `/api/boss/store` | 가게 정보 + 영업시간 수정 | O | BOSS |
 | `PUT` | `/api/boss/store/images` | 가게 이미지 일괄 교체 (multipart) | O | BOSS |
 
 ### 키워드 (Keyword)
 
 | 메서드 | 경로 | 설명 | 인증 |
 |--------|------|------|------|
-| `POST` | `/api/keywords/add` | 키워드 등록 | O |
-| `GET` | `/api/keywords/get-keyword` | 내 키워드 목록 조회 | O |
-| `DELETE` | `/api/keywords/delete/{userKeywordId}` | 키워드 삭제 | O |
+| `POST` | `/api/keywords` | 키워드 등록 | O |
+| `GET` | `/api/keywords` | 내 키워드 목록 조회 | O |
+| `DELETE` | `/api/keywords/{userKeywordId}` | 키워드 삭제 | O |
 
 ### 단골 가게 (Favourite Store)
 
@@ -98,7 +106,7 @@
 
 - JWT (HMAC-SHA256) 기반 stateless 인증
 - 역할 계층: `BOSS > USER`
-- 인증 불필요 경로: 회원가입, 로그인, 이메일/닉네임/전화번호 중복확인, 토큰 재발급, 이메일 찾기, 본인 확인, 비밀번호 재설정, 헬스체크, Swagger, 이미지 정적 파일
+- 인증 불필요 경로: 회원가입, 로그인, 이메일/닉네임/전화번호 중복확인, 토큰 재발급, 계정 복구, 헬스체크, Swagger, 이미지 정적 파일
 - 그 외 모든 경로는 `Authorization: Bearer {accessToken}` 필요
 - 사장님 전용 API (`/api/boss/**`)는 `@PreAuthorize("hasRole('BOSS')")` 적용
 
@@ -149,6 +157,8 @@
 | `STORE_002` | 409 | 이미 등록된 가게가 있습니다. |
 | `STORE_003` | 409 | 가게 전화번호가 중복이 됩니다. |
 | `STORE_004` | 404 | 가게를 찾을 수 없습니다. |
+| `STORE_005` | 400 | 영업시간 데이터가 올바르지 않습니다. |
+| `STORE_006` | 400 | 요일 데이터가 중복됩니다. |
 
 ### 매장 이미지 (STORE_IMAGE)
 

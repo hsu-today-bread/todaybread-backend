@@ -62,20 +62,20 @@ docker compose up -d
 ├── scripts/
 │   └── mysql-connect.sh                   # utf8mb4로 MySQL CLI 접속
 ├── src/main/java/com/todaybread/server/
-│   ├── ServerApplication.java             # Spring Boot 시작점
+│   ├── ServerApplication.java             # Spring Boot 시작점 + Clock 빈 등록
 │   ├── config/
 │   │   ├── OpenApiConfig.java             # Swagger 설정
 │   │   ├── SecurityConfig.java            # Spring Security 설정
-│   │   ├── WebConfig.java                 # CORS 등 웹 설정
+│   │   ├── WebConfig.java                 # 정적 리소스 매핑 (/images/**)
 │   │   └── jwt/
-│   │       ├── JwtRoleHelper.java         # JWT에서 userId/role 추출
-│   │       └── JwtTokenService.java       # JWT 발급/검증
+│   │       └── JwtTokenService.java       # JWT 발급/검증 (Access + Refresh)
 │   ├── domain/
 │   │   ├── auth/                          # 인증/토큰 도메인
 │   │   ├── bread/                         # 빵(메뉴) 도메인
 │   │   ├── keyword/                       # 키워드 도메인
-│   │   ├── store/                         # 매장/이미지 도메인
-│   │   └── user/                          # 사용자 도메인
+│   │   ├── store/                         # 매장/이미지/영업시간/단골 도메인
+│   │   ├── user/                          # 사용자 도메인
+│   │   └── wishlist/                      # 찜목록 통합 조회
 │   ├── global/
 │   │   ├── entity/BaseEntity.java         # 공통 엔티티 (createdAt, updatedAt)
 │   │   ├── exception/
@@ -83,20 +83,18 @@ docker compose up -d
 │   │   │   ├── ErrorCode.java             # 에러 코드 enum
 │   │   │   ├── ErrorResponse.java         # 에러 응답 DTO
 │   │   │   └── GlobalExceptionHandler.java # 전역 예외 핸들러
-│   │   └── storage/
-│   │       ├── FileStorage.java           # 파일 저장소 인터페이스
-│   │       └── LocalFileStorage.java      # 로컬 파일 저장소 구현
+│   │   ├── storage/
+│   │   │   ├── FileStorage.java           # 파일 저장소 인터페이스
+│   │   │   ├── ImageValidationHelper.java # 이미지 검증 헬퍼
+│   │   │   └── LocalFileStorage.java      # 로컬 파일 저장소 구현
+│   │   └── util/
+│   │       └── JwtRoleHelper.java         # JWT에서 userId/role 추출
 │   └── system/
 │       └── HealthController.java          # 헬스 체크 API
 └── src/main/resources/
     ├── application.properties             # 애플리케이션 설정
-    └── db/migration/                      # Flyway 마이그레이션 SQL
-        ├── V1__init.sql
-        ├── V2__create_refresh_tokens.sql
-        ├── V3__create_key_word.sql
-        ├── V4__create_store.sql
-        ├── V5__create_store_image.sql
-        └── V6__create_stock.sql
+    └── db/migration/
+        └── V1__init_schema.sql            # 전체 스키마 (통합 마이그레이션)
 ```
 
 ### 도메인별 구조
@@ -109,18 +107,31 @@ domain/{name}/
 ├── dto/           # 요청/응답 DTO (record 타입)
 ├── entity/        # JPA 엔티티
 ├── repository/    # Spring Data JPA 리포지터리
-└── service/       # 비즈니스 로직
+├── service/       # 비즈니스 로직
+└── util/          # 유틸리티 (해당 도메인에만 존재)
 ```
 
 ---
 
 ## DB 마이그레이션
 
+기존 V1~V12 마이그레이션을 단일 파일로 통합했습니다.
+
 | 파일 | 설명 |
 |------|------|
-| `V1__init.sql` | users 테이블 |
-| `V2__create_refresh_tokens.sql` | refresh_tokens 테이블 |
-| `V3__create_key_word.sql` | keyword, user_keyword 테이블 |
-| `V4__create_store.sql` | store, favourite_store 테이블 + 위도/경도 인덱스 |
-| `V5__create_store_image.sql` | store_image 테이블 |
-| `V6__create_stock.sql` | bread, bread_image 테이블 |
+| `V1__init_schema.sql` | 전체 스키마 (users, refresh_token, keyword, user_keyword, store, favourite_store, store_image, store_business_hours, bread, bread_image) |
+
+### 테이블 목록
+
+| 테이블 | 설명 |
+|--------|------|
+| `users` | 사용자 정보 |
+| `refresh_token` | JWT Refresh Token (해시 저장) |
+| `keyword` | 정규화된 키워드 마스터 |
+| `user_keyword` | 사용자-키워드 M:N 관계 |
+| `store` | 가게 정보 (위치, 활성 상태) |
+| `favourite_store` | 단골 가게 (유저-가게 관계) |
+| `store_image` | 가게 이미지 (최대 5장) |
+| `store_business_hours` | 요일별 영업시간 (가게당 7개) |
+| `bread` | 빵 메뉴 (가격, 재고) |
+| `bread_image` | 빵 이미지 (메뉴당 1장) |

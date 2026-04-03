@@ -76,6 +76,8 @@ public enum ErrorCode {
     STORE_ALREADY_EXISTS("STORE_002", "이미 등록된 가게가 있습니다.", HttpStatus.CONFLICT),
     STORE_PHONE_EXISTS("STORE_003", "가게 전화번호가 중복이 됩니다.",HttpStatus.CONFLICT),
     STORE_NOT_FOUND("STORE_004","가게를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    STORE_BUSINESS_HOURS_INVALID("STORE_005", "영업시간 데이터가 올바르지 않습니다.", HttpStatus.BAD_REQUEST),
+    STORE_DAY_OF_WEEK_DUPLICATE("STORE_006", "요일 데이터가 중복됩니다.", HttpStatus.BAD_REQUEST),
 
     /**
      * ============================

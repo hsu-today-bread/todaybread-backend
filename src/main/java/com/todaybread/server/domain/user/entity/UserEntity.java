@@ -38,7 +38,7 @@ public class UserEntity extends BaseEntity {
     private String phoneNumber;
 
     @Column(name = "is_boss", nullable = false)
-    private boolean boss = false;
+    private Boolean isBoss = false;
 
     /**
      * 빌더 입니다. ID를 제외하고 모든 정보를 받습니다.
@@ -62,7 +62,7 @@ public class UserEntity extends BaseEntity {
      * 사장님 인증 후 사장님으로 바꿉니다.
      */
     public void approveBoss() {
-        this.boss = true;
+        this.isBoss = true;
     }
 
     /**

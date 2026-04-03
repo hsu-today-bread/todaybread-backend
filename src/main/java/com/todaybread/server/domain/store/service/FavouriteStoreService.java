@@ -6,11 +6,14 @@ import com.todaybread.server.domain.store.dto.FavouriteStoreResponse;
 import com.todaybread.server.domain.store.dto.FavouriteStoreToggleRequest;
 import com.todaybread.server.domain.store.dto.FavouriteStoreToggleResponse;
 import com.todaybread.server.domain.store.entity.FavouriteStoreEntity;
+import com.todaybread.server.domain.store.entity.StoreBusinessHoursEntity;
 import com.todaybread.server.domain.store.entity.StoreEntity;
 import com.todaybread.server.domain.store.entity.StoreImageEntity;
 import com.todaybread.server.domain.store.repository.FavouriteStoreRepository;
+import com.todaybread.server.domain.store.repository.StoreBusinessHoursRepository;
 import com.todaybread.server.domain.store.repository.StoreImageRepository;
 import com.todaybread.server.domain.store.repository.StoreRepository;
+import com.todaybread.server.domain.store.util.SellingStatusUtil;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
 import com.todaybread.server.global.storage.FileStorage;
@@ -19,6 +22,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,7 +46,9 @@ public class FavouriteStoreService {
     private final StoreRepository storeRepository;
     private final BreadRepository breadRepository;
     private final StoreImageRepository storeImageRepository;
+    private final StoreBusinessHoursRepository storeBusinessHoursRepository;
     private final FileStorage fileStorage;
+    private final Clock clock;
 
     /**
      * 단골 가게를 토글합니다 (추가/해제).
@@ -60,8 +67,9 @@ public class FavouriteStoreService {
             return new FavouriteStoreToggleResponse(false);
         }
 
-        storeRepository.findByIdAndIsActiveTrue(request.storeId())
-                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+        if (storeRepository.findByIdAndIsActiveTrue(request.storeId()).isEmpty()) {
+            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
+        }
 
         if (favouriteStoreRepository.countByUserIdWithLock(userId) >= MAX_FAVOURITE_STORES) {
             throw new CustomException(ErrorCode.FAVOURITE_STORE_LIMIT_EXCEEDED);
@@ -100,17 +108,26 @@ public class FavouriteStoreService {
                 .map(FavouriteStoreEntity::getStoreId)
                 .toList();
 
-        // 가게 일괄 조회 (활성 가게만 포함)
-        Map<Long, StoreEntity> storeMap = storeRepository.findAllById(storeIds).stream()
-                .filter(StoreEntity::getIsActive)
+        // 가게 일괄 조회 (활성 가게만)
+        List<StoreEntity> activeStores = storeRepository.findByIdInAndIsActiveTrue(storeIds);
+        Map<Long, StoreEntity> storeMap = activeStores.stream()
                 .collect(Collectors.toMap(StoreEntity::getId, Function.identity()));
 
+        // 활성 가게 ID만 추출하여 후속 쿼리에 사용
+        List<Long> activeStoreIds = activeStores.stream()
+                .map(StoreEntity::getId)
+                .toList();
+
         // 빵 일괄 조회 → 가게별 그룹핑
-        Map<Long, List<BreadEntity>> breadsByStore = breadRepository.findByStoreIdIn(storeIds).stream()
+        Map<Long, List<BreadEntity>> breadsByStore = breadRepository.findByStoreIdIn(activeStoreIds).stream()
                 .collect(Collectors.groupingBy(BreadEntity::getStoreId));
 
+        // 영업시간 일괄 조회 → 가게별 그룹핑
+        Map<Long, List<StoreBusinessHoursEntity>> businessHoursMap = storeBusinessHoursRepository.findByStoreIdIn(activeStoreIds).stream()
+                .collect(Collectors.groupingBy(StoreBusinessHoursEntity::getStoreId));
+
         // 이미지 일괄 조회 → 가게별 대표 이미지 추출
-        Map<Long, String> primaryImageMap = buildPrimaryImageMap(storeIds);
+        Map<Long, String> primaryImageMap = buildPrimaryImageMap(activeStoreIds);
 
         // 응답 조립
         List<FavouriteStoreResponse> responses = new ArrayList<>();
@@ -121,7 +138,9 @@ public class FavouriteStoreService {
             }
 
             List<BreadEntity> breads = breadsByStore.getOrDefault(store.getId(), List.of());
-            boolean isSelling = calculateIsSelling(store, breads);
+            boolean hasStock = breads.stream().anyMatch(b -> b.getRemainingQuantity() > 0);
+            boolean isSelling = SellingStatusUtil.isSelling(store.getIsActive(),
+                    businessHoursMap.getOrDefault(store.getId(), List.of()), hasStock, clock);
             String address = store.getAddressLine1() + " " + store.getAddressLine2();
             String imageUrl = primaryImageMap.get(store.getId());
 
@@ -155,40 +174,6 @@ public class FavouriteStoreService {
             }
         }
         return result;
-    }
-
-    /**
-     * 판매중 여부를 판별합니다.
-     * isActive가 true이고, 재고가 있는 빵이 1개 이상이며, 현재 시간이 라스트 오더 시간 이전이면 판매중입니다.
-     * 라스트 오더 시간이 영업 종료 시간보다 이른 경우(자정을 넘기는 영업) 자정 전후를 고려합니다.
-     *
-     * @param store  가게 엔티티
-     * @param breads 해당 가게의 빵 목록
-     * @return 판매중이면 true, 아니면 false
-     */
-    private boolean calculateIsSelling(StoreEntity store, List<BreadEntity> breads) {
-        if (!store.getIsActive()) {
-            return false;
-        }
-
-        boolean hasStock = breads.stream()
-                .anyMatch(b -> b.getRemainingQuantity() > 0);
-        if (!hasStock) {
-            return false;
-        }
-
-        LocalTime now = LocalTime.now();
-        LocalTime lastOrder = store.getLastOrderTime().toLocalTime();
-        LocalTime endTime = store.getEndTime().toLocalTime();
-
-        // 자정을 넘기는 영업인지 판별 (endTime < lastOrderTime이면 다음 날 영업)
-        if (lastOrder.isBefore(endTime)) {
-            // 일반 영업: 현재 시간이 라스트 오더 이전이면 판매중
-            return now.isBefore(lastOrder);
-        } else {
-            // 자정 넘김 영업: 자정 이전(now >= endTime 구간) 또는 자정 이후(now < lastOrder 구간)
-            return now.isAfter(endTime) || now.isBefore(lastOrder);
-        }
     }
 
 }

@@ -1,10 +1,7 @@
 package com.todaybread.server.domain.bread.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.todaybread.server.domain.bread.entity.BreadEntity;
 import com.todaybread.server.domain.store.entity.StoreEntity;
-
-import java.sql.Time;
 
 /**
  * 빵 상세 조회 응답 DTO입니다.
@@ -18,7 +15,7 @@ import java.sql.Time;
  * @param imageUrl 이미지 URL
  * @param storeId 가게 ID
  * @param storeName 가게 이름
- * @param lastOrderTime 라스트 오더 시간
+ * @param isSelling 판매 상태 (영업시간 내 + 재고 있음)
  */
 public record BreadDetailResponse(
         Long id,
@@ -30,11 +27,10 @@ public record BreadDetailResponse(
         String imageUrl,
         Long storeId,
         String storeName,
-        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm:ss")
-        Time lastOrderTime
+        boolean isSelling
 ) {
     public static BreadDetailResponse of(
-            BreadEntity bread, StoreEntity store, String imageUrl) {
+            BreadEntity bread, StoreEntity store, String imageUrl, boolean isSelling) {
         return new BreadDetailResponse(
                 bread.getId(),
                 bread.getName(),
@@ -45,7 +41,7 @@ public record BreadDetailResponse(
                 imageUrl,
                 store.getId(),
                 store.getName(),
-                store.getLastOrderTime()
+                isSelling
         );
     }
 }
