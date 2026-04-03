@@ -67,6 +67,16 @@ public class BreadEntity extends BaseEntity {
     }
 
     /**
+     * 재고를 증가시킵니다.
+     * 주문 취소 시 재고 복원에 사용됩니다.
+     *
+     * @param number 증가할 수량
+     */
+    public void increaseQuantity(int number) {
+        this.remainingQuantity += number;
+    }
+
+    /**
      * 재고를 set 합니다.
      *
      * @param number 변경할 수

@@ -111,7 +111,34 @@ public enum ErrorCode {
      */
     AUTH_ACCESS_TOKEN_EXPIRED("AUTH_001", "Access 토큰이 만료되었습니다.", HttpStatus.UNAUTHORIZED),
     AUTH_ACCESS_TOKEN_INVALID("AUTH_002", "유효하지 않은 Access 토큰입니다.", HttpStatus.UNAUTHORIZED),
-    AUTH_REFRESH_TOKEN_INVALID("AUTH_003", "유효하지 않은 Refresh 토큰입니다.", HttpStatus.UNAUTHORIZED);
+    AUTH_REFRESH_TOKEN_INVALID("AUTH_003", "유효하지 않은 Refresh 토큰입니다.", HttpStatus.UNAUTHORIZED),
+
+    /**
+     * ============================
+     * 장바구니 오류
+     * ============================
+     */
+    CART_SINGLE_STORE_ONLY("CART_001", "장바구니에는 하나의 매장 빵만 담을 수 있습니다.", HttpStatus.CONFLICT),
+    CART_ITEM_NOT_FOUND("CART_002", "장바구니 항목을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    CART_EMPTY("CART_003", "장바구니가 비어 있습니다.", HttpStatus.BAD_REQUEST),
+
+    /**
+     * ============================
+     * 주문 오류
+     * ============================
+     */
+    ORDER_NOT_FOUND("ORDER_001", "주문을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    ORDER_ACCESS_DENIED("ORDER_002", "주문에 접근할 권한이 없습니다.", HttpStatus.FORBIDDEN),
+    ORDER_STATUS_CANNOT_CHANGE("ORDER_003", "변경할 수 없는 주문 상태입니다.", HttpStatus.CONFLICT),
+
+    /**
+     * ============================
+     * 결제 오류
+     * ============================
+     */
+    PAYMENT_AMOUNT_MISMATCH("PAYMENT_001", "결제 금액이 주문 금액과 일치하지 않습니다.", HttpStatus.BAD_REQUEST),
+    PAYMENT_AMOUNT_MUST_BE_POSITIVE("PAYMENT_002", "결제 금액은 0보다 커야 합니다.", HttpStatus.BAD_REQUEST),
+    PAYMENT_ORDER_STATUS_INVALID("PAYMENT_003", "결제할 수 없는 주문 상태입니다.", HttpStatus.CONFLICT);
 
     private final String code;
     private final String message;
