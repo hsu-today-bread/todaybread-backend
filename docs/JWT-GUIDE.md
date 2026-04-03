@@ -2,6 +2,8 @@
 
 이 문서는 JWT 인증이 적용된 상태에서 새로운 API 엔드포인트를 작성할 때 참고하는 예시 문서입니다.
 
+개발용 테스트 계정이 필요하면 먼저 `./scripts/test-data.sh`를 실행하세요.
+
 ---
 
 ## 기본 원리
@@ -115,7 +117,7 @@ public UserLoginResponse login(@RequestBody @Valid UserLoginRequest request) {
 프론트:
 ```dart
 final response = await dio.post('/api/user/login',
-    data: {'email': 'test@test.com', 'password': '1234'},
+    data: {'email': 'demo-user@todaybread.local', 'password': 'todaybread123'},
 );
 // 응답에서 accessToken, refreshToken 저장
 ```
