@@ -1,8 +1,11 @@
 package com.todaybread.server.domain.store.service;
 
 import com.todaybread.server.domain.bread.dto.BreadCommonResponse;
+import com.todaybread.server.domain.bread.entity.BreadEntity;
+import com.todaybread.server.domain.bread.repository.BreadRepository;
 import com.todaybread.server.domain.bread.service.BreadService;
 import com.todaybread.server.domain.store.dto.BusinessHoursRequest;
+import com.todaybread.server.domain.store.dto.NearbyStoreResponse;
 import com.todaybread.server.domain.store.dto.StoreCommonRequest;
 import com.todaybread.server.domain.store.dto.StoreCommonResponse;
 import com.todaybread.server.domain.store.dto.StoreDetailResponse;
@@ -11,24 +14,34 @@ import com.todaybread.server.domain.store.dto.StoreInfoResponse;
 import com.todaybread.server.domain.store.dto.StoreStatusResponse;
 import com.todaybread.server.domain.store.entity.StoreBusinessHoursEntity;
 import com.todaybread.server.domain.store.entity.StoreEntity;
+import com.todaybread.server.domain.store.entity.StoreImageEntity;
 import com.todaybread.server.domain.store.repository.StoreBusinessHoursRepository;
+import com.todaybread.server.domain.store.repository.StoreDistanceProjection;
+import com.todaybread.server.domain.store.repository.StoreImageRepository;
 import com.todaybread.server.domain.store.repository.StoreRepository;
 import com.todaybread.server.domain.store.util.SellingStatusUtil;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
+import com.todaybread.server.global.storage.FileStorage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * store 도메인 서비스 계층입니다.
@@ -39,8 +52,11 @@ public class StoreService {
 
     private final StoreRepository storeRepository;
     private final StoreBusinessHoursRepository storeBusinessHoursRepository;
+    private final StoreImageRepository storeImageRepository;
     private final StoreImageService storeImageService;
+    private final BreadRepository breadRepository;
     private final BreadService breadService;
+    private final FileStorage fileStorage;
     private final Clock clock;
 
     /**
@@ -225,5 +241,131 @@ public class StoreService {
         }
 
         return storeBusinessHoursRepository.saveAll(entities);
+    }
+
+    /**
+     * 유저 좌표 기준 반경 내 활성 가게 목록을 조회합니다.
+     * 거리순 오름차순으로 정렬하여 반환합니다.
+     *
+     * @param lat      유저 위도
+     * @param lng      유저 경도
+     * @param radiusKm 검색 반경 (km)
+     * @return 근처 가게 응답 리스트
+     */
+    @Transactional(readOnly = true)
+    public List<NearbyStoreResponse> getNearbyStores(BigDecimal lat, BigDecimal lng, int radiusKm) {
+        // 1. Bounding Box 계산 (BreadService.getNearbyBreads()와 동일한 공식)
+        double latDouble = lat.doubleValue();
+        double deltaLat = radiusKm / 111.0;
+        double cosLat = Math.cos(Math.toRadians(latDouble));
+        double deltaLng = (Math.abs(cosLat) < 1e-10) ? 180.0 : radiusKm / (111.0 * cosLat);
+
+        BigDecimal minLat = lat.subtract(BigDecimal.valueOf(deltaLat));
+        BigDecimal maxLat = lat.add(BigDecimal.valueOf(deltaLat));
+        BigDecimal minLng = lng.subtract(BigDecimal.valueOf(deltaLng));
+        BigDecimal maxLng = lng.add(BigDecimal.valueOf(deltaLng));
+
+        // 2. 반경 내 활성 가게 + 거리 조회 (Haversine)
+        List<StoreDistanceProjection> storeResults = storeRepository.findActiveStoresWithinRadius(
+                lat, lng, radiusKm, minLat, maxLat, minLng, maxLng);
+
+        if (storeResults.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 3. Projection에서 storeId와 distance 추출
+        Map<Long, Double> storeDistanceMap = new HashMap<>();
+        List<Long> storeIds = new ArrayList<>();
+        for (StoreDistanceProjection row : storeResults) {
+            storeDistanceMap.put(row.getStoreId(), row.getDistance());
+            storeIds.add(row.getStoreId());
+        }
+
+        // 4. 가게 엔티티 일괄 조회
+        Map<Long, StoreEntity> storeMap = new HashMap<>();
+        for (StoreEntity store : storeRepository.findByIdInAndIsActiveTrue(storeIds)) {
+            storeMap.put(store.getId(), store);
+        }
+
+        // 5. 영업시간 일괄 조회 → 가게별 그룹핑
+        Map<Long, List<StoreBusinessHoursEntity>> businessHoursMap =
+                storeBusinessHoursRepository.findByStoreIdIn(storeIds).stream()
+                        .collect(Collectors.groupingBy(StoreBusinessHoursEntity::getStoreId));
+
+        // 6. 빵 재고 일괄 조회 → 가게별 그룹핑
+        Map<Long, List<BreadEntity>> breadsByStore =
+                breadRepository.findByStoreIdIn(storeIds).stream()
+                        .collect(Collectors.groupingBy(BreadEntity::getStoreId));
+
+        // 7. 대표 이미지 일괄 조회
+        Map<Long, String> primaryImageMap = buildPrimaryImageMap(storeIds);
+
+        // 8. 오늘 요일 및 현재 시간
+        int todayDayOfWeek = LocalDate.now(clock).getDayOfWeek().getValue();
+        LocalTime now = LocalTime.now(clock);
+
+        // 9. 응답 조립
+        List<NearbyStoreResponse> responses = new ArrayList<>();
+        for (StoreDistanceProjection projection : storeResults) {
+            StoreEntity store = storeMap.get(projection.getStoreId());
+            if (store == null) {
+                continue;
+            }
+
+            // 오늘 요일의 영업시간 추출
+            List<StoreBusinessHoursEntity> storeHours = businessHoursMap.getOrDefault(store.getId(), List.of());
+            StoreBusinessHoursEntity todayHours = storeHours.stream()
+                    .filter(h -> h.getDayOfWeek().equals(todayDayOfWeek))
+                    .findFirst()
+                    .orElse(null);
+
+            // 가게별 재고 존재 여부
+            List<BreadEntity> breads = breadsByStore.getOrDefault(store.getId(), List.of());
+            boolean hasStock = breads.stream().anyMatch(b -> b.getRemainingQuantity() > 0);
+
+            // 판매 상태 판별
+            boolean isSelling = SellingStatusUtil.isSelling(store.getIsActive(), todayHours, hasStock, now);
+
+            // lastOrderTime 추출
+            LocalTime lastOrderTime = (todayHours != null) ? todayHours.getLastOrderTime() : null;
+
+            responses.add(new NearbyStoreResponse(
+                    store.getId(),
+                    store.getName(),
+                    store.getAddressLine1(),
+                    store.getAddressLine2(),
+                    store.getLatitude(),
+                    store.getLongitude(),
+                    primaryImageMap.get(store.getId()),
+                    isSelling,
+                    projection.getDistance(),
+                    lastOrderTime
+            ));
+        }
+
+        // 10. 거리순 오름차순 정렬
+        responses.sort(Comparator.comparingDouble(NearbyStoreResponse::distance));
+
+        return responses;
+    }
+
+    /**
+     * 가게 ID 목록에 대해 대표 이미지 URL 맵을 구성합니다.
+     * displayOrder=0인 이미지의 URL을 반환하며, 없으면 해당 가게는 맵에 포함되지 않습니다.
+     * 일괄 조회로 N+1 쿼리를 방지합니다.
+     *
+     * @param storeIds 가게 ID 목록
+     * @return storeId → 대표 이미지 URL 매핑
+     */
+    private Map<Long, String> buildPrimaryImageMap(List<Long> storeIds) {
+        List<StoreImageEntity> allImages = storeImageRepository
+                .findByStoreIdInOrderByStoreIdAscDisplayOrderAsc(storeIds);
+        Map<Long, String> result = new HashMap<>();
+        for (StoreImageEntity image : allImages) {
+            if (image.getDisplayOrder() == 0) {
+                result.put(image.getStoreId(), fileStorage.getFileUrl(image.getStoredFilename()));
+            }
+        }
+        return result;
     }
 }
