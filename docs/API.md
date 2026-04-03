@@ -5,6 +5,18 @@
 > 이 문서는 전체 API 목록과 에러 코드를 정리한 참고용 문서입니다.
 > 실시간 API 스펙은 Swagger UI에서 확인하세요.
 
+개발용 테스트 데이터가 필요하면 먼저 아래 스크립트를 실행하세요:
+
+```bash
+./scripts/test-data.sh
+```
+
+샘플 계정:
+
+- `demo-user@todaybread.local` / `todaybread123`
+- `demo-boss-gangnam@todaybread.local` / `todaybread123`
+- `demo-boss-seolleung@todaybread.local` / `todaybread123`
+
 ---
 
 ## API 목록
@@ -61,6 +73,7 @@
 
 | 메서드 | 경로 | 설명 | 인증 |
 |--------|------|------|------|
+| `GET` | `/api/store/nearby?lat=&lng=&radius=` | 근처 가게 목록 (위치 기반) | O |
 | `GET` | `/api/store/{storeId}` | 가게 상세 조회 (정보 + 이미지 + 메뉴 + 판매 상태) | O |
 
 ### 매장 — 사장님 (Store Boss)
