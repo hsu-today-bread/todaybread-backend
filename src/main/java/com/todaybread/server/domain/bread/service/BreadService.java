@@ -31,9 +31,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -258,50 +260,66 @@ public class BreadService {
             storeMap.put(store.getId(), store);
         }
 
-        // 5. 해당 가게들의 빵 일괄 조회
+        // 5. 영업시간 일괄 조회 및 가게 레벨 판매 상태 판별
+        Map<Long, List<StoreBusinessHoursEntity>> businessHoursMap =
+                storeBusinessHoursRepository.findByStoreIdIn(storeIds).stream()
+                        .collect(Collectors.groupingBy(StoreBusinessHoursEntity::getStoreId));
+        int todayDayOfWeek = LocalDate.now(clock).getDayOfWeek().getValue();
+        LocalTime now = LocalTime.now(clock);
+
+        // 5.5. 빵 일괄 조회
         List<BreadEntity> allBreads = breadRepository.findByStoreIdIn(storeIds);
         if (allBreads.isEmpty()) {
             return Collections.emptyList();
         }
 
-        // 5.5. 영업시간 일괄 조회 및 그룹핑
-        List<StoreBusinessHoursEntity> allBusinessHours = storeBusinessHoursRepository.findByStoreIdIn(storeIds);
-        Map<Long, List<StoreBusinessHoursEntity>> businessHoursMap = allBusinessHours.stream()
-                .collect(Collectors.groupingBy(StoreBusinessHoursEntity::getStoreId));
-        int todayDayOfWeek = LocalDate.now(clock).getDayOfWeek().getValue();
-        LocalTime now = LocalTime.now(clock);
+        // 5.6. 가게 레벨에서 영업중인 가게만 필터링 (재고와 무관하게 영업시간/활성 여부만 체크)
+        Set<Long> openStoreIds = new HashSet<>();
+        Map<Long, StoreBusinessHoursEntity> todayHoursMap = new HashMap<>();
+        for (Long storeId : storeIds) {
+            StoreEntity store = storeMap.get(storeId);
+            if (store == null) continue;
 
-        // 6. 이미지 일괄 조회 (N+1 방지)
-        List<Long> breadIds = allBreads.stream()
-                .map(BreadEntity::getId)
-                .collect(Collectors.toList());
-        Map<Long, String> imageUrlMap = breadImageService.getImageUrls(breadIds);
-
-        // 7. NearbyBreadResponse 변환
-        List<NearbyBreadResponse> responses = new ArrayList<>();
-        for (BreadEntity bread : allBreads) {
-            StoreEntity store = storeMap.get(bread.getStoreId());
-            if (store == null) {
-                continue;
-            }
-            double distance = storeDistanceMap.getOrDefault(store.getId(), 0.0);
-            String imageUrl = imageUrlMap.get(bread.getId());
-
-            // 오늘 요일의 영업시간에서 lastOrderTime 추출
-            LocalTime lastOrderTime = null;
             StoreBusinessHoursEntity todayHours = null;
-            List<StoreBusinessHoursEntity> storeHours = businessHoursMap.get(store.getId());
+            List<StoreBusinessHoursEntity> storeHours = businessHoursMap.get(storeId);
             if (storeHours != null) {
                 todayHours = storeHours.stream()
                         .filter(h -> h.getDayOfWeek().equals(todayDayOfWeek))
                         .findFirst()
                         .orElse(null);
-                if (todayHours != null) {
-                    lastOrderTime = todayHours.getLastOrderTime();
-                }
             }
+            todayHoursMap.put(storeId, todayHours);
 
-            // 개별 빵의 재고로 판매 상태 판별
+            // 재고 true로 넘겨서 영업시간/활성 여부만 판별
+            if (SellingStatusUtil.isSelling(store.getIsActive(), todayHours, true, now)) {
+                openStoreIds.add(storeId);
+            }
+        }
+
+        if (openStoreIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 6. 영업중인 가게의 빵만 필터링 후 이미지 일괄 조회
+        List<BreadEntity> openStoreBreads = allBreads.stream()
+                .filter(b -> openStoreIds.contains(b.getStoreId()))
+                .collect(Collectors.toList());
+
+        List<Long> breadIds = openStoreBreads.stream()
+                .map(BreadEntity::getId)
+                .collect(Collectors.toList());
+        Map<Long, String> imageUrlMap = breadImageService.getImageUrls(breadIds);
+
+        // 7. NearbyBreadResponse 변환 (영업중인 가게의 빵만, 개별 재고로 isSelling 판별)
+        List<NearbyBreadResponse> responses = new ArrayList<>();
+        for (BreadEntity bread : openStoreBreads) {
+            StoreEntity store = storeMap.get(bread.getStoreId());
+            double distance = storeDistanceMap.getOrDefault(store.getId(), 0.0);
+            String imageUrl = imageUrlMap.get(bread.getId());
+
+            StoreBusinessHoursEntity todayHours = todayHoursMap.get(store.getId());
+            LocalTime lastOrderTime = (todayHours != null) ? todayHours.getLastOrderTime() : null;
+
             boolean hasStock = bread.getRemainingQuantity() > 0;
             boolean isSelling = SellingStatusUtil.isSelling(store.getIsActive(), todayHours, hasStock, now);
 
