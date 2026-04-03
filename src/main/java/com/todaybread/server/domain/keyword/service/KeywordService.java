@@ -94,7 +94,7 @@ public class KeywordService {
             throw new CustomException(ErrorCode.KEYWORD_ALREADY_EXISTS);
         }
 
-        if (userKeywordRepository.countByUserId(userId) >= MAX_KEYWORDS_PER_USER) {
+        if (userKeywordRepository.countByUserIdWithLock(userId) >= MAX_KEYWORDS_PER_USER) {
             throw new CustomException(ErrorCode.KEYWORD_LIMIT_EXCEEDED);
         }
 
