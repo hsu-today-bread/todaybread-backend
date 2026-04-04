@@ -179,7 +179,10 @@ class FavouriteStoreServiceTest {
         StoreEntity store = createStore(storeId);
 
         // 오늘 요일에 해당하는 영업시간 엔티티 생성 (00:00~23:59 — 항상 영업시간 내)
-        int todayDayOfWeek = LocalDate.now().getDayOfWeek().getValue();
+        // mocked clock의 instant + zone 기준으로 요일을 계산해야 서비스 로직과 일치
+        Instant mockedInstant = Instant.parse("2026-04-03T03:00:00Z");
+        ZoneId seoulZone = ZoneId.of("Asia/Seoul");
+        int todayDayOfWeek = LocalDate.ofInstant(mockedInstant, seoulZone).getDayOfWeek().getValue();
         StoreBusinessHoursEntity todayHours = StoreBusinessHoursEntity.builder()
                 .storeId(storeId)
                 .dayOfWeek(todayDayOfWeek)
