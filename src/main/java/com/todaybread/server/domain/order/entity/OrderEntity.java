@@ -14,7 +14,13 @@ import lombok.NoArgsConstructor;
  * 유저가 장바구니 또는 바로 구매를 통해 생성한 주문을 관리합니다.
  */
 @Entity
-@Table(name = "orders")
+@Table(
+        name = "orders",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_orders_user_id_idempotency_key",
+                columnNames = {"user_id", "idempotency_key"}
+        )
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class OrderEntity extends BaseEntity {
@@ -36,12 +42,16 @@ public class OrderEntity extends BaseEntity {
     @Column(name = "total_amount", nullable = false)
     private int totalAmount;
 
+    @Column(name = "idempotency_key", length = 255)
+    private String idempotencyKey;
+
     @Builder
-    private OrderEntity(Long userId, Long storeId, OrderStatus status, int totalAmount) {
+    private OrderEntity(Long userId, Long storeId, OrderStatus status, int totalAmount, String idempotencyKey) {
         this.userId = userId;
         this.storeId = storeId;
         this.status = status;
         this.totalAmount = totalAmount;
+        this.idempotencyKey = idempotencyKey;
     }
 
     /**

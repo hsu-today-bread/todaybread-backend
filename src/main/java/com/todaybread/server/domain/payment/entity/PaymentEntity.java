@@ -36,24 +36,39 @@ public class PaymentEntity extends BaseEntity {
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
 
+    @Column(name = "idempotency_key", length = 255)
+    private String idempotencyKey;
+
     @Builder
-    private PaymentEntity(Long orderId, int amount, PaymentStatus status, LocalDateTime paidAt) {
+    private PaymentEntity(Long orderId, int amount, PaymentStatus status, LocalDateTime paidAt,
+                          String idempotencyKey) {
         this.orderId = orderId;
         this.amount = amount;
         this.status = status;
         this.paidAt = paidAt;
+        this.idempotencyKey = idempotencyKey;
+    }
+
+    /**
+     * 결제를 승인 처리합니다.
+     * 결제 상태를 APPROVED로 변경하고 결제 시각을 설정합니다.
+     *
+     * @param paidAt 결제 처리 시각
+     */
+    public void approve(LocalDateTime paidAt, String idempotencyKey) {
+        this.status = PaymentStatus.APPROVED;
+        this.paidAt = paidAt;
+        this.idempotencyKey = idempotencyKey;
     }
 
     /**
      * 결제 상태를 변경합니다.
-     * APPROVED 상태로 변경 시 결제 시각을 현재 시각으로 설정합니다.
      *
      * @param newStatus 변경할 결제 상태
      */
-    public void updateStatus(PaymentStatus newStatus) {
+    public void updateStatus(PaymentStatus newStatus, String idempotencyKey) {
         this.status = newStatus;
-        if (newStatus == PaymentStatus.APPROVED) {
-            this.paidAt = LocalDateTime.now();
-        }
+        this.paidAt = null;
+        this.idempotencyKey = idempotencyKey;
     }
 }

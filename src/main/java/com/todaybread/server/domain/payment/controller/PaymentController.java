@@ -7,6 +7,7 @@ import com.todaybread.server.global.util.JwtRoleHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -36,8 +37,9 @@ public class PaymentController {
     @Operation(summary = "결제 요청")
     @PostMapping
     public PaymentResponse processPayment(@AuthenticationPrincipal Jwt jwt,
+                                          @RequestHeader("Idempotency-Key") @NotBlank String idempotencyKey,
                                           @RequestBody @Valid PaymentRequest request) {
         Long userId = JwtRoleHelper.getUserId(jwt);
-        return paymentService.processPayment(userId, request);
+        return paymentService.processPayment(userId, request, idempotencyKey);
     }
 }

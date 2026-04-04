@@ -36,7 +36,7 @@ public class CartController {
      */
     @Operation(summary = "장바구니에 빵 추가")
     @PostMapping
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(HttpStatus.CREATED)
     public void addToCart(@AuthenticationPrincipal Jwt jwt,
                           @RequestBody @Valid CartAddRequest request) {
         Long userId = JwtRoleHelper.getUserId(jwt);
@@ -81,7 +81,7 @@ public class CartController {
      */
     @Operation(summary = "장바구니 항목 삭제")
     @DeleteMapping("/items/{cartItemId}")
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void removeItem(@AuthenticationPrincipal Jwt jwt,
                            @PathVariable Long cartItemId) {
         Long userId = JwtRoleHelper.getUserId(jwt);
@@ -95,7 +95,7 @@ public class CartController {
      */
     @Operation(summary = "장바구니 비우기")
     @DeleteMapping
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void clearCart(@AuthenticationPrincipal Jwt jwt) {
         Long userId = JwtRoleHelper.getUserId(jwt);
         cartService.clearCart(userId);

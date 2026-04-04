@@ -8,14 +8,16 @@ import com.todaybread.server.global.util.JwtRoleHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 /**
  * 주문 컨트롤러입니다.
@@ -38,9 +40,10 @@ public class OrderController {
      */
     @Operation(summary = "장바구니 기반 주문 생성")
     @PostMapping("/cart")
-    public OrderDetailResponse createOrderFromCart(@AuthenticationPrincipal Jwt jwt) {
+    public OrderDetailResponse createOrderFromCart(@AuthenticationPrincipal Jwt jwt,
+                                                   @RequestHeader("Idempotency-Key") @NotBlank String idempotencyKey) {
         Long userId = JwtRoleHelper.getUserId(jwt);
-        return orderService.createOrderFromCart(userId);
+        return orderService.createOrderFromCart(userId, idempotencyKey);
     }
 
     /**
@@ -53,9 +56,10 @@ public class OrderController {
     @Operation(summary = "바로 구매")
     @PostMapping("/direct")
     public OrderDetailResponse createDirectOrder(@AuthenticationPrincipal Jwt jwt,
+                                                 @RequestHeader("Idempotency-Key") @NotBlank String idempotencyKey,
                                                  @RequestBody @Valid DirectOrderRequest request) {
         Long userId = JwtRoleHelper.getUserId(jwt);
-        return orderService.createDirectOrder(userId, request);
+        return orderService.createDirectOrder(userId, request, idempotencyKey);
     }
 
     /**
@@ -81,9 +85,12 @@ public class OrderController {
      */
     @Operation(summary = "주문 내역 목록 조회")
     @GetMapping
-    public List<OrderResponse> getOrders(@AuthenticationPrincipal Jwt jwt) {
+    public Page<OrderResponse> getOrders(@AuthenticationPrincipal Jwt jwt,
+                                         @RequestParam(defaultValue = "0") int page,
+                                         @RequestParam(defaultValue = "20") int size) {
         Long userId = JwtRoleHelper.getUserId(jwt);
-        return orderService.getOrders(userId);
+        Pageable pageable = PageRequest.of(page, Math.min(size, 100));
+        return orderService.getOrders(userId, pageable);
     }
 
     /**

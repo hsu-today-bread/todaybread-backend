@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 public class StubPaymentProcessor implements PaymentProcessor {
 
     @Override
-    public PaymentResult pay(int amount) {
+    public PaymentResult pay(Long orderId, int amount) {
         if (amount <= 0) {
             return new PaymentResult(PaymentStatus.FAILED, "결제 금액은 0보다 커야 합니다");
         }

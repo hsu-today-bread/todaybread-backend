@@ -70,9 +70,12 @@ public class BreadEntity extends BaseEntity {
      * 재고를 증가시킵니다.
      * 주문 취소 시 재고 복원에 사용됩니다.
      *
-     * @param number 증가할 수량
+     * @param number 증가할 수량 (양수만 허용)
      */
     public void increaseQuantity(int number) {
+        if (number <= 0) {
+            throw new IllegalArgumentException("증가 수량은 양수여야 합니다");
+        }
         this.remainingQuantity += number;
     }
 

@@ -9,8 +9,9 @@ public interface PaymentProcessor {
     /**
      * 결제를 처리합니다.
      *
-     * @param amount 결제 금액
+     * @param orderId 주문 ID (외부 PG의 idempotency key로 활용)
+     * @param amount  결제 금액
      * @return 결제 처리 결과
      */
-    PaymentResult pay(int amount);
+    PaymentResult pay(Long orderId, int amount);
 }

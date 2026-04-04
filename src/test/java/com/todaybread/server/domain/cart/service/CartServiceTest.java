@@ -11,6 +11,7 @@ import com.todaybread.server.domain.cart.repository.CartItemRepository;
 import com.todaybread.server.domain.cart.repository.CartRepository;
 import com.todaybread.server.domain.store.repository.StoreBusinessHoursRepository;
 import com.todaybread.server.domain.store.repository.StoreRepository;
+import com.todaybread.server.domain.user.repository.UserRepository;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
@@ -57,6 +58,9 @@ class CartServiceTest {
 
     @Mock
     private Clock clock;
+
+    @Mock
+    private UserRepository userRepository;
 
     private CartEntity createCartEntity(Long cartId, Long userId, Long storeId) {
         CartEntity cart = CartEntity.builder()
@@ -146,7 +150,7 @@ class CartServiceTest {
             CartAddRequest request = new CartAddRequest(100L, 1);
 
             given(breadRepository.findById(100L)).willReturn(Optional.of(bread));
-            given(cartRepository.findByUserId(1L)).willReturn(Optional.of(cart));
+            given(cartRepository.findByUserIdWithLock(1L)).willReturn(Optional.of(cart));
 
             assertThatThrownBy(() -> cartService.addToCart(1L, request))
                     .isInstanceOf(CustomException.class)
@@ -165,7 +169,7 @@ class CartServiceTest {
             CartEntity cart = createCartEntity(1L, 1L, 10L);
             CartItemEntity item = createCartItemEntity(100L, 1L, 50L, 2);
 
-            given(cartRepository.findByUserId(1L)).willReturn(Optional.of(cart));
+            given(cartRepository.findByUserIdWithLock(1L)).willReturn(Optional.of(cart));
             given(cartItemRepository.findById(100L)).willReturn(Optional.of(item));
             given(cartItemRepository.findByCartId(1L)).willReturn(List.of());
 

@@ -4,8 +4,6 @@ import com.todaybread.server.domain.bread.entity.BreadEntity;
 import com.todaybread.server.domain.bread.repository.BreadRepository;
 import com.todaybread.server.domain.cart.entity.CartEntity;
 import com.todaybread.server.domain.cart.entity.CartItemEntity;
-import com.todaybread.server.domain.cart.repository.CartItemRepository;
-import com.todaybread.server.domain.cart.repository.CartRepository;
 import com.todaybread.server.domain.cart.service.CartService;
 import com.todaybread.server.domain.order.dto.DirectOrderRequest;
 import com.todaybread.server.domain.order.dto.OrderDetailResponse;
@@ -49,11 +47,11 @@ import static org.mockito.Mockito.verify;
  */
 class OrderPropertyTest {
 
+    private static final String IDEMPOTENCY_KEY = "order-key";
+
     private OrderService orderService;
     private OrderRepository orderRepository;
     private OrderItemRepository orderItemRepository;
-    private CartRepository cartRepository;
-    private CartItemRepository cartItemRepository;
     private CartService cartService;
     private BreadRepository breadRepository;
     private StoreRepository storeRepository;
@@ -62,14 +60,11 @@ class OrderPropertyTest {
     void setUp() {
         orderRepository = Mockito.mock(OrderRepository.class);
         orderItemRepository = Mockito.mock(OrderItemRepository.class);
-        cartRepository = Mockito.mock(CartRepository.class);
-        cartItemRepository = Mockito.mock(CartItemRepository.class);
         cartService = Mockito.mock(CartService.class);
         breadRepository = Mockito.mock(BreadRepository.class);
         storeRepository = Mockito.mock(StoreRepository.class);
         orderService = new OrderService(
                 orderRepository, orderItemRepository,
-                cartRepository, cartItemRepository,
                 cartService, breadRepository, storeRepository
         );
     }
@@ -146,7 +141,7 @@ class OrderPropertyTest {
 
     /**
      * Sets up common mocks for createOrderFromCart:
-     * - cartRepository, cartItemRepository, breadRepository (findAllByIdWithLock)
+     * - cartService.getCartWithItemsForCheckout, breadRepository (findAllByIdWithLock)
      * - orderRepository.save (sets order ID via ReflectionTestUtils)
      * - storeRepository
      */
@@ -156,8 +151,9 @@ class OrderPropertyTest {
         CartEntity cart = createCart(cartId, userId, storeId);
         StoreEntity store = createStore(storeId, "테스트매장");
 
-        given(cartRepository.findByUserId(userId)).willReturn(Optional.of(cart));
-        given(cartItemRepository.findByCartId(cartId)).willReturn(cartItems);
+        given(orderRepository.findByUserIdAndIdempotencyKey(userId, IDEMPOTENCY_KEY)).willReturn(Optional.empty());
+        given(cartService.getCartWithItemsForCheckout(userId))
+                .willReturn(new CartService.CartWithItems(cart, cartItems));
 
         List<Long> breadIds = cartItems.stream().map(CartItemEntity::getBreadId).toList();
         given(breadRepository.findAllByIdWithLock(breadIds)).willReturn(breads);
@@ -194,7 +190,7 @@ class OrderPropertyTest {
 
         setupCartOrderMocks(userId, cartId, storeId, cartItems, breads);
 
-        OrderDetailResponse response = orderService.createOrderFromCart(userId);
+        OrderDetailResponse response = orderService.createOrderFromCart(userId, IDEMPOTENCY_KEY);
 
         assertThat(response.status()).isEqualTo(OrderStatus.PENDING);
     }
@@ -209,6 +205,7 @@ class OrderPropertyTest {
         BreadEntity bread = createBread(breadId, storeId, "소금빵", 3500, quantity + 50);
         StoreEntity store = createStore(storeId, "테스트매장");
 
+        given(orderRepository.findByUserIdAndIdempotencyKey(userId, IDEMPOTENCY_KEY)).willReturn(Optional.empty());
         given(breadRepository.findAllByIdWithLock(List.of(breadId))).willReturn(List.of(bread));
         given(orderRepository.save(any(OrderEntity.class))).willAnswer(invocation -> {
             OrderEntity order = invocation.getArgument(0);
@@ -219,7 +216,7 @@ class OrderPropertyTest {
         given(storeRepository.findById(storeId)).willReturn(Optional.of(store));
 
         DirectOrderRequest request = new DirectOrderRequest(breadId, quantity);
-        OrderDetailResponse response = orderService.createDirectOrder(userId, request);
+        OrderDetailResponse response = orderService.createDirectOrder(userId, request, IDEMPOTENCY_KEY);
 
         assertThat(response.status()).isEqualTo(OrderStatus.PENDING);
     }
@@ -249,7 +246,7 @@ class OrderPropertyTest {
         ArgumentCaptor<List<OrderItemEntity>> captor = ArgumentCaptor.forClass(List.class);
         given(orderItemRepository.saveAll(captor.capture())).willAnswer(invocation -> invocation.getArgument(0));
 
-        orderService.createOrderFromCart(userId);
+        orderService.createOrderFromCart(userId, IDEMPOTENCY_KEY);
 
         List<OrderItemEntity> savedItems = captor.getValue();
         assertThat(savedItems).hasSize(itemCount);
@@ -284,7 +281,7 @@ class OrderPropertyTest {
 
         setupCartOrderMocks(userId, cartId, storeId, cartItems, breads);
 
-        orderService.createOrderFromCart(userId);
+        orderService.createOrderFromCart(userId, IDEMPOTENCY_KEY);
 
         for (BreadEntity bread : breads) {
             assertThat(bread.getRemainingQuantity()).isEqualTo(initialStock - quantity);
@@ -321,12 +318,13 @@ class OrderPropertyTest {
         }
 
         CartEntity cart = createCart(cartId, userId, storeId);
-        given(cartRepository.findByUserId(userId)).willReturn(Optional.of(cart));
-        given(cartItemRepository.findByCartId(cartId)).willReturn(cartItems);
+        given(orderRepository.findByUserIdAndIdempotencyKey(userId, IDEMPOTENCY_KEY)).willReturn(Optional.empty());
+        given(cartService.getCartWithItemsForCheckout(userId))
+                .willReturn(new CartService.CartWithItems(cart, cartItems));
         List<Long> breadIds = cartItems.stream().map(CartItemEntity::getBreadId).toList();
         given(breadRepository.findAllByIdWithLock(breadIds)).willReturn(breads);
 
-        assertThatThrownBy(() -> orderService.createOrderFromCart(userId))
+        assertThatThrownBy(() -> orderService.createOrderFromCart(userId, IDEMPOTENCY_KEY))
                 .isInstanceOf(CustomException.class)
                 .satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
                         .isEqualTo(ErrorCode.BREAD_INSUFFICIENT_QUANTITY));
@@ -359,7 +357,7 @@ class OrderPropertyTest {
 
         setupCartOrderMocks(userId, cartId, storeId, cartItems, breads);
 
-        orderService.createOrderFromCart(userId);
+        orderService.createOrderFromCart(userId, IDEMPOTENCY_KEY);
 
         verify(cartService).clearCart(userId);
     }
@@ -388,7 +386,7 @@ class OrderPropertyTest {
 
         setupCartOrderMocks(userId, cartId, storeId, cartItems, breads);
 
-        OrderDetailResponse response = orderService.createOrderFromCart(userId);
+        OrderDetailResponse response = orderService.createOrderFromCart(userId, IDEMPOTENCY_KEY);
 
         assertThat(response.totalAmount()).isEqualTo(expectedTotal);
     }
@@ -415,11 +413,14 @@ class OrderPropertyTest {
             breads.add(createBread(breadId, storeId, "빵-" + breadId, 3000, currentStock));
         }
 
-        given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
+        given(orderRepository.findByIdWithLock(orderId)).willReturn(Optional.of(order));
         given(orderItemRepository.findByOrderId(orderId)).willReturn(orderItems);
-        for (int i = 0; i < itemCount; i++) {
-            given(breadRepository.findById(10L + i)).willReturn(Optional.of(breads.get(i)));
-        }
+
+        List<Long> breadIdsForLock = orderItems.stream()
+                .map(OrderItemEntity::getBreadId)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        given(breadRepository.findAllByIdWithLock(breadIdsForLock)).willReturn(breads);
 
         orderService.cancelOrder(userId, orderId);
 
@@ -440,7 +441,7 @@ class OrderPropertyTest {
         OrderStatus nonPendingStatus = statusIndex == 0 ? OrderStatus.CONFIRMED : OrderStatus.CANCELLED;
 
         OrderEntity order = createOrder(orderId, userId, storeId, nonPendingStatus, 7000);
-        given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
+        given(orderRepository.findByIdWithLock(orderId)).willReturn(Optional.of(order));
 
         // Cancel should be rejected
         assertThatThrownBy(() -> orderService.cancelOrder(userId, orderId))
@@ -462,7 +463,7 @@ class OrderPropertyTest {
         OrderStatus nonPendingStatus = statusIndex == 0 ? OrderStatus.CONFIRMED : OrderStatus.CANCELLED;
 
         OrderEntity order = createOrder(orderId, 1L, storeId, nonPendingStatus, 7000);
-        given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
+        given(orderRepository.findByIdWithLock(orderId)).willReturn(Optional.of(order));
 
         assertThatThrownBy(() -> orderService.confirmOrder(orderId))
                 .isInstanceOf(CustomException.class)
@@ -482,7 +483,6 @@ class OrderPropertyTest {
         Long userId = 1L, storeId = 100L;
         StoreEntity store = createStore(storeId, "테스트매장");
 
-        // Create N orders with descending createdAt (already sorted by repository)
         List<OrderEntity> orders = new ArrayList<>();
         for (int i = 0; i < n; i++) {
             OrderEntity order = createOrder((long) (i + 1), userId, storeId, OrderStatus.PENDING, 3000 * (i + 1));
@@ -490,21 +490,21 @@ class OrderPropertyTest {
             orders.add(order);
         }
 
-        given(orderRepository.findByUserIdOrderByCreatedAtDesc(userId)).willReturn(orders);
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, 20);
+        given(orderRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable))
+                .willReturn(new org.springframework.data.domain.PageImpl<>(orders, pageable, orders.size()));
         given(storeRepository.findAllById(List.of(storeId))).willReturn(List.of(store));
 
-        List<OrderResponse> responses = orderService.getOrders(userId);
+        org.springframework.data.domain.Page<OrderResponse> page = orderService.getOrders(userId, pageable);
 
-        assertThat(responses).hasSize(n);
+        assertThat(page.getContent()).hasSize(n);
 
-        // Verify descending order by createdAt
         for (int i = 0; i < n - 1; i++) {
-            assertThat(responses.get(i).createdAt())
-                    .isAfterOrEqualTo(responses.get(i + 1).createdAt());
+            assertThat(page.getContent().get(i).createdAt())
+                    .isAfterOrEqualTo(page.getContent().get(i + 1).createdAt());
         }
 
-        // Verify required fields
-        for (OrderResponse response : responses) {
+        for (OrderResponse response : page.getContent()) {
             assertThat(response.orderId()).isNotNull();
             assertThat(response.storeName()).isEqualTo("테스트매장");
             assertThat(response.status()).isNotNull();

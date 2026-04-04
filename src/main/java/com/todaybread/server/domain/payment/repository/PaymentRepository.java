@@ -17,4 +17,13 @@ public interface PaymentRepository extends JpaRepository<PaymentEntity, Long> {
      * @return 결제 엔티티
      */
     Optional<PaymentEntity> findByOrderId(Long orderId);
+
+    /**
+     * 주문 ID와 idempotency key로 결제를 조회합니다.
+     *
+     * @param orderId 주문 ID
+     * @param idempotencyKey idempotency key
+     * @return 결제 엔티티
+     */
+    Optional<PaymentEntity> findByOrderIdAndIdempotencyKey(Long orderId, String idempotencyKey);
 }

@@ -14,6 +14,7 @@ import com.todaybread.server.domain.store.entity.StoreBusinessHoursEntity;
 import com.todaybread.server.domain.store.entity.StoreEntity;
 import com.todaybread.server.domain.store.repository.StoreBusinessHoursRepository;
 import com.todaybread.server.domain.store.repository.StoreRepository;
+import com.todaybread.server.domain.user.repository.UserRepository;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
 import net.jqwik.api.ForAll;
@@ -55,6 +56,7 @@ class CartPropertyTest {
     private BreadImageService breadImageService;
     private StoreRepository storeRepository;
     private StoreBusinessHoursRepository storeBusinessHoursRepository;
+    private UserRepository userRepository;
     private Clock clock;
 
     @BeforeProperty
@@ -65,10 +67,11 @@ class CartPropertyTest {
         breadImageService = Mockito.mock(BreadImageService.class);
         storeRepository = Mockito.mock(StoreRepository.class);
         storeBusinessHoursRepository = Mockito.mock(StoreBusinessHoursRepository.class);
+        userRepository = Mockito.mock(UserRepository.class);
         clock = Mockito.mock(Clock.class);
         cartService = new CartService(
                 cartRepository, cartItemRepository, breadRepository,
-                breadImageService, storeRepository, storeBusinessHoursRepository, clock
+                breadImageService, storeRepository, storeBusinessHoursRepository, userRepository, clock
         );
     }
 
@@ -134,7 +137,7 @@ class CartPropertyTest {
         CartItemEntity existingItem = createCartItem(1L, cartId, breadId, q1);
 
         given(breadRepository.findById(breadId)).willReturn(Optional.of(bread));
-        given(cartRepository.findByUserId(userId)).willReturn(Optional.of(cart));
+        given(cartRepository.findByUserIdWithLock(userId)).willReturn(Optional.of(cart));
         given(cartItemRepository.findByCartIdAndBreadId(cartId, breadId))
                 .willReturn(Optional.of(existingItem));
 
@@ -189,7 +192,7 @@ class CartPropertyTest {
         CartEntity cart = createCart(cartId, userId, storeId);
 
         given(breadRepository.findById(breadId)).willReturn(Optional.of(bread));
-        given(cartRepository.findByUserId(userId)).willReturn(Optional.of(cart));
+        given(cartRepository.findByUserIdWithLock(userId)).willReturn(Optional.of(cart));
         given(cartItemRepository.findByCartIdAndBreadId(cartId, breadId))
                 .willReturn(Optional.empty());
 
@@ -217,7 +220,7 @@ class CartPropertyTest {
         CartEntity cart = createCart(cartId, userId, storeA);
 
         given(breadRepository.findById(breadId)).willReturn(Optional.of(bread));
-        given(cartRepository.findByUserId(userId)).willReturn(Optional.of(cart));
+        given(cartRepository.findByUserIdWithLock(userId)).willReturn(Optional.of(cart));
 
         CartAddRequest request = new CartAddRequest(breadId, 1);
 
@@ -261,11 +264,14 @@ class CartPropertyTest {
         lenient().when(storeBusinessHoursRepository.findByStoreIdAndDayOfWeek(eq(storeId), any(Integer.class)))
                 .thenReturn(Optional.of(hours));
 
+        List<BreadEntity> breadList = new ArrayList<>();
+        List<Long> breadIds = new ArrayList<>();
         for (int i = 0; i < n; i++) {
             long breadId = 10L + i;
-            BreadEntity bread = createBread(breadId, storeId, 100);
-            given(breadRepository.findById(breadId)).willReturn(Optional.of(bread));
+            breadIds.add(breadId);
+            breadList.add(createBread(breadId, storeId, 100));
         }
+        given(breadRepository.findAllById(anyList())).willReturn(breadList);
 
         CartResponse response = cartService.getCart(userId);
 
@@ -294,7 +300,7 @@ class CartPropertyTest {
         CartItemEntity cartItem = createCartItem(cartItemId, cartId, breadId, 5);
         BreadEntity bread = createBread(breadId, storeId, 100);
 
-        given(cartRepository.findByUserId(userId)).willReturn(Optional.of(cart));
+        given(cartRepository.findByUserIdWithLock(userId)).willReturn(Optional.of(cart));
         given(cartItemRepository.findById(cartItemId)).willReturn(Optional.of(cartItem));
         given(breadRepository.findById(breadId)).willReturn(Optional.of(bread));
 
@@ -313,7 +319,7 @@ class CartPropertyTest {
     ) {
         // Reset mocks to avoid accumulated invocation counts across tries
         Mockito.reset(cartRepository, cartItemRepository, breadRepository,
-                breadImageService, storeRepository, storeBusinessHoursRepository, clock);
+                breadImageService, storeRepository, storeBusinessHoursRepository, userRepository, clock);
 
         Long userId = 1L, cartId = 1L, storeId = 100L;
         CartEntity cart = createCart(cartId, userId, storeId);
@@ -326,7 +332,7 @@ class CartPropertyTest {
         CartItemEntity itemToRemove = allItems.get(0);
         List<CartItemEntity> remaining = new ArrayList<>(allItems.subList(1, allItems.size()));
 
-        given(cartRepository.findByUserId(userId)).willReturn(Optional.of(cart));
+        given(cartRepository.findByUserIdWithLock(userId)).willReturn(Optional.of(cart));
         given(cartItemRepository.findById(itemToRemove.getId())).willReturn(Optional.of(itemToRemove));
         given(cartItemRepository.findByCartId(cartId)).willReturn(remaining);
 
@@ -350,14 +356,14 @@ class CartPropertyTest {
             @ForAll @IntRange(min = 1, max = 10) int n
     ) {
         Mockito.reset(cartRepository, cartItemRepository, breadRepository,
-                breadImageService, storeRepository, storeBusinessHoursRepository, clock);
+                breadImageService, storeRepository, storeBusinessHoursRepository, userRepository, clock);
 
         Long userId = 1L, cartId = 1L, storeId = 100L;
         CartEntity cart = createCart(cartId, userId, storeId);
 
         assertThat(cart.getStoreId()).isEqualTo(storeId);
 
-        given(cartRepository.findByUserId(userId)).willReturn(Optional.of(cart));
+        given(cartRepository.findByUserIdWithLock(userId)).willReturn(Optional.of(cart));
 
         cartService.clearCart(userId);
 

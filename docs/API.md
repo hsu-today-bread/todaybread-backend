@@ -120,19 +120,27 @@
 
 ### 주문 (Order)
 
-| 메서드 | 경로 | 설명 | 인증 |
-|--------|------|------|------|
-| `POST` | `/api/orders/cart` | 장바구니 기반 주문 생성 | O |
-| `POST` | `/api/orders/direct` | 바로 구매 (장바구니 미경유) | O |
-| `POST` | `/api/orders/{orderId}/cancel` | 주문 취소 | O |
-| `GET` | `/api/orders` | 주문 내역 목록 (최신순) | O |
-| `GET` | `/api/orders/{orderId}` | 주문 상세 조회 | O |
+> 주문 생성 API(`POST /api/orders/cart`, `POST /api/orders/direct`)는 `Idempotency-Key` 헤더가 필수입니다.
+> 네트워크 오류 등으로 응답을 받지 못했을 때 같은 key로 재요청하면 동일한 주문 결과를 반환합니다.
+> 새로운 주문을 생성하려면 반드시 새로운 key를 사용하세요. (UUID v4 권장)
+
+| 메서드 | 경로 | 설명 | 인증 | 필수 헤더 |
+|--------|------|------|------|----------|
+| `POST` | `/api/orders/cart` | 장바구니 기반 주문 생성 | O | `Idempotency-Key` |
+| `POST` | `/api/orders/direct` | 바로 구매 (장바구니 미경유) | O | `Idempotency-Key` |
+| `POST` | `/api/orders/{orderId}/cancel` | 주문 취소 | O | — |
+| `GET` | `/api/orders` | 주문 내역 목록 (최신순) | O | — |
+| `GET` | `/api/orders/{orderId}` | 주문 상세 조회 | O | — |
 
 ### 결제 (Payment)
 
-| 메서드 | 경로 | 설명 | 인증 |
-|--------|------|------|------|
-| `POST` | `/api/payments` | 결제 요청 (Stub → 토스 교체 예정) | O |
+> 결제 API(`POST /api/payments`)는 `Idempotency-Key` 헤더가 필수입니다.
+> 같은 key로 재요청하면 PG를 중복 호출하지 않고 기존 결제 결과를 반환합니다.
+> 결제 실패 후 재시도할 때는 새로운 key를 사용하세요.
+
+| 메서드 | 경로 | 설명 | 인증 | 필수 헤더 |
+|--------|------|------|------|----------|
+| `POST` | `/api/payments` | 결제 요청 (Stub → 토스 교체 예정) | O | `Idempotency-Key` |
 
 ### 시스템 (System)
 

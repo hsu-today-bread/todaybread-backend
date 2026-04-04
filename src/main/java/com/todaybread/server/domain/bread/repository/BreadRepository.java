@@ -38,6 +38,6 @@ public interface BreadRepository extends JpaRepository<BreadEntity, Long> {
      * @return 빵 엔티티 목록 (락 획득)
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT b FROM BreadEntity b WHERE b.id IN :ids")
+    @Query("SELECT b FROM BreadEntity b WHERE b.id IN :ids ORDER BY b.id")
     List<BreadEntity> findAllByIdWithLock(@Param("ids") List<Long> ids);
 }
