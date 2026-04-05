@@ -42,15 +42,19 @@ public class PaymentService {
      * 비관적 락으로 주문을 조회하여 동시 결제를 방지합니다.
      * 기존 FAILED 결제가 있으면 상태를 갱신하여 재시도를 지원합니다.
      *
-     * @param userId  유저 ID
-     * @param request 결제 요청
+     * @param userId         유저 ID
+     * @param request        결제 요청
+     * @param idempotencyKey 멱등성 키
      * @return 결제 응답
      */
     @Transactional
     public PaymentResponse processPayment(Long userId, PaymentRequest request, String idempotencyKey) {
         // 1. 비관적 락으로 Order 조회 — 동시 결제 방지
-        OrderEntity order = orderRepository.findByIdWithLock(request.orderId())
-                .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
+        Optional<OrderEntity> orderOpt = orderRepository.findByIdWithLock(request.orderId());
+        if (orderOpt.isEmpty()) {
+            throw new CustomException(ErrorCode.ORDER_NOT_FOUND);
+        }
+        OrderEntity order = orderOpt.get();
 
         // 2. 소유자 확인
         if (!order.getUserId().equals(userId)) {

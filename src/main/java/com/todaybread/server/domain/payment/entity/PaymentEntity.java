@@ -53,7 +53,8 @@ public class PaymentEntity extends BaseEntity {
      * 결제를 승인 처리합니다.
      * 결제 상태를 APPROVED로 변경하고 결제 시각을 설정합니다.
      *
-     * @param paidAt 결제 처리 시각
+     * @param paidAt         결제 처리 시각
+     * @param idempotencyKey 멱등성 키
      */
     public void approve(LocalDateTime paidAt, String idempotencyKey) {
         this.status = PaymentStatus.APPROVED;
@@ -64,7 +65,8 @@ public class PaymentEntity extends BaseEntity {
     /**
      * 결제 상태를 변경합니다.
      *
-     * @param newStatus 변경할 결제 상태
+     * @param newStatus      변경할 결제 상태
+     * @param idempotencyKey 멱등성 키
      */
     public void updateStatus(PaymentStatus newStatus, String idempotencyKey) {
         this.status = newStatus;

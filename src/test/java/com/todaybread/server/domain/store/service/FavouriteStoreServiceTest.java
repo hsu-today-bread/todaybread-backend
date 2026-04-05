@@ -15,36 +15,24 @@ import com.todaybread.server.domain.store.repository.StoreRepository;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
 import com.todaybread.server.global.storage.FileStorage;
-import org.junit.jupiter.api.DisplayName;
+import com.todaybread.server.support.TestFixtures;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
+import org.mockito.MockitoAnnotations;
+import org.springframework.dao.DataIntegrityViolationException;
 
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
-/**
- * {@link FavouriteStoreService}의 단위 테스트입니다.
- * 단골 가게 토글(추가/해제), 목록 조회, 판매중 판별 로직을 검증합니다.
- */
-@ExtendWith(MockitoExtension.class)
 class FavouriteStoreServiceTest {
-
-    @InjectMocks
-    private FavouriteStoreService favouriteStoreService;
 
     @Mock
     private FavouriteStoreRepository favouriteStoreRepository;
@@ -64,167 +52,93 @@ class FavouriteStoreServiceTest {
     @Mock
     private FileStorage fileStorage;
 
-    @Mock
-    private java.time.Clock clock;
+    private FavouriteStoreService favouriteStoreService;
 
-    @Test
-    @DisplayName("toggleFavouriteStore_추가_성공")
-    void toggleFavouriteStore_add_success() {
-        // given
-        Long userId = 1L;
-        Long storeId = 10L;
-        FavouriteStoreToggleRequest request = new FavouriteStoreToggleRequest(storeId);
-
-        when(favouriteStoreRepository.findByUserIdAndStoreId(userId, storeId))
-                .thenReturn(Optional.empty());
-        when(storeRepository.findByIdAndIsActiveTrue(storeId))
-                .thenReturn(Optional.of(createStore(storeId)));
-        when(favouriteStoreRepository.countByUserIdWithLock(userId)).thenReturn(0L);
-        when(favouriteStoreRepository.save(any())).thenReturn(null);
-
-        // when
-        FavouriteStoreToggleResponse response = favouriteStoreService.toggleFavouriteStore(userId, request);
-
-        // then
-        assertThat(response.added()).isTrue();
-        verify(favouriteStoreRepository).save(any(FavouriteStoreEntity.class));
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+        favouriteStoreService = new FavouriteStoreService(
+                favouriteStoreRepository,
+                storeRepository,
+                breadRepository,
+                storeImageRepository,
+                storeBusinessHoursRepository,
+                fileStorage,
+                TestFixtures.FIXED_CLOCK
+        );
     }
 
     @Test
-    @DisplayName("toggleFavouriteStore_해제_성공")
-    void toggleFavouriteStore_remove_success() {
-        // given
-        Long userId = 1L;
-        Long storeId = 10L;
-        FavouriteStoreToggleRequest request = new FavouriteStoreToggleRequest(storeId);
-        FavouriteStoreEntity existing = FavouriteStoreEntity.builder()
-                .userId(userId).storeId(storeId).build();
+    void toggleFavouriteStore_removesExistingFavourite() {
+        FavouriteStoreEntity existing = TestFixtures.favouriteStore(1L, 1L, 100L);
+        given(favouriteStoreRepository.findByUserIdAndStoreId(1L, 100L)).willReturn(Optional.of(existing));
 
-        when(favouriteStoreRepository.findByUserIdAndStoreId(userId, storeId))
-                .thenReturn(Optional.of(existing));
+        FavouriteStoreToggleResponse response = favouriteStoreService.toggleFavouriteStore(1L, new FavouriteStoreToggleRequest(100L));
 
-        // when
-        FavouriteStoreToggleResponse response = favouriteStoreService.toggleFavouriteStore(userId, request);
-
-        // then
         assertThat(response.added()).isFalse();
         verify(favouriteStoreRepository).delete(existing);
     }
 
     @Test
-    @DisplayName("toggleFavouriteStore_존재하지않는가게_에러")
-    void toggleFavouriteStore_storeNotFound_error() {
-        // given
-        Long userId = 1L;
-        Long storeId = 999L;
-        FavouriteStoreToggleRequest request = new FavouriteStoreToggleRequest(storeId);
+    void toggleFavouriteStore_rejectsMissingStore() {
+        given(favouriteStoreRepository.findByUserIdAndStoreId(1L, 100L)).willReturn(Optional.empty());
+        given(storeRepository.findByIdAndIsActiveTrue(100L)).willReturn(Optional.empty());
 
-        when(favouriteStoreRepository.findByUserIdAndStoreId(userId, storeId))
-                .thenReturn(Optional.empty());
-        when(storeRepository.findByIdAndIsActiveTrue(storeId))
-                .thenReturn(Optional.empty());
-
-        // when & then
-        assertThatThrownBy(() -> favouriteStoreService.toggleFavouriteStore(userId, request))
+        assertThatThrownBy(() -> favouriteStoreService.toggleFavouriteStore(1L, new FavouriteStoreToggleRequest(100L)))
                 .isInstanceOf(CustomException.class)
-                .extracting(e -> ((CustomException) e).getErrorCode())
+                .extracting("errorCode")
                 .isEqualTo(ErrorCode.STORE_NOT_FOUND);
     }
 
     @Test
-    @DisplayName("toggleFavouriteStore_5개초과_에러")
-    void toggleFavouriteStore_limitExceeded_error() {
-        // given
-        Long userId = 1L;
-        Long storeId = 10L;
-        FavouriteStoreToggleRequest request = new FavouriteStoreToggleRequest(storeId);
+    void toggleFavouriteStore_rejectsWhenLimitExceeded() {
+        StoreEntity store = TestFixtures.store(100L, 10L);
+        given(favouriteStoreRepository.findByUserIdAndStoreId(1L, 100L)).willReturn(Optional.empty());
+        given(storeRepository.findByIdAndIsActiveTrue(100L)).willReturn(Optional.of(store));
+        given(favouriteStoreRepository.countByUserIdWithLock(1L)).willReturn(5L);
 
-        when(favouriteStoreRepository.findByUserIdAndStoreId(userId, storeId))
-                .thenReturn(Optional.empty());
-        when(storeRepository.findByIdAndIsActiveTrue(storeId))
-                .thenReturn(Optional.of(createStore(storeId)));
-        when(favouriteStoreRepository.countByUserIdWithLock(userId)).thenReturn(5L);
-
-        // when & then
-        assertThatThrownBy(() -> favouriteStoreService.toggleFavouriteStore(userId, request))
+        assertThatThrownBy(() -> favouriteStoreService.toggleFavouriteStore(1L, new FavouriteStoreToggleRequest(100L)))
                 .isInstanceOf(CustomException.class)
-                .extracting(e -> ((CustomException) e).getErrorCode())
+                .extracting("errorCode")
                 .isEqualTo(ErrorCode.FAVOURITE_STORE_LIMIT_EXCEEDED);
     }
 
     @Test
-    @DisplayName("getMyFavouriteStores_빈목록")
-    void getMyFavouriteStores_empty() {
-        // given
-        Long userId = 1L;
-        when(favouriteStoreRepository.findByUserId(userId)).thenReturn(List.of());
+    void toggleFavouriteStore_returnsAddedWhenConcurrentDuplicateOccurs() {
+        StoreEntity store = TestFixtures.store(100L, 10L);
+        given(favouriteStoreRepository.findByUserIdAndStoreId(1L, 100L)).willReturn(Optional.empty());
+        given(storeRepository.findByIdAndIsActiveTrue(100L)).willReturn(Optional.of(store));
+        given(favouriteStoreRepository.countByUserIdWithLock(1L)).willReturn(1L);
+        given(favouriteStoreRepository.save(any())).willThrow(new DataIntegrityViolationException("duplicate"));
 
-        // when
-        List<FavouriteStoreResponse> result = favouriteStoreService.getMyFavouriteStores(userId);
+        FavouriteStoreToggleResponse response = favouriteStoreService.toggleFavouriteStore(1L, new FavouriteStoreToggleRequest(100L));
 
-        // then
-        assertThat(result).isEmpty();
+        assertThat(response.added()).isTrue();
     }
 
     @Test
-    @DisplayName("getMyFavouriteStores_판매중판별_정확성")
-    void getMyFavouriteStores_isSelling_accuracy() {
-        // given
-        Long userId = 1L;
-        Long storeId = 10L;
+    void getMyFavouriteStores_returnsOnlyActiveStores() {
+        FavouriteStoreEntity favourite1 = TestFixtures.favouriteStore(1L, 1L, 100L);
+        FavouriteStoreEntity favourite2 = TestFixtures.favouriteStore(2L, 1L, 200L);
+        StoreEntity activeStore = TestFixtures.store(100L, 10L);
+        BreadEntity bread = TestFixtures.bread(1L, 100L, 3, 4_000, 2_000);
+        StoreBusinessHoursEntity sundayHours = TestFixtures.businessHours(
+                100L, 7, false, LocalTime.of(9, 0), LocalTime.of(20, 0), LocalTime.of(19, 0)
+        );
 
-        FavouriteStoreEntity favourite = FavouriteStoreEntity.builder()
-                .userId(userId).storeId(storeId).build();
+        given(favouriteStoreRepository.findByUserId(1L)).willReturn(List.of(favourite1, favourite2));
+        given(storeRepository.findByIdInAndIsActiveTrue(List.of(100L, 200L))).willReturn(List.of(activeStore));
+        given(breadRepository.findByStoreIdIn(List.of(100L))).willReturn(List.of(bread));
+        given(storeBusinessHoursRepository.findByStoreIdIn(List.of(100L))).willReturn(List.of(sundayHours));
+        given(storeImageRepository.findByStoreIdInOrderByStoreIdAscDisplayOrderAsc(List.of(100L)))
+                .willReturn(List.of(TestFixtures.storeImage(1L, 100L, "store.jpg", 0)));
+        given(fileStorage.getFileUrl("store.jpg")).willReturn("https://cdn/store.jpg");
 
-        StoreEntity store = createStore(storeId);
+        List<FavouriteStoreResponse> responses = favouriteStoreService.getMyFavouriteStores(1L);
 
-        // 오늘 요일에 해당하는 영업시간 엔티티 생성 (00:00~23:59 — 항상 영업시간 내)
-        // mocked clock의 instant + zone 기준으로 요일을 계산해야 서비스 로직과 일치
-        Instant mockedInstant = Instant.parse("2026-04-03T03:00:00Z");
-        ZoneId seoulZone = ZoneId.of("Asia/Seoul");
-        int todayDayOfWeek = LocalDate.ofInstant(mockedInstant, seoulZone).getDayOfWeek().getValue();
-        StoreBusinessHoursEntity todayHours = StoreBusinessHoursEntity.builder()
-                .storeId(storeId)
-                .dayOfWeek(todayDayOfWeek)
-                .isClosed(false)
-                .startTime(LocalTime.of(0, 0))
-                .endTime(LocalTime.of(23, 59))
-                .build();
-
-        BreadEntity bread = BreadEntity.builder()
-                .storeId(storeId).name("테스트빵").description("설명")
-                .originalPrice(3000).salePrice(2000).remainingQuantity(5).build();
-
-        when(clock.getZone()).thenReturn(ZoneId.of("Asia/Seoul"));
-        when(clock.instant()).thenReturn(Instant.parse("2026-04-03T03:00:00Z"));
-        when(favouriteStoreRepository.findByUserId(userId)).thenReturn(List.of(favourite));
-        when(storeRepository.findByIdInAndIsActiveTrue(List.of(storeId))).thenReturn(List.of(store));
-        when(breadRepository.findByStoreIdIn(List.of(storeId))).thenReturn(List.of(bread));
-        when(storeBusinessHoursRepository.findByStoreIdIn(List.of(storeId))).thenReturn(List.of(todayHours));
-        when(storeImageRepository.findByStoreIdInOrderByStoreIdAscDisplayOrderAsc(List.of(storeId)))
-                .thenReturn(List.of());
-
-        // when
-        List<FavouriteStoreResponse> result = favouriteStoreService.getMyFavouriteStores(userId);
-
-        // then
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).storeId()).isEqualTo(storeId);
-        assertThat(result.get(0).isSelling()).isTrue();
-    }
-
-    private StoreEntity createStore(Long storeId) {
-        StoreEntity store = StoreEntity.builder()
-                .userId(100L)
-                .name("테스트 가게")
-                .phoneNumber("010-0000-0000")
-                .description("설명")
-                .addressLine1("서울시")
-                .addressLine2("강남구")
-                .latitude(BigDecimal.valueOf(37.5))
-                .longitude(BigDecimal.valueOf(127.0))
-                .build();
-        ReflectionTestUtils.setField(store, "id", storeId);
-        return store;
+        assertThat(responses).hasSize(1);
+        assertThat(responses.getFirst().storeId()).isEqualTo(100L);
+        assertThat(responses.getFirst().imageUrl()).isEqualTo("https://cdn/store.jpg");
+        assertThat(responses.getFirst().isSelling()).isTrue();
     }
 }

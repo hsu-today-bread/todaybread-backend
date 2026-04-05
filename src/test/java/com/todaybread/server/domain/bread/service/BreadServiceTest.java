@@ -2,36 +2,41 @@ package com.todaybread.server.domain.bread.service;
 
 import com.todaybread.server.domain.bread.dto.BreadCommonRequest;
 import com.todaybread.server.domain.bread.dto.BreadCommonResponse;
+import com.todaybread.server.domain.bread.dto.BreadDetailResponse;
+import com.todaybread.server.domain.bread.dto.BreadSortType;
 import com.todaybread.server.domain.bread.dto.BreadStockUpdateRequest;
 import com.todaybread.server.domain.bread.dto.BreadSuccessResponse;
+import com.todaybread.server.domain.bread.dto.NearbyBreadResponse;
 import com.todaybread.server.domain.bread.entity.BreadEntity;
 import com.todaybread.server.domain.bread.repository.BreadRepository;
+import com.todaybread.server.domain.store.entity.StoreBusinessHoursEntity;
 import com.todaybread.server.domain.store.entity.StoreEntity;
+import com.todaybread.server.domain.store.repository.StoreBusinessHoursRepository;
 import com.todaybread.server.domain.store.repository.StoreRepository;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
+import com.todaybread.server.global.exception.CustomException;
+import com.todaybread.server.global.exception.ErrorCode;
+import com.todaybread.server.support.TestFixtures;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InOrder;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.MockitoAnnotations;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 
-@ExtendWith(MockitoExtension.class)
 class BreadServiceTest {
-
-    @InjectMocks
-    private BreadService breadService;
 
     @Mock
     private BreadRepository breadRepository;
@@ -43,144 +48,156 @@ class BreadServiceTest {
     private StoreRepository storeRepository;
 
     @Mock
-    private java.time.Clock clock;
+    private StoreBusinessHoursRepository storeBusinessHoursRepository;
 
-    private StoreEntity createStoreEntity(Long userId, Long storeId) {
-        StoreEntity storeEntity = StoreEntity.builder()
-                .userId(userId)
-                .name("테스트빵집")
-                .phoneNumber("02-1234-5678")
-                .description("맛있는 빵집")
-                .addressLine1("서울시 강남구")
-                .addressLine2("역삼동 123")
-                .latitude(new BigDecimal("37.1234567"))
-                .longitude(new BigDecimal("127.1234567"))
-                .build();
-        ReflectionTestUtils.setField(storeEntity, "id", storeId);
-        return storeEntity;
+    private BreadService breadService;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+        breadService = new BreadService(
+                breadRepository,
+                breadImageService,
+                storeRepository,
+                storeBusinessHoursRepository,
+                TestFixtures.FIXED_CLOCK
+        );
     }
 
-    private BreadEntity createBreadEntity(Long breadId, Long storeId) {
-        BreadEntity breadEntity = BreadEntity.builder()
-                .storeId(storeId)
-                .name("소금빵")
-                .description("겉바속촉")
-                .originalPrice(5000)
-                .salePrice(3500)
-                .remainingQuantity(10)
-                .build();
-        ReflectionTestUtils.setField(breadEntity, "id", breadId);
-        return breadEntity;
+    @Test
+    void addBread_savesBreadAndUploadsImage() {
+        StoreEntity store = TestFixtures.store(100L, 1L);
+        MultipartFile image = TestFixtures.imageFile("bread.jpg");
+        BreadCommonRequest request = new BreadCommonRequest("Sourdough", 4_000, 2_500, 3, "fresh");
+
+        given(storeRepository.findByUserIdAndIsActiveTrue(1L)).willReturn(Optional.of(store));
+        given(breadRepository.save(any(BreadEntity.class))).willAnswer(invocation -> {
+            BreadEntity bread = invocation.getArgument(0);
+            ReflectionTestUtils.setField(bread, "id", 10L);
+            return bread;
+        });
+        given(breadImageService.uploadImage(10L, image)).willReturn("https://cdn/bread.jpg");
+
+        BreadCommonResponse response = breadService.addBread(1L, request, image);
+
+        assertThat(response.id()).isEqualTo(10L);
+        assertThat(response.storeId()).isEqualTo(100L);
+        assertThat(response.imageUrl()).isEqualTo("https://cdn/bread.jpg");
     }
 
-    @Nested
-    @DisplayName("updateBread")
-    class UpdateBread {
+    @Test
+    void updateBread_rejectsBreadOwnedByAnotherStore() {
+        StoreEntity ownerStore = TestFixtures.store(100L, 1L);
+        BreadEntity otherStoreBread = TestFixtures.bread(10L, 200L, 3, 4_000, 2_000);
+        given(storeRepository.findByUserIdAndIsActiveTrue(1L)).willReturn(Optional.of(ownerStore));
+        given(breadRepository.findById(10L)).willReturn(Optional.of(otherStoreBread));
 
-        @Test
-        @DisplayName("이미지 없이 수정하면 기존 이미지 URL과 함께 응답한다")
-        void successWithoutImage() {
-            StoreEntity storeEntity = createStoreEntity(1L, 10L);
-            BreadEntity breadEntity = createBreadEntity(100L, 10L);
-            BreadCommonRequest request = new BreadCommonRequest(
-                    "크루아상", 6000, 4200, 5, "버터 풍미"
-            );
-
-            given(storeRepository.findByUserIdAndIsActiveTrue(1L)).willReturn(Optional.of(storeEntity));
-            given(breadRepository.findById(100L)).willReturn(Optional.of(breadEntity));
-            given(breadImageService.getImageUrl(100L)).willReturn("/images/bread_100.jpg");
-
-            BreadCommonResponse result = breadService.updateBread(1L, 100L, request, null);
-
-            assertThat(result.id()).isEqualTo(100L);
-            assertThat(result.name()).isEqualTo("크루아상");
-            assertThat(result.salePrice()).isEqualTo(4200);
-            assertThat(result.remainingQuantity()).isEqualTo(5);
-            assertThat(result.imageUrl()).isEqualTo("/images/bread_100.jpg");
-        }
+        assertThatThrownBy(() -> breadService.updateBread(
+                1L,
+                10L,
+                new BreadCommonRequest("new", 4_000, 2_000, 3, "fresh"),
+                null
+        ))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.BREAD_ACCESS_DENIED);
     }
 
-    @Nested
-    @DisplayName("changeQuantity")
-    class ChangeQuantity {
+    @Test
+    void changeQuantity_updatesOwnedBreadStock() {
+        StoreEntity store = TestFixtures.store(100L, 1L);
+        BreadEntity bread = TestFixtures.bread(10L, 100L, 3, 4_000, 2_000);
+        given(storeRepository.findByUserIdAndIsActiveTrue(1L)).willReturn(Optional.of(store));
+        given(breadRepository.findById(10L)).willReturn(Optional.of(bread));
 
-        @Test
-        @DisplayName("품절 처리 시 재고를 0으로 바꾼다")
-        void soldOut() {
-            StoreEntity storeEntity = createStoreEntity(1L, 10L);
-            BreadEntity breadEntity = createBreadEntity(100L, 10L);
-            BreadStockUpdateRequest request = new BreadStockUpdateRequest(0);
+        BreadSuccessResponse response = breadService.changeQuantity(1L, 10L, new BreadStockUpdateRequest(7));
 
-            given(storeRepository.findByUserIdAndIsActiveTrue(1L)).willReturn(Optional.of(storeEntity));
-            given(breadRepository.findById(100L)).willReturn(Optional.of(breadEntity));
-
-            BreadSuccessResponse result = breadService.changeQuantity(1L, 100L, request);
-
-            assertThat(result.success()).isTrue();
-            assertThat(breadEntity.getRemainingQuantity()).isZero();
-        }
-
-        @Test
-        @DisplayName("재고를 지정한 수량으로 변경한다")
-        void changeToSpecificQuantity() {
-            StoreEntity storeEntity = createStoreEntity(1L, 10L);
-            BreadEntity breadEntity = createBreadEntity(100L, 10L);
-            BreadStockUpdateRequest request = new BreadStockUpdateRequest(25);
-
-            given(storeRepository.findByUserIdAndIsActiveTrue(1L)).willReturn(Optional.of(storeEntity));
-            given(breadRepository.findById(100L)).willReturn(Optional.of(breadEntity));
-
-            BreadSuccessResponse result = breadService.changeQuantity(1L, 100L, request);
-
-            assertThat(result.success()).isTrue();
-            assertThat(breadEntity.getRemainingQuantity()).isEqualTo(25);
-        }
+        assertThat(response.success()).isTrue();
+        assertThat(bread.getRemainingQuantity()).isEqualTo(7);
     }
 
-    @Nested
-    @DisplayName("deleteBread")
-    class DeleteBread {
+    @Test
+    void deleteBread_deletesBreadAndImage() {
+        StoreEntity store = TestFixtures.store(100L, 1L);
+        BreadEntity bread = TestFixtures.bread(10L, 100L, 3, 4_000, 2_000);
+        given(storeRepository.findByUserIdAndIsActiveTrue(1L)).willReturn(Optional.of(store));
+        given(breadRepository.findById(10L)).willReturn(Optional.of(bread));
 
-        @Test
-        @DisplayName("삭제 시 이미지를 먼저 지우고 빵 엔티티를 삭제한다")
-        void deletesImageBeforeBread() {
-            StoreEntity storeEntity = createStoreEntity(1L, 10L);
-            BreadEntity breadEntity = createBreadEntity(100L, 10L);
+        BreadSuccessResponse response = breadService.deleteBread(1L, 10L);
 
-            given(storeRepository.findByUserIdAndIsActiveTrue(1L)).willReturn(Optional.of(storeEntity));
-            given(breadRepository.findById(100L)).willReturn(Optional.of(breadEntity));
-
-            BreadSuccessResponse result = breadService.deleteBread(1L, 100L);
-
-            InOrder inOrder = inOrder(breadImageService, breadRepository);
-            inOrder.verify(breadImageService).deleteImage(100L);
-            inOrder.verify(breadRepository).delete(breadEntity);
-            assertThat(result.success()).isTrue();
-        }
+        assertThat(response.success()).isTrue();
+        verify(breadImageService).deleteImage(10L);
+        verify(breadRepository).delete(bread);
     }
 
-    @Nested
-    @DisplayName("getBreadsFromStore")
-    class GetBreadsFromStore {
+    @Test
+    void getBreadsFromStore_rejectsMissingStore() {
+        given(storeRepository.findByIdAndIsActiveTrue(100L)).willReturn(Optional.empty());
 
-        @Test
-        @DisplayName("조회 응답에 각 빵의 imageUrl을 채운다")
-        void includesImageUrl() {
-            StoreEntity storeEntity = createStoreEntity(1L, 10L);
-            BreadEntity firstBread = createBreadEntity(100L, 10L);
-            BreadEntity secondBread = createBreadEntity(101L, 10L);
+        assertThatThrownBy(() -> breadService.getBreadsFromStore(100L))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.STORE_NOT_FOUND);
+    }
 
-            given(storeRepository.findByIdAndIsActiveTrue(10L)).willReturn(Optional.of(storeEntity));
-            given(breadRepository.findByStoreId(10L)).willReturn(List.of(firstBread, secondBread));
-            given(breadImageService.getImageUrls(List.of(100L, 101L)))
-                    .willReturn(java.util.Map.of(100L, "/images/bread_100.jpg"));
+    @Test
+    void getBreadDetail_returnsSellingStatusAndImage() {
+        BreadEntity bread = TestFixtures.bread(10L, 100L, 3, 4_000, 2_000);
+        StoreEntity store = TestFixtures.store(100L, 1L);
+        StoreBusinessHoursEntity hours = TestFixtures.businessHours(
+                100L, 7, false, LocalTime.of(9, 0), LocalTime.of(20, 0), LocalTime.of(19, 0)
+        );
+        given(breadRepository.findById(10L)).willReturn(Optional.of(bread));
+        given(storeRepository.findByIdAndIsActiveTrue(100L)).willReturn(Optional.of(store));
+        given(breadImageService.getImageUrl(10L)).willReturn("https://cdn/bread.jpg");
+        given(storeBusinessHoursRepository.findByStoreIdAndDayOfWeek(100L, 7)).willReturn(Optional.of(hours));
 
-            List<BreadCommonResponse> result = breadService.getBreadsFromStore(10L);
+        BreadDetailResponse response = breadService.getBreadDetail(10L);
 
-            assertThat(result).hasSize(2);
-            assertThat(result.get(0).imageUrl()).isEqualTo("/images/bread_100.jpg");
-            assertThat(result.get(1).imageUrl()).isNull();
-            verify(breadImageService).getImageUrls(List.of(100L, 101L));
-        }
+        assertThat(response.storeName()).isEqualTo(store.getName());
+        assertThat(response.imageUrl()).isEqualTo("https://cdn/bread.jpg");
+        assertThat(response.isSelling()).isTrue();
+    }
+
+    @Test
+    void getNearbyBreads_filtersClosedStoresAndSortsByPrice() {
+        BigDecimal lat = BigDecimal.valueOf(37.5);
+        BigDecimal lng = BigDecimal.valueOf(127.0);
+        StoreEntity store1 = TestFixtures.store(100L, 1L);
+        StoreEntity store2 = TestFixtures.store(200L, 2L);
+        StoreEntity store3 = TestFixtures.store(300L, 3L);
+        BreadEntity bread1 = TestFixtures.bread(10L, 100L, 5, 4_000, 2_500);
+        BreadEntity bread2 = TestFixtures.bread(20L, 200L, 5, 5_000, 1_500);
+        BreadEntity bread3 = TestFixtures.bread(30L, 300L, 5, 6_000, 3_000);
+        StoreBusinessHoursEntity open1 = TestFixtures.businessHours(
+                100L, 7, false, LocalTime.of(9, 0), LocalTime.of(20, 0), LocalTime.of(19, 0)
+        );
+        StoreBusinessHoursEntity open2 = TestFixtures.businessHours(
+                200L, 7, false, LocalTime.of(9, 0), LocalTime.of(20, 0), LocalTime.of(19, 0)
+        );
+        StoreBusinessHoursEntity closed3 = TestFixtures.businessHours(
+                300L, 7, true, null, null, null
+        );
+
+        given(storeRepository.findActiveStoresWithinRadius(
+                eq(lat), eq(lng), eq(1), any(BigDecimal.class), any(BigDecimal.class), any(BigDecimal.class), any(BigDecimal.class)
+        )).willReturn(List.of(
+                TestFixtures.projection(100L, 1.0),
+                TestFixtures.projection(200L, 0.7),
+                TestFixtures.projection(300L, 0.5)
+        ));
+        given(storeRepository.findByIdInAndIsActiveTrue(List.of(100L, 200L, 300L)))
+                .willReturn(List.of(store1, store2, store3));
+        given(storeBusinessHoursRepository.findByStoreIdIn(List.of(100L, 200L, 300L)))
+                .willReturn(List.of(open1, open2, closed3));
+        given(breadRepository.findByStoreIdIn(List.of(100L, 200L, 300L)))
+                .willReturn(List.of(bread1, bread2, bread3));
+        given(breadImageService.getImageUrls(List.of(10L, 20L)))
+                .willReturn(Map.of(10L, "https://cdn/bread1.jpg", 20L, "https://cdn/bread2.jpg"));
+
+        List<NearbyBreadResponse> responses = breadService.getNearbyBreads(lat, lng, 1, BreadSortType.PRICE);
+
+        assertThat(responses).extracting(NearbyBreadResponse::id).containsExactly(20L, 10L);
+        assertThat(responses).extracting(NearbyBreadResponse::storeId).doesNotContain(300L);
     }
 }

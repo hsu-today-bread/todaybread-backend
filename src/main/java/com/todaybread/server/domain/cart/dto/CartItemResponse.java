@@ -23,6 +23,14 @@ public record CartItemResponse(
         String imageUrl,
         int salePrice
 ) {
+    /**
+     * CartItemEntity와 BreadEntity로부터 응답을 생성합니다.
+     *
+     * @param cartItem 장바구니 항목 엔티티
+     * @param bread    빵 엔티티
+     * @param imageUrl 이미지 URL
+     * @return 장바구니 항목 응답
+     */
     public static CartItemResponse of(CartItemEntity cartItem, BreadEntity bread, String imageUrl) {
         return new CartItemResponse(
                 cartItem.getId(),

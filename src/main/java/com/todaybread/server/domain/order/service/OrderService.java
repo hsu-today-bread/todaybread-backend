@@ -48,6 +48,14 @@ public class OrderService {
     private final BreadRepository breadRepository;
     private final StoreRepository storeRepository;
 
+    /**
+     * 장바구니 기반 주문을 생성합니다.
+     * 장바구니 항목을 비관적 락으로 조회하고, 재고 차감 후 주문을 생성합니다.
+     *
+     * @param userId         유저 ID
+     * @param idempotencyKey 멱등성 키
+     * @return 주문 상세 응답
+     */
     @Transactional
     public OrderDetailResponse createOrderFromCart(Long userId, String idempotencyKey) {
         Optional<OrderDetailResponse> existingOrder = findExistingOrderDetail(userId, idempotencyKey);
@@ -138,13 +146,25 @@ public class OrderService {
         cartService.clearCart(userId);
 
         // 8. 응답 생성
-        StoreEntity store = storeRepository.findById(order.getStoreId())
-                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+        Optional<StoreEntity> storeOpt = storeRepository.findById(order.getStoreId());
+        if (storeOpt.isEmpty()) {
+            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
+        }
+        StoreEntity store = storeOpt.get();
 
         return OrderDetailResponse.of(order, store.getName(),
                 orderItems.stream().map(OrderItemResponse::of).toList());
     }
 
+    /**
+     * 바로 구매 주문을 생성합니다.
+     * 단일 빵에 대해 재고 차감 후 주문을 생성합니다.
+     *
+     * @param userId         유저 ID
+     * @param request        바로 구매 요청
+     * @param idempotencyKey 멱등성 키
+     * @return 주문 상세 응답
+     */
     @Transactional
     public OrderDetailResponse createDirectOrder(Long userId, DirectOrderRequest request, String idempotencyKey) {
         Optional<OrderDetailResponse> existingOrder = findExistingOrderDetail(userId, idempotencyKey);
@@ -191,16 +211,29 @@ public class OrderService {
                 .build();
         orderItemRepository.save(orderItem);
 
-        StoreEntity store = storeRepository.findById(bread.getStoreId())
-                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+        Optional<StoreEntity> storeOpt = storeRepository.findById(bread.getStoreId());
+        if (storeOpt.isEmpty()) {
+            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
+        }
+        StoreEntity store = storeOpt.get();
 
         return OrderDetailResponse.of(order, store.getName(), List.of(OrderItemResponse.of(orderItem)));
     }
 
+    /**
+     * 주문을 취소합니다.
+     * 비관적 락으로 주문을 조회하고, 재고를 복원합니다.
+     *
+     * @param userId  유저 ID
+     * @param orderId 주문 ID
+     */
     @Transactional
     public void cancelOrder(Long userId, Long orderId) {
-        OrderEntity order = orderRepository.findByIdWithLock(orderId)
-                .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
+        Optional<OrderEntity> orderOpt = orderRepository.findByIdWithLock(orderId);
+        if (orderOpt.isEmpty()) {
+            throw new CustomException(ErrorCode.ORDER_NOT_FOUND);
+        }
+        OrderEntity order = orderOpt.get();
 
         if (!order.getUserId().equals(userId)) {
             throw new CustomException(ErrorCode.ORDER_ACCESS_DENIED);
@@ -233,14 +266,30 @@ public class OrderService {
         log.info("주문 취소 완료: orderId={}, userId={}", orderId, userId);
     }
 
+    /**
+     * 주문을 확정합니다.
+     * 결제 승인 후 호출되어 주문 상태를 CONFIRMED로 변경합니다.
+     *
+     * @param orderId 주문 ID
+     */
     @Transactional
     public void confirmOrder(Long orderId) {
-        OrderEntity order = orderRepository.findByIdWithLock(orderId)
-                .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
+        Optional<OrderEntity> orderOpt = orderRepository.findByIdWithLock(orderId);
+        if (orderOpt.isEmpty()) {
+            throw new CustomException(ErrorCode.ORDER_NOT_FOUND);
+        }
+        OrderEntity order = orderOpt.get();
         order.updateStatus(OrderStatus.CONFIRMED);
         log.info("주문 확정: orderId={}", orderId);
     }
 
+    /**
+     * 주문 내역 목록을 페이지네이션으로 조회합니다.
+     *
+     * @param userId   유저 ID
+     * @param pageable 페이지 정보
+     * @return 주문 응답 페이지
+     */
     @Transactional(readOnly = true)
     public Page<OrderResponse> getOrders(Long userId, Pageable pageable) {
         Page<OrderEntity> orders = orderRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
@@ -260,23 +309,37 @@ public class OrderService {
         });
     }
 
+    /**
+     * 주문 상세를 조회합니다.
+     *
+     * @param userId  유저 ID
+     * @param orderId 주문 ID
+     * @return 주문 상세 응답
+     */
     @Transactional(readOnly = true)
     public OrderDetailResponse getOrderDetail(Long userId, Long orderId) {
-        OrderEntity order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
+        Optional<OrderEntity> orderOpt = orderRepository.findById(orderId);
+        if (orderOpt.isEmpty()) {
+            throw new CustomException(ErrorCode.ORDER_NOT_FOUND);
+        }
+        OrderEntity order = orderOpt.get();
 
         if (!order.getUserId().equals(userId)) {
             throw new CustomException(ErrorCode.ORDER_ACCESS_DENIED);
         }
 
-        StoreEntity store = storeRepository.findById(order.getStoreId())
-                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+        Optional<StoreEntity> storeOpt = storeRepository.findById(order.getStoreId());
+        if (storeOpt.isEmpty()) {
+            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
+        }
+        StoreEntity store = storeOpt.get();
 
         List<OrderItemEntity> orderItems = orderItemRepository.findByOrderId(orderId);
         return OrderDetailResponse.of(order, store.getName(),
                 orderItems.stream().map(OrderItemResponse::of).toList());
     }
 
+    /** 기존 주문이 있으면 상세 응답을 반환합니다. */
     private Optional<OrderDetailResponse> findExistingOrderDetail(Long userId, String idempotencyKey) {
         return orderRepository.findByUserIdAndIdempotencyKey(userId, idempotencyKey)
                 .map(order -> getOrderDetail(userId, order.getId()));

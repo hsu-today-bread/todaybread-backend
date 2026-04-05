@@ -30,8 +30,9 @@ public class PaymentController {
     /**
      * 결제를 처리합니다.
      *
-     * @param jwt     JWT 토큰
-     * @param request 결제 요청
+     * @param jwt            JWT 토큰
+     * @param idempotencyKey 멱등성 키
+     * @param request        결제 요청
      * @return 결제 응답
      */
     @Operation(summary = "결제 요청")

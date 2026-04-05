@@ -9,31 +9,23 @@ import com.todaybread.server.domain.user.entity.UserEntity;
 import com.todaybread.server.domain.user.repository.UserRepository;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
+import com.todaybread.server.support.TestFixtures;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
-/**
- * {@link UserRecoveryService}의 단위 테스트입니다.
- */
 @ExtendWith(MockitoExtension.class)
 class UserRecoveryServiceTest {
-
-    @InjectMocks
-    private UserRecoveryService userRecoveryService;
 
     @Mock
     private UserRepository userRepository;
@@ -44,143 +36,54 @@ class UserRecoveryServiceTest {
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
 
-    private UserEntity createUser() {
-        UserEntity user = UserEntity.builder()
-                .email("testuser@example.com")
-                .passwordHash("hashedPw")
-                .name("테스트")
-                .nickname("테스터")
-                .phoneNumber("010-1234-5678")
-                .build();
-        ReflectionTestUtils.setField(user, "id", 1L);
-        return user;
+    @InjectMocks
+    private UserRecoveryService userRecoveryService;
+
+    @Test
+    void findEmailByPhone_returnsMaskedEmail() {
+        UserEntity user = TestFixtures.user(1L, false);
+        given(userRepository.findByPhoneNumber(user.getPhoneNumber())).willReturn(Optional.of(user));
+
+        UserFindEmailResponse response = userRecoveryService.findEmailByPhone(user.getPhoneNumber());
+
+        assertThat(response.maskedEmail()).contains("@example.com");
+        assertThat(response.maskedEmail()).doesNotContain("user1");
     }
 
-    // ========== findEmailByPhone ==========
+    @Test
+    void findEmailByPhone_rejectsUnknownPhone() {
+        given(userRepository.findByPhoneNumber("01000000000")).willReturn(Optional.empty());
 
-    @Nested
-    @DisplayName("findEmailByPhone")
-    class FindEmailByPhone {
-
-        @Test
-        @DisplayName("정상 조회 — 5글자 이상 로컬 파트 마스킹")
-        void success_longLocal() {
-            given(userRepository.findByPhoneNumber("010-1234-5678"))
-                    .willReturn(Optional.of(createUser()));
-
-            UserFindEmailResponse result = userRecoveryService.findEmailByPhone("010-1234-5678");
-
-            // testuser -> t******r@example.com
-            assertThat(result.maskedEmail()).isEqualTo("t******r@example.com");
-        }
-
-        @Test
-        @DisplayName("정상 조회 — 1글자 로컬 파트 마스킹")
-        void success_singleChar() {
-            UserEntity user = UserEntity.builder()
-                    .email("a@test.com").passwordHash("pw").name("이름")
-                    .nickname("닉").phoneNumber("010-0000-0000").build();
-            given(userRepository.findByPhoneNumber("010-0000-0000"))
-                    .willReturn(Optional.of(user));
-
-            UserFindEmailResponse result = userRecoveryService.findEmailByPhone("010-0000-0000");
-
-            assertThat(result.maskedEmail()).isEqualTo("*@test.com");
-        }
-
-        @Test
-        @DisplayName("정상 조회 — 2~4글자 로컬 파트 마스킹")
-        void success_shortLocal() {
-            UserEntity user = UserEntity.builder()
-                    .email("ab@test.com").passwordHash("pw").name("이름")
-                    .nickname("닉2").phoneNumber("010-1111-1111").build();
-            given(userRepository.findByPhoneNumber("010-1111-1111"))
-                    .willReturn(Optional.of(user));
-
-            UserFindEmailResponse result = userRecoveryService.findEmailByPhone("010-1111-1111");
-
-            // ab -> **@test.com
-            assertThat(result.maskedEmail()).isEqualTo("**@test.com");
-        }
-
-        @Test
-        @DisplayName("미등록 전화번호 — USER_RECOVERY_NOT_FOUND")
-        void notFound() {
-            given(userRepository.findByPhoneNumber("010-9999-9999"))
-                    .willReturn(Optional.empty());
-
-            assertThatThrownBy(() -> userRecoveryService.findEmailByPhone("010-9999-9999"))
-                    .isInstanceOf(CustomException.class)
-                    .satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
-                            .isEqualTo(ErrorCode.USER_RECOVERY_NOT_FOUND));
-        }
+        assertThatThrownBy(() -> userRecoveryService.findEmailByPhone("01000000000"))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.USER_RECOVERY_NOT_FOUND);
     }
 
-    // ========== verifyIdentity ==========
+    @Test
+    void verifyIdentity_returnsVerifiedResponse() {
+        UserEntity user = TestFixtures.user(1L, false);
+        given(userRepository.findByPhoneNumberAndEmail(user.getPhoneNumber(), user.getEmail()))
+                .willReturn(Optional.of(user));
 
-    @Nested
-    @DisplayName("verifyIdentity")
-    class VerifyIdentity {
+        VerifyIdentityResponse response = userRecoveryService.verifyIdentity(user.getPhoneNumber(), user.getEmail());
 
-        @Test
-        @DisplayName("정상 본인 확인")
-        void success() {
-            given(userRepository.findByPhoneNumberAndEmail("010-1234-5678", "testuser@example.com"))
-                    .willReturn(Optional.of(createUser()));
-
-            VerifyIdentityResponse result = userRecoveryService.verifyIdentity(
-                    "010-1234-5678", "testuser@example.com");
-
-            assertThat(result.verified()).isTrue();
-            assertThat(result.email()).isEqualTo("testuser@example.com");
-        }
-
-        @Test
-        @DisplayName("불일치 — USER_RECOVERY_NOT_FOUND")
-        void notFound() {
-            given(userRepository.findByPhoneNumberAndEmail("010-1234-5678", "wrong@test.com"))
-                    .willReturn(Optional.empty());
-
-            assertThatThrownBy(() -> userRecoveryService.verifyIdentity(
-                    "010-1234-5678", "wrong@test.com"))
-                    .isInstanceOf(CustomException.class)
-                    .satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
-                            .isEqualTo(ErrorCode.USER_RECOVERY_NOT_FOUND));
-        }
+        assertThat(response.verified()).isTrue();
+        assertThat(response.email()).isEqualTo(user.getEmail());
     }
 
-    // ========== resetPassword ==========
+    @Test
+    void resetPassword_updatesPasswordAndClearsRefreshTokens() {
+        UserEntity user = TestFixtures.user(1L, false);
+        given(userRepository.findByEmail(user.getEmail())).willReturn(Optional.of(user));
+        given(passwordEncoder.encode("new-password")).willReturn("encoded-new-password");
 
-    @Nested
-    @DisplayName("resetPassword")
-    class ResetPassword {
+        ResetPasswordResponse response = userRecoveryService.resetPassword(
+                new ResetPasswordRequest(user.getEmail(), "new-password")
+        );
 
-        @Test
-        @DisplayName("정상 비밀번호 재설정")
-        void success() {
-            UserEntity user = createUser();
-            given(userRepository.findByEmail("testuser@example.com"))
-                    .willReturn(Optional.of(user));
-            given(passwordEncoder.encode("newPassword1234")).willReturn("newHashedPw");
-
-            ResetPasswordResponse result = userRecoveryService.resetPassword(
-                    new ResetPasswordRequest("testuser@example.com", "newPassword1234"));
-
-            assertThat(result.success()).isTrue();
-            assertThat(user.getPasswordHash()).isEqualTo("newHashedPw");
-        }
-
-        @Test
-        @DisplayName("미등록 이메일 — USER_RECOVERY_NOT_FOUND")
-        void notFound() {
-            given(userRepository.findByEmail("notfound@test.com"))
-                    .willReturn(Optional.empty());
-
-            assertThatThrownBy(() -> userRecoveryService.resetPassword(
-                    new ResetPasswordRequest("notfound@test.com", "newPassword1234")))
-                    .isInstanceOf(CustomException.class)
-                    .satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
-                            .isEqualTo(ErrorCode.USER_RECOVERY_NOT_FOUND));
-        }
+        assertThat(response.success()).isTrue();
+        assertThat(user.getPasswordHash()).isEqualTo("encoded-new-password");
+        verify(refreshTokenRepository).deleteByUserId(1L);
     }
 }

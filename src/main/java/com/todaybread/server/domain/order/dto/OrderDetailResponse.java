@@ -24,6 +24,14 @@ public record OrderDetailResponse(
         LocalDateTime createdAt,
         List<OrderItemResponse> items
 ) {
+    /**
+     * OrderEntity로부터 상세 응답을 생성합니다.
+     *
+     * @param order     주문 엔티티
+     * @param storeName 매장 이름
+     * @param items     주문 항목 응답 목록
+     * @return 주문 상세 응답
+     */
     public static OrderDetailResponse of(OrderEntity order, String storeName, List<OrderItemResponse> items) {
         return new OrderDetailResponse(
                 order.getId(),

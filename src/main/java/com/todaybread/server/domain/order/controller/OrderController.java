@@ -35,7 +35,8 @@ public class OrderController {
     /**
      * 장바구니 기반 주문을 생성합니다.
      *
-     * @param jwt JWT 토큰
+     * @param jwt            JWT 토큰
+     * @param idempotencyKey 멱등성 키
      * @return 주문 상세 응답
      */
     @Operation(summary = "장바구니 기반 주문 생성")
@@ -49,8 +50,9 @@ public class OrderController {
     /**
      * 바로 구매 주문을 생성합니다.
      *
-     * @param jwt     JWT 토큰
-     * @param request 바로 구매 요청
+     * @param jwt            JWT 토큰
+     * @param idempotencyKey 멱등성 키
+     * @param request        바로 구매 요청
      * @return 주문 상세 응답
      */
     @Operation(summary = "바로 구매")

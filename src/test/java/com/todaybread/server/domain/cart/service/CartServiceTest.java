@@ -5,38 +5,39 @@ import com.todaybread.server.domain.bread.repository.BreadRepository;
 import com.todaybread.server.domain.bread.service.BreadImageService;
 import com.todaybread.server.domain.cart.dto.CartAddRequest;
 import com.todaybread.server.domain.cart.dto.CartResponse;
+import com.todaybread.server.domain.cart.dto.CartUpdateRequest;
 import com.todaybread.server.domain.cart.entity.CartEntity;
 import com.todaybread.server.domain.cart.entity.CartItemEntity;
 import com.todaybread.server.domain.cart.repository.CartItemRepository;
 import com.todaybread.server.domain.cart.repository.CartRepository;
+import com.todaybread.server.domain.store.entity.StoreBusinessHoursEntity;
+import com.todaybread.server.domain.store.entity.StoreEntity;
 import com.todaybread.server.domain.store.repository.StoreBusinessHoursRepository;
 import com.todaybread.server.domain.store.repository.StoreRepository;
+import com.todaybread.server.domain.user.entity.UserEntity;
 import com.todaybread.server.domain.user.repository.UserRepository;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
+import com.todaybread.server.support.TestFixtures;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.MockitoAnnotations;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.time.Clock;
+import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
-@ExtendWith(MockitoExtension.class)
 class CartServiceTest {
-
-    @InjectMocks
-    private CartService cartService;
 
     @Mock
     private CartRepository cartRepository;
@@ -57,126 +58,158 @@ class CartServiceTest {
     private StoreBusinessHoursRepository storeBusinessHoursRepository;
 
     @Mock
-    private Clock clock;
-
-    @Mock
     private UserRepository userRepository;
 
-    private CartEntity createCartEntity(Long cartId, Long userId, Long storeId) {
-        CartEntity cart = CartEntity.builder()
-                .userId(userId)
-                .storeId(storeId)
-                .build();
-        ReflectionTestUtils.setField(cart, "id", cartId);
-        return cart;
+    private CartService cartService;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+        cartService = new CartService(
+                cartRepository,
+                cartItemRepository,
+                breadRepository,
+                breadImageService,
+                storeRepository,
+                storeBusinessHoursRepository,
+                userRepository,
+                TestFixtures.FIXED_CLOCK
+        );
     }
 
-    private BreadEntity createBreadEntity(Long breadId, Long storeId) {
-        BreadEntity bread = BreadEntity.builder()
-                .storeId(storeId)
-                .name("소금빵")
-                .description("겉바속촉")
-                .originalPrice(5000)
-                .salePrice(3500)
-                .remainingQuantity(10)
-                .build();
-        ReflectionTestUtils.setField(bread, "id", breadId);
-        return bread;
+    @Test
+    void addToCart_createsCartAndNewItemForFirstBread() {
+        BreadEntity bread = TestFixtures.bread(10L, 100L, 5, 4_000, 2_000);
+        UserEntity user = TestFixtures.user(1L, false);
+        given(breadRepository.findById(10L)).willReturn(Optional.of(bread));
+        given(cartRepository.findByUserIdWithLock(1L)).willReturn(Optional.empty(), Optional.empty());
+        given(userRepository.findByIdWithLock(1L)).willReturn(Optional.of(user));
+        given(cartRepository.save(any(CartEntity.class))).willAnswer(invocation -> {
+            CartEntity cart = invocation.getArgument(0);
+            ReflectionTestUtils.setField(cart, "id", 50L);
+            return cart;
+        });
+        given(cartItemRepository.findByCartIdAndBreadId(50L, 10L)).willReturn(Optional.empty());
+
+        cartService.addToCart(1L, new CartAddRequest(10L, 2));
+
+        verify(cartItemRepository).save(any(CartItemEntity.class));
     }
 
-    private CartItemEntity createCartItemEntity(Long itemId, Long cartId, Long breadId, int quantity) {
-        CartItemEntity item = CartItemEntity.builder()
-                .cartId(cartId)
-                .breadId(breadId)
-                .quantity(quantity)
-                .build();
-        ReflectionTestUtils.setField(item, "id", itemId);
-        return item;
+    @Test
+    void addToCart_increasesExistingItemQuantity() {
+        BreadEntity bread = TestFixtures.bread(10L, 100L, 5, 4_000, 2_000);
+        CartEntity cart = TestFixtures.cart(50L, 1L, 100L);
+        CartItemEntity item = TestFixtures.cartItem(1L, 50L, 10L, 1);
+
+        given(breadRepository.findById(10L)).willReturn(Optional.of(bread));
+        given(cartRepository.findByUserIdWithLock(1L)).willReturn(Optional.of(cart));
+        given(cartItemRepository.findByCartIdAndBreadId(50L, 10L)).willReturn(Optional.of(item));
+
+        cartService.addToCart(1L, new CartAddRequest(10L, 2));
+
+        assertThat(item.getQuantity()).isEqualTo(3);
     }
 
-    @Nested
-    @DisplayName("getCart")
-    class GetCart {
+    @Test
+    void addToCart_rejectsBreadFromAnotherStore() {
+        BreadEntity bread = TestFixtures.bread(10L, 100L, 5, 4_000, 2_000);
+        CartEntity cart = TestFixtures.cart(50L, 1L, 200L);
+        given(breadRepository.findById(10L)).willReturn(Optional.of(bread));
+        given(cartRepository.findByUserIdWithLock(1L)).willReturn(Optional.of(cart));
 
-        @Test
-        @DisplayName("Cart가 없으면 빈 응답을 반환한다")
-        void emptyCartReturnsEmptyResponse() {
-            given(cartRepository.findByUserId(1L)).willReturn(Optional.empty());
-
-            CartResponse result = cartService.getCart(1L);
-
-            assertThat(result.storeName()).isNull();
-            assertThat(result.lastOrderTime()).isNull();
-            assertThat(result.items()).isEmpty();
-        }
-
-        @Test
-        @DisplayName("Cart의 storeId가 null이면 빈 응답을 반환한다")
-        void cartWithNullStoreIdReturnsEmptyResponse() {
-            CartEntity cart = createCartEntity(1L, 1L, null);
-            given(cartRepository.findByUserId(1L)).willReturn(Optional.of(cart));
-
-            CartResponse result = cartService.getCart(1L);
-
-            assertThat(result.storeName()).isNull();
-            assertThat(result.lastOrderTime()).isNull();
-            assertThat(result.items()).isEmpty();
-        }
+        assertThatThrownBy(() -> cartService.addToCart(1L, new CartAddRequest(10L, 1)))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.CART_SINGLE_STORE_ONLY);
     }
 
-    @Nested
-    @DisplayName("addToCart")
-    class AddToCart {
+    @Test
+    void getCart_returnsEmptyResponseWhenCartMissing() {
+        given(cartRepository.findByUserId(1L)).willReturn(Optional.empty());
 
-        @Test
-        @DisplayName("존재하지 않는 빵 ID로 추가하면 BREAD_NOT_FOUND 예외를 던진다")
-        void nonExistentBreadThrowsBreadNotFound() {
-            CartAddRequest request = new CartAddRequest(999L, 1);
-            given(breadRepository.findById(999L)).willReturn(Optional.empty());
+        CartResponse response = cartService.getCart(1L);
 
-            assertThatThrownBy(() -> cartService.addToCart(1L, request))
-                    .isInstanceOf(CustomException.class)
-                    .satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
-                            .isEqualTo(ErrorCode.BREAD_NOT_FOUND));
-        }
-
-        @Test
-        @DisplayName("다른 매장의 빵을 추가하면 CART_SINGLE_STORE_ONLY 예외를 던진다")
-        void differentStoreBreadThrowsSingleStoreOnly() {
-            Long storeA = 10L;
-            Long storeB = 20L;
-            CartEntity cart = createCartEntity(1L, 1L, storeA);
-            BreadEntity bread = createBreadEntity(100L, storeB);
-            CartAddRequest request = new CartAddRequest(100L, 1);
-
-            given(breadRepository.findById(100L)).willReturn(Optional.of(bread));
-            given(cartRepository.findByUserIdWithLock(1L)).willReturn(Optional.of(cart));
-
-            assertThatThrownBy(() -> cartService.addToCart(1L, request))
-                    .isInstanceOf(CustomException.class)
-                    .satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
-                            .isEqualTo(ErrorCode.CART_SINGLE_STORE_ONLY));
-        }
+        assertThat(response.storeName()).isNull();
+        assertThat(response.items()).isEmpty();
+        verifyNoInteractions(cartItemRepository, breadImageService);
     }
 
-    @Nested
-    @DisplayName("removeItem")
-    class RemoveItem {
+    @Test
+    void getCart_returnsMappedResponse() {
+        CartEntity cart = TestFixtures.cart(50L, 1L, 100L);
+        CartItemEntity item = TestFixtures.cartItem(1L, 50L, 10L, 2);
+        BreadEntity bread = TestFixtures.bread(10L, 100L, 5, 4_000, 2_000);
+        StoreEntity store = TestFixtures.store(100L, 1L);
+        StoreBusinessHoursEntity hours = TestFixtures.businessHours(
+                100L, 7, false, LocalTime.of(9, 0), LocalTime.of(20, 0), LocalTime.of(19, 0)
+        );
 
-        @Test
-        @DisplayName("마지막 항목 삭제 시 Cart의 storeId를 null로 초기화한다")
-        void lastItemRemovalResetsStoreId() {
-            CartEntity cart = createCartEntity(1L, 1L, 10L);
-            CartItemEntity item = createCartItemEntity(100L, 1L, 50L, 2);
+        given(cartRepository.findByUserId(1L)).willReturn(Optional.of(cart));
+        given(cartItemRepository.findByCartId(50L)).willReturn(List.of(item));
+        given(breadImageService.getImageUrls(List.of(10L))).willReturn(Map.of(10L, "https://cdn/bread.jpg"));
+        given(breadRepository.findAllById(List.of(10L))).willReturn(List.of(bread));
+        given(storeRepository.findById(100L)).willReturn(Optional.of(store));
+        given(storeBusinessHoursRepository.findByStoreIdAndDayOfWeek(100L, 7)).willReturn(Optional.of(hours));
 
-            given(cartRepository.findByUserIdWithLock(1L)).willReturn(Optional.of(cart));
-            given(cartItemRepository.findById(100L)).willReturn(Optional.of(item));
-            given(cartItemRepository.findByCartId(1L)).willReturn(List.of());
+        CartResponse response = cartService.getCart(1L);
 
-            cartService.removeItem(1L, 100L);
+        assertThat(response.storeName()).isEqualTo(store.getName());
+        assertThat(response.lastOrderTime()).isEqualTo(LocalTime.of(19, 0));
+        assertThat(response.items()).hasSize(1);
+        assertThat(response.items().getFirst().breadName()).isEqualTo(bread.getName());
+    }
 
-            verify(cartItemRepository).delete(item);
-            assertThat(cart.getStoreId()).isNull();
-        }
+    @Test
+    void updateQuantity_updatesItemWhenStockIsEnough() {
+        CartEntity cart = TestFixtures.cart(50L, 1L, 100L);
+        CartItemEntity item = TestFixtures.cartItem(1L, 50L, 10L, 2);
+        BreadEntity bread = TestFixtures.bread(10L, 100L, 5, 4_000, 2_000);
+
+        given(cartRepository.findByUserIdWithLock(1L)).willReturn(Optional.of(cart));
+        given(cartItemRepository.findById(1L)).willReturn(Optional.of(item));
+        given(breadRepository.findById(10L)).willReturn(Optional.of(bread));
+
+        cartService.updateQuantity(1L, 1L, new CartUpdateRequest(4));
+
+        assertThat(item.getQuantity()).isEqualTo(4);
+    }
+
+    @Test
+    void removeItem_clearsStoreIdWhenLastItemIsRemoved() {
+        CartEntity cart = TestFixtures.cart(50L, 1L, 100L);
+        CartItemEntity item = TestFixtures.cartItem(1L, 50L, 10L, 2);
+
+        given(cartRepository.findByUserIdWithLock(1L)).willReturn(Optional.of(cart));
+        given(cartItemRepository.findById(1L)).willReturn(Optional.of(item));
+        given(cartItemRepository.findByCartId(50L)).willReturn(List.of());
+
+        cartService.removeItem(1L, 1L);
+
+        assertThat(cart.getStoreId()).isNull();
+        verify(cartItemRepository).delete(item);
+    }
+
+    @Test
+    void clearCart_deletesItemsAndResetsStoreId() {
+        CartEntity cart = TestFixtures.cart(50L, 1L, 100L);
+        given(cartRepository.findByUserIdWithLock(1L)).willReturn(Optional.of(cart));
+
+        cartService.clearCart(1L);
+
+        assertThat(cart.getStoreId()).isNull();
+        verify(cartItemRepository).deleteByCartId(50L);
+    }
+
+    @Test
+    void getCartWithItemsForCheckout_rejectsEmptyCartItems() {
+        CartEntity cart = TestFixtures.cart(50L, 1L, 100L);
+        given(cartRepository.findByUserIdWithLock(1L)).willReturn(Optional.of(cart));
+        given(cartItemRepository.findByCartIdWithLock(50L)).willReturn(List.of());
+
+        assertThatThrownBy(() -> cartService.getCartWithItemsForCheckout(1L))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.CART_EMPTY);
     }
 }

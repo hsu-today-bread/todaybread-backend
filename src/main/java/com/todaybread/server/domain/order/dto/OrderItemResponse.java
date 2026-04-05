@@ -14,6 +14,12 @@ public record OrderItemResponse(
         int breadPrice,
         int quantity
 ) {
+    /**
+     * OrderItemEntity로부터 응답을 생성합니다.
+     *
+     * @param orderItem 주문 항목 엔티티
+     * @return 주문 항목 응답
+     */
     public static OrderItemResponse of(OrderItemEntity orderItem) {
         return new OrderItemResponse(
                 orderItem.getBreadName(),

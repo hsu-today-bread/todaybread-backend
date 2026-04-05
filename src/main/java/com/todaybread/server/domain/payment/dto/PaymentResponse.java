@@ -21,6 +21,12 @@ public record PaymentResponse(
         PaymentStatus status,
         LocalDateTime paidAt
 ) {
+    /**
+     * PaymentEntity로부터 응답을 생성합니다.
+     *
+     * @param payment 결제 엔티티
+     * @return 결제 응답
+     */
     public static PaymentResponse of(PaymentEntity payment) {
         return new PaymentResponse(
                 payment.getId(),

@@ -21,6 +21,13 @@ public record OrderResponse(
         int totalAmount,
         LocalDateTime createdAt
 ) {
+    /**
+     * OrderEntity로부터 목록 응답을 생성합니다.
+     *
+     * @param order     주문 엔티티
+     * @param storeName 매장 이름
+     * @return 주문 목록 응답
+     */
     public static OrderResponse of(OrderEntity order, String storeName) {
         return new OrderResponse(
                 order.getId(),

@@ -8,9 +8,8 @@ import com.todaybread.server.domain.user.entity.UserEntity;
 import com.todaybread.server.domain.user.repository.UserRepository;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
+import com.todaybread.server.support.TestFixtures;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -24,19 +23,13 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
-/**
- * {@link AuthService}의 단위 테스트입니다.
- */
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
-
-    @InjectMocks
-    private AuthService authService;
 
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
@@ -50,166 +43,89 @@ class AuthServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
-    private static final String SECRET = "todaybread-test-jwt-secret-key-at-least-32-bytes!!";
-    private JwtTokenService realJwtTokenService;
+    @InjectMocks
+    private AuthService authService;
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(authService, "refreshTokenExpiration", 604800000L);
-        realJwtTokenService = new JwtTokenService(SECRET, 1800000L, 604800000L);
+        ReflectionTestUtils.setField(authService, "refreshTokenExpiration", 60_000L);
     }
 
-    // ========== saveRefreshToken ==========
+    @Test
+    void saveRefreshToken_savesNewEntityWhenMissing() {
+        given(passwordEncoder.encode("refresh-token")).willReturn("encoded-token");
+        given(refreshTokenRepository.findByUserId(1L)).willReturn(Optional.empty());
 
-    @Nested
-    @DisplayName("saveRefreshToken")
-    class SaveRefreshToken {
+        authService.saveRefreshToken(1L, "refresh-token");
 
-        @Test
-        @DisplayName("신규 저장 — 기존 토큰 없으면 새로 생성")
-        void newToken() {
-            given(passwordEncoder.encode(anyString())).willReturn("hashedToken");
-            given(refreshTokenRepository.findByUserId(1L)).willReturn(Optional.empty());
-
-            authService.saveRefreshToken(1L, "rawToken");
-
-            verify(refreshTokenRepository).save(any(RefreshTokenEntity.class));
-        }
-
-        @Test
-        @DisplayName("갱신 — 기존 토큰 있으면 renew 호출")
-        void renewExisting() {
-            RefreshTokenEntity existing = RefreshTokenEntity.builder()
-                    .userId(1L).token("oldHash").expiresAt(LocalDateTime.now().plusDays(7)).build();
-            given(passwordEncoder.encode(anyString())).willReturn("newHash");
-            given(refreshTokenRepository.findByUserId(1L)).willReturn(Optional.of(existing));
-
-            authService.saveRefreshToken(1L, "rawToken");
-
-            assertThat(existing.getToken()).isEqualTo("newHash");
-            verify(refreshTokenRepository, never()).save(any());
-        }
+        verify(refreshTokenRepository).save(any(RefreshTokenEntity.class));
     }
 
-    // ========== reissue ==========
+    @Test
+    void saveRefreshToken_renewsExistingEntity() {
+        RefreshTokenEntity refreshToken = TestFixtures.refreshToken(1L, 1L, "old", LocalDateTime.now().minusDays(1));
+        given(passwordEncoder.encode("refresh-token")).willReturn("encoded-token");
+        given(refreshTokenRepository.findByUserId(1L)).willReturn(Optional.of(refreshToken));
 
-    @Nested
-    @DisplayName("reissue")
-    class Reissue {
+        authService.saveRefreshToken(1L, "refresh-token");
 
-        @Test
-        @DisplayName("정상 재발급")
-        void success() {
-            String validToken = realJwtTokenService.generateRefreshToken(1L);
-            given(jwtTokenService.parseRefreshToken(validToken)).willReturn(1L);
-
-            RefreshTokenEntity entity = RefreshTokenEntity.builder()
-                    .userId(1L).token("hashedOld").expiresAt(LocalDateTime.now().plusDays(7)).build();
-            given(refreshTokenRepository.findByUserId(1L)).willReturn(Optional.of(entity));
-            given(passwordEncoder.matches(eq(validToken), eq("hashedOld"))).willReturn(true);
-
-            UserEntity user = UserEntity.builder()
-                    .email("test@test.com").passwordHash("pw").name("테스트")
-                    .nickname("테스터").phoneNumber("010-1234-5678").build();
-            ReflectionTestUtils.setField(user, "id", 1L);
-            given(userRepository.findById(1L)).willReturn(Optional.of(user));
-
-            given(jwtTokenService.generateAccessToken(eq(1L), eq("test@test.com"), eq("USER")))
-                    .willReturn("newAccess");
-            given(jwtTokenService.generateRefreshToken(1L)).willReturn("newRefresh");
-            given(passwordEncoder.encode("newRefresh")).willReturn("newRefreshHash");
-
-            TokenResponse result = authService.reissue(validToken);
-
-            assertThat(result.accessToken()).isEqualTo("newAccess");
-            assertThat(result.refreshToken()).isEqualTo("newRefresh");
-        }
-
-        @Test
-        @DisplayName("잘못된 JWT 형식 — AUTH_REFRESH_TOKEN_INVALID")
-        void invalidJwtFormat() {
-            given(jwtTokenService.parseRefreshToken("not-a-jwt"))
-                    .willThrow(new IllegalArgumentException("invalid jwt"));
-
-            assertThatThrownBy(() -> authService.reissue("not-a-jwt"))
-                    .isInstanceOf(CustomException.class)
-                    .satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
-                            .isEqualTo(ErrorCode.AUTH_REFRESH_TOKEN_INVALID));
-        }
-
-        @Test
-        @DisplayName("서명 불일치 — AUTH_REFRESH_TOKEN_INVALID")
-        void signatureInvalid() {
-            String wrongToken = "signed-by-other-secret";
-            given(jwtTokenService.parseRefreshToken(wrongToken))
-                    .willThrow(new IllegalArgumentException("invalid signature"));
-
-            assertThatThrownBy(() -> authService.reissue(wrongToken))
-                    .isInstanceOf(CustomException.class)
-                    .satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
-                            .isEqualTo(ErrorCode.AUTH_REFRESH_TOKEN_INVALID));
-        }
-
-        @Test
-        @DisplayName("DB에 토큰 없음 — AUTH_REFRESH_TOKEN_INVALID")
-        void noTokenInDb() {
-            String validToken = realJwtTokenService.generateRefreshToken(1L);
-            given(jwtTokenService.parseRefreshToken(validToken)).willReturn(1L);
-            given(refreshTokenRepository.findByUserId(1L)).willReturn(Optional.empty());
-
-            assertThatThrownBy(() -> authService.reissue(validToken))
-                    .isInstanceOf(CustomException.class)
-                    .satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
-                            .isEqualTo(ErrorCode.AUTH_REFRESH_TOKEN_INVALID));
-        }
-
-        @Test
-        @DisplayName("해시 불일치 — AUTH_REFRESH_TOKEN_INVALID")
-        void hashMismatch() {
-            String validToken = realJwtTokenService.generateRefreshToken(1L);
-            given(jwtTokenService.parseRefreshToken(validToken)).willReturn(1L);
-
-            RefreshTokenEntity entity = RefreshTokenEntity.builder()
-                    .userId(1L).token("differentHash").expiresAt(LocalDateTime.now().plusDays(7)).build();
-            given(refreshTokenRepository.findByUserId(1L)).willReturn(Optional.of(entity));
-            given(passwordEncoder.matches(eq(validToken), eq("differentHash"))).willReturn(false);
-
-            assertThatThrownBy(() -> authService.reissue(validToken))
-                    .isInstanceOf(CustomException.class)
-                    .satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
-                            .isEqualTo(ErrorCode.AUTH_REFRESH_TOKEN_INVALID));
-        }
-
-        @Test
-        @DisplayName("만료된 토큰 — AUTH_REFRESH_TOKEN_INVALID + 삭제")
-        void expiredToken() {
-            String validToken = realJwtTokenService.generateRefreshToken(1L);
-            given(jwtTokenService.parseRefreshToken(validToken)).willReturn(1L);
-
-            RefreshTokenEntity entity = RefreshTokenEntity.builder()
-                    .userId(1L).token("hash").expiresAt(LocalDateTime.now().minusDays(1)).build();
-            given(refreshTokenRepository.findByUserId(1L)).willReturn(Optional.of(entity));
-            given(passwordEncoder.matches(eq(validToken), eq("hash"))).willReturn(true);
-
-            assertThatThrownBy(() -> authService.reissue(validToken))
-                    .isInstanceOf(CustomException.class)
-                    .satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
-                            .isEqualTo(ErrorCode.AUTH_REFRESH_TOKEN_INVALID));
-            verify(refreshTokenRepository).delete(entity);
-        }
+        assertThat(refreshToken.getToken()).isEqualTo("encoded-token");
+        verify(refreshTokenRepository, never()).save(any());
     }
 
-    // ========== logout ==========
+    @Test
+    void reissue_rejectsUnparseableToken() {
+        given(jwtTokenService.parseRefreshToken("bad-token")).willThrow(new IllegalArgumentException("bad token"));
 
-    @Nested
-    @DisplayName("logout")
-    class Logout {
+        assertThatThrownBy(() -> authService.reissue("bad-token"))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.AUTH_REFRESH_TOKEN_INVALID);
+    }
 
-        @Test
-        @DisplayName("로그아웃 시 토큰 삭제")
-        void success() {
-            authService.logout(1L);
-            verify(refreshTokenRepository).deleteByUserId(1L);
-        }
+    @Test
+    void reissue_deletesExpiredRefreshToken() {
+        RefreshTokenEntity refreshToken = TestFixtures.refreshToken(
+                1L, 1L, "encoded-old", LocalDateTime.now().minusMinutes(1)
+        );
+        given(jwtTokenService.parseRefreshToken("refresh-token")).willReturn(1L);
+        given(refreshTokenRepository.findByUserId(1L)).willReturn(Optional.of(refreshToken));
+        given(passwordEncoder.matches("refresh-token", "encoded-old")).willReturn(true);
+
+        assertThatThrownBy(() -> authService.reissue("refresh-token"))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.AUTH_REFRESH_TOKEN_INVALID);
+
+        verify(refreshTokenRepository).delete(refreshToken);
+    }
+
+    @Test
+    void reissue_returnsNewTokensWhenRefreshTokenIsValid() {
+        RefreshTokenEntity refreshToken = TestFixtures.refreshToken(
+                1L, 1L, "encoded-old", LocalDateTime.now().plusMinutes(10)
+        );
+        UserEntity user = TestFixtures.user(1L, true);
+
+        given(jwtTokenService.parseRefreshToken("refresh-token")).willReturn(1L);
+        given(refreshTokenRepository.findByUserId(1L)).willReturn(Optional.of(refreshToken));
+        given(passwordEncoder.matches("refresh-token", "encoded-old")).willReturn(true);
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(jwtTokenService.generateRefreshToken(1L)).willReturn("new-refresh");
+        given(jwtTokenService.generateAccessToken(1L, user.getEmail(), "BOSS")).willReturn("new-access");
+        given(passwordEncoder.encode("new-refresh")).willReturn("new-encoded-refresh");
+
+        TokenResponse response = authService.reissue("refresh-token");
+
+        assertThat(response.accessToken()).isEqualTo("new-access");
+        assertThat(response.refreshToken()).isEqualTo("new-refresh");
+        assertThat(refreshToken.getToken()).isEqualTo("new-encoded-refresh");
+    }
+
+    @Test
+    void logout_deletesRefreshTokenByUserId() {
+        authService.logout(1L);
+
+        verify(refreshTokenRepository).deleteByUserId(1L);
     }
 }

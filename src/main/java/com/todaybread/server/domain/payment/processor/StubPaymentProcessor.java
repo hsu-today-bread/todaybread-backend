@@ -10,6 +10,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class StubPaymentProcessor implements PaymentProcessor {
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public PaymentResult pay(Long orderId, int amount) {
         if (amount <= 0) {
