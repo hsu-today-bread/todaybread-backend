@@ -1,48 +1,51 @@
+# Build and test artifacts
 HELP.md
-.gradle
+.gradle/
 build/
 .jqwik-database
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
 
-### STS ###
+# IDE and editor files
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+# Eclipse / STS
 .apt_generated
 .classpath
 .factorypath
 .project
-.settings
+.settings/
 .springBeans
 .sts4-cache
 bin/
 !**/src/main/**/bin/
 !**/src/test/**/bin/
 
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
-out/
-!**/src/main/**/out/
-!**/src/test/**/out/
-
-### NetBeans ###
+# NetBeans
 /nbproject/private/
 /nbbuild/
 /dist/
 /nbdist/
 /.nb-gradle/
 
-### VS Code ###
-.vscode/
-
-### .env ###
+# Environment files
 .env
+.env.*
+!.env.example
 
-# Uploaded files
+# Project-local directories
 uploads/
-
-# Custom local files
 custom/
 .kiro/
+
+# OS and misc local artifacts
+.DS_Store
+*.log
