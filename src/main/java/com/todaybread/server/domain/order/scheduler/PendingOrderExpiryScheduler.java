@@ -20,7 +20,6 @@ public class PendingOrderExpiryScheduler {
     @Scheduled(fixedDelayString = "${order.expiry.scheduler-interval-ms:60000}")
     public void run() {
         log.info("만료 주문 처리 시작");
-        int cancelledCount = orderExpiryService.processExpiredOrders();
-        log.info("만료 주문 처리 완료: {}건 취소", cancelledCount);
+        orderExpiryService.processExpiredOrders();
     }
 }

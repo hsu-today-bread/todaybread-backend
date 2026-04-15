@@ -10,7 +10,6 @@ import com.todaybread.server.domain.order.repository.OrderRepository;
 import net.jqwik.api.*;
 import net.jqwik.api.lifecycle.BeforeProperty;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -18,6 +17,7 @@ import java.time.*;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -52,15 +52,23 @@ class OrderExpiryServicePropertyTest {
     @Mock
     private BreadRepository breadRepository;
 
+    @Mock
+    private OrderExpiryCanceller orderExpiryCanceller;
+
     private OrderExpiryService orderExpiryService;
+    private OrderExpiryCanceller realCanceller;
 
     @BeforeProperty
     void setUp() {
         MockitoAnnotations.openMocks(this);
         orderExpiryService = new OrderExpiryService(
-                orderRepository, orderItemRepository, breadRepository, FIXED_CLOCK
+                orderRepository, orderExpiryCanceller, FIXED_CLOCK
         );
         ReflectionTestUtils.setField(orderExpiryService, "expiryTimeoutMinutes", EXPIRY_TIMEOUT_MINUTES);
+        ReflectionTestUtils.setField(orderExpiryService, "batchSize", 100);
+
+        // Create a real canceller for Properties 2-4 that test cancellation logic directly
+        realCanceller = new OrderExpiryCanceller(orderRepository, orderItemRepository, breadRepository);
     }
 
     /**
@@ -84,7 +92,7 @@ class OrderExpiryServicePropertyTest {
                 .collect(Collectors.toList());
 
         // Configure mock to return the expected filtered/sorted list
-        given(orderRepository.findExpiredPendingOrders(any(LocalDateTime.class)))
+        given(orderRepository.findExpiredPendingOrders(any(OrderStatus.class), any(LocalDateTime.class), any()))
                 .willReturn(expected);
 
         // Act
@@ -153,20 +161,29 @@ class OrderExpiryServicePropertyTest {
     ) {
         Long orderId = testData.order.getId();
 
+        // Reset mutable state for jqwik shrinking idempotency
+        ReflectionTestUtils.setField(testData.order, "status", OrderStatus.PENDING);
+
         // Mock repository calls
         given(orderRepository.findByIdWithLock(orderId))
                 .willReturn(Optional.of(testData.order));
         given(orderItemRepository.findByOrderId(orderId))
                 .willReturn(testData.orderItems);
-        given(breadRepository.findAllByIdWithLock(
-                testData.orderItems.stream().map(OrderItemEntity::getBreadId).toList()))
+
+        List<Long> breadIds = testData.orderItems.stream()
+                .map(OrderItemEntity::getBreadId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        given(breadRepository.findAllByIdWithLock(breadIds))
                 .willReturn(testData.breads);
 
         // Act
-        orderExpiryService.cancelExpiredOrder(orderId);
+        CancelResult result = realCanceller.cancelExpiredOrder(orderId);
 
         // Assert: order status is now CANCELLED
         assertThat(testData.order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
+        assertThat(result).isEqualTo(CancelResult.CANCELLED);
     }
 
     /**
@@ -225,12 +242,20 @@ class OrderExpiryServicePropertyTest {
                 .willReturn(Optional.of(testData.order));
         given(orderItemRepository.findByOrderId(orderId))
                 .willReturn(testData.orderItems);
-        given(breadRepository.findAllByIdWithLock(
-                testData.orderItems.stream().map(OrderItemEntity::getBreadId).toList()))
+
+        List<Long> breadIds = testData.orderItems.stream()
+                .map(OrderItemEntity::getBreadId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        given(breadRepository.findAllByIdWithLock(breadIds))
                 .willReturn(testData.breads);
 
         // Act
-        orderExpiryService.cancelExpiredOrder(orderId);
+        CancelResult result = realCanceller.cancelExpiredOrder(orderId);
+
+        // Assert: result is CANCELLED
+        assertThat(result).isEqualTo(CancelResult.CANCELLED);
 
         // Assert: for each bread, afterQuantity == beforeQuantity + orderItemQuantity
         for (BreadEntity bread : testData.breads) {
@@ -382,7 +407,10 @@ class OrderExpiryServicePropertyTest {
                 .willReturn(Optional.of(testData.order));
 
         // Act
-        orderExpiryService.cancelExpiredOrder(orderId);
+        CancelResult result = realCanceller.cancelExpiredOrder(orderId);
+
+        // Assert: result is SKIPPED_STATUS_CHANGED
+        assertThat(result).isEqualTo(CancelResult.SKIPPED_STATUS_CHANGED);
 
         // Assert: order status has NOT changed
         assertThat(testData.order.getStatus()).isEqualTo(statusBefore);
@@ -458,8 +486,7 @@ class OrderExpiryServicePropertyTest {
      * Property 5: 예외 격리 — 하나의 실패가 다른 주문 처리에 영향을 주지 않는다
      *
      * N개의 만료 대상 중 임의의 k번째에서 예외가 발생해도 나머지 주문이 정상 취소되는지 검증한다.
-     * Mockito SPY를 사용하여 processExpiredOrders의 실제 로직을 실행하되,
-     * findExpiredPendingOrders와 cancelExpiredOrder의 동작을 제어한다.
+     * OrderExpiryCanceller mock을 사용하여 개별 취소 동작을 제어한다.
      *
      * **Validates: Requirements 2.4, 2.5**
      */
@@ -468,29 +495,31 @@ class OrderExpiryServicePropertyTest {
     void processExpiredOrders_isolatesExceptionFromOneOrder(
             @ForAll("expiredOrderListWithFailIndex") ExceptionIsolationTestData testData
     ) {
-        // Create a spy of OrderExpiryService
-        OrderExpiryService spy = Mockito.spy(orderExpiryService);
+        // Reset mocks between jqwik tries to avoid accumulated invocations
+        reset(orderExpiryCanceller);
 
         List<OrderEntity> expiredOrders = testData.expiredOrders;
         int failIndex = testData.failIndex;
         Long failingOrderId = expiredOrders.get(failIndex).getId();
 
         // Mock findExpiredPendingOrders to return our generated list
-        doReturn(expiredOrders).when(spy).findExpiredPendingOrders();
+        given(orderRepository.findExpiredPendingOrders(any(OrderStatus.class), any(LocalDateTime.class), any()))
+                .willReturn(expiredOrders);
 
         // For the failing order: throw RuntimeException
-        doThrow(new RuntimeException("simulated failure for order " + failingOrderId))
-                .when(spy).cancelExpiredOrder(eq(failingOrderId));
+        given(orderExpiryCanceller.cancelExpiredOrder(eq(failingOrderId)))
+                .willThrow(new RuntimeException("simulated failure for order " + failingOrderId));
 
-        // For all other orders: doNothing (simulate successful cancellation)
+        // For all other orders: return CANCELLED
         for (int i = 0; i < expiredOrders.size(); i++) {
             if (i != failIndex) {
-                doNothing().when(spy).cancelExpiredOrder(eq(expiredOrders.get(i).getId()));
+                given(orderExpiryCanceller.cancelExpiredOrder(eq(expiredOrders.get(i).getId())))
+                        .willReturn(CancelResult.CANCELLED);
             }
         }
 
         // Act
-        int cancelledCount = spy.processExpiredOrders();
+        int cancelledCount = orderExpiryService.processExpiredOrders();
 
         // Assert: cancelled count should be N - 1 (all except the failing one)
         assertThat(cancelledCount)
@@ -500,7 +529,7 @@ class OrderExpiryServicePropertyTest {
 
         // Assert: cancelExpiredOrder was called for ALL orders (including the failing one)
         for (OrderEntity order : expiredOrders) {
-            verify(spy).cancelExpiredOrder(eq(order.getId()));
+            verify(orderExpiryCanceller).cancelExpiredOrder(eq(order.getId()));
         }
     }
 

@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Collections;
@@ -21,9 +22,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
 class OrderExpiryServiceTest {
@@ -32,10 +33,7 @@ class OrderExpiryServiceTest {
     private OrderRepository orderRepository;
 
     @Mock
-    private OrderItemRepository orderItemRepository;
-
-    @Mock
-    private BreadRepository breadRepository;
+    private OrderExpiryCanceller orderExpiryCanceller;
 
     private OrderExpiryService orderExpiryService;
 
@@ -44,16 +42,16 @@ class OrderExpiryServiceTest {
         MockitoAnnotations.openMocks(this);
         orderExpiryService = new OrderExpiryService(
                 orderRepository,
-                orderItemRepository,
-                breadRepository,
+                orderExpiryCanceller,
                 TestFixtures.FIXED_CLOCK
         );
         ReflectionTestUtils.setField(orderExpiryService, "expiryTimeoutMinutes", 10L);
+        ReflectionTestUtils.setField(orderExpiryService, "batchSize", 100);
     }
 
     @Test
     void findExpiredPendingOrders_returnsEmptyListWhenNoExpiredOrders() {
-        given(orderRepository.findExpiredPendingOrders(any())).willReturn(Collections.emptyList());
+        given(orderRepository.findExpiredPendingOrders(any(), any(), any())).willReturn(Collections.emptyList());
 
         List<OrderEntity> result = orderExpiryService.findExpiredPendingOrders();
 
@@ -62,38 +60,28 @@ class OrderExpiryServiceTest {
 
     @Test
     void processExpiredOrders_returnsZeroWhenNoExpiredOrders() {
-        OrderExpiryService serviceSpy = spy(orderExpiryService);
-        given(orderRepository.findExpiredPendingOrders(any())).willReturn(Collections.emptyList());
+        given(orderRepository.findExpiredPendingOrders(any(), any(), any())).willReturn(Collections.emptyList());
 
-        int result = serviceSpy.processExpiredOrders();
+        int result = orderExpiryService.processExpiredOrders();
 
         assertThat(result).isZero();
-        verify(serviceSpy, never()).cancelExpiredOrder(anyLong());
+        verify(orderExpiryCanceller, never()).cancelExpiredOrder(anyLong());
     }
 
     @Test
-    void cancelExpiredOrder_skipsWhenOrderNotFound() {
-        given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.empty());
+    void processExpiredOrders_countsCancelledAndSkippedCorrectly() {
+        OrderEntity order1 = TestFixtures.order(1L, 10L, 100L, OrderStatus.PENDING, 5000, "key-1");
+        OrderEntity order2 = TestFixtures.order(2L, 10L, 100L, OrderStatus.PENDING, 3000, "key-2");
+        OrderEntity order3 = TestFixtures.order(3L, 10L, 100L, OrderStatus.PENDING, 4000, "key-3");
 
-        orderExpiryService.cancelExpiredOrder(1L);
+        given(orderRepository.findExpiredPendingOrders(any(), any(), any()))
+                .willReturn(List.of(order1, order2, order3));
+        given(orderExpiryCanceller.cancelExpiredOrder(1L)).willReturn(CancelResult.CANCELLED);
+        given(orderExpiryCanceller.cancelExpiredOrder(2L)).willReturn(CancelResult.SKIPPED_STATUS_CHANGED);
+        given(orderExpiryCanceller.cancelExpiredOrder(3L)).willReturn(CancelResult.CANCELLED);
 
-        verify(orderItemRepository, never()).findByOrderId(anyLong());
-    }
+        int result = orderExpiryService.processExpiredOrders();
 
-    @Test
-    void cancelExpiredOrder_cancelsOrderAndSkipsMissingBreads() {
-        OrderEntity order = TestFixtures.order(1L, 10L, 100L, OrderStatus.PENDING, 5000, "key-1");
-        OrderItemEntity item1 = TestFixtures.orderItem(1L, 1L, 50L, 2000, 2);
-        OrderItemEntity item2 = TestFixtures.orderItem(2L, 1L, 60L, 3000, 1);
-
-        given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
-        given(orderItemRepository.findByOrderId(1L)).willReturn(List.of(item1, item2));
-        // Return empty list — no breads found at all
-        given(breadRepository.findAllByIdWithLock(List.of(50L, 60L))).willReturn(Collections.emptyList());
-
-        orderExpiryService.cancelExpiredOrder(1L);
-
-        assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
-        // No bread quantity restoration happened since breads were not found
+        assertThat(result).isEqualTo(2);
     }
 }

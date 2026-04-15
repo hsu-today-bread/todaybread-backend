@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -29,8 +28,6 @@ class PendingOrderExpirySchedulerTest {
      */
     @Test
     void run_callsProcessExpiredOrdersExactlyOnce() {
-        given(orderExpiryService.processExpiredOrders()).willReturn(3);
-
         scheduler.run();
 
         verify(orderExpiryService, times(1)).processExpiredOrders();
