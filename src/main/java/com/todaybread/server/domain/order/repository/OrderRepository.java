@@ -58,14 +58,14 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long> {
 
     /**
      * 만료 대상 PENDING 주문을 조회합니다.
-     * 주문 상태가 파라미터로 전달된 상태이고 생성 시각이 기준 시각 이전인 주문을 ID 오름차순으로 반환합니다.
+     * 주문 상태가 파라미터로 전달된 상태이고 생성 시각이 기준 시각 이전인 주문을 생성 시각 오름차순, ID 오름차순으로 반환합니다.
      * 비관적 락 없이 일반 조회로 수행합니다.
      *
      * @param status     주문 상태
      * @param cutoffTime 만료 기준 시각
      * @param pageable   페이지 정보
-     * @return 만료 대상 주문 목록 (ID 오름차순)
+     * @return 만료 대상 주문 목록 (생성 시각 오름차순, ID 오름차순)
      */
-    @Query("SELECT o FROM OrderEntity o WHERE o.status = :status AND o.createdAt < :cutoffTime ORDER BY o.id ASC")
+    @Query("SELECT o FROM OrderEntity o WHERE o.status = :status AND o.createdAt < :cutoffTime ORDER BY o.createdAt ASC, o.id ASC")
     List<OrderEntity> findExpiredPendingOrders(@Param("status") OrderStatus status, @Param("cutoffTime") LocalDateTime cutoffTime, Pageable pageable);
 }

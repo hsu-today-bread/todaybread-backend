@@ -1,13 +1,14 @@
 /*
- 신규 환경에서 V1~V12를 순차 적용하지 않고,
- 현재 최종 스키마를 한 번에 구성하기 위한 baseline migration입니다.
+ 신규 환경에서 현재 최종 스키마를 한 번에 구성하기 위한 통합 baseline migration입니다.
+ users, auth, keyword, store, bread, cart, order, payment 도메인 테이블과 인덱스를 포함합니다.
 
- 기존 환경에서는 이미 적용된 V1~V12 이력을 그대로 유지합니다.
+ 기존 환경에서는 이미 적용된 migration 이력을 그대로 유지합니다.
  */
 
-/*
- users / auth
- */
+-- ============================================================
+-- users / auth
+-- ============================================================
+
 CREATE TABLE users (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
@@ -30,9 +31,10 @@ CREATE TABLE refresh_token (
     CONSTRAINT fk_refresh_token_users FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-/*
- keyword
- */
+-- ============================================================
+-- keyword
+-- ============================================================
+
 CREATE TABLE keyword (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     normalised_text VARCHAR(255) NOT NULL UNIQUE,
@@ -52,9 +54,10 @@ CREATE TABLE user_keyword (
     CONSTRAINT fk_user_keyword_users FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-/*
- store
- */
+-- ============================================================
+-- store
+-- ============================================================
+
 CREATE TABLE store (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT NOT NULL UNIQUE,
@@ -112,9 +115,10 @@ CREATE TABLE store_business_hours (
     CONSTRAINT uk_store_business_hours_store_id_day_of_week UNIQUE (store_id, day_of_week)
 );
 
-/*
- bread
- */
+-- ============================================================
+-- bread
+-- ============================================================
+
 CREATE TABLE bread (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     store_id BIGINT NOT NULL,
@@ -137,4 +141,92 @@ CREATE TABLE bread_image (
     created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
     CONSTRAINT fk_bread_image_bread FOREIGN KEY (bread_id) REFERENCES bread(id) ON DELETE CASCADE
+);
+
+-- ============================================================
+-- cart
+-- ============================================================
+
+-- cart: 유저당 하나의 장바구니 (user_id UNIQUE)
+CREATE TABLE cart (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL UNIQUE,
+    store_id BIGINT NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    CONSTRAINT fk_cart_users FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_cart_store FOREIGN KEY (store_id) REFERENCES store(id)
+);
+
+-- cart_item: 장바구니 항목 (cart_id + bread_id 복합 유니크)
+CREATE TABLE cart_item (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    cart_id BIGINT NOT NULL,
+    bread_id BIGINT NOT NULL,
+    quantity INT NOT NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    CONSTRAINT fk_cart_item_cart FOREIGN KEY (cart_id) REFERENCES cart(id) ON DELETE CASCADE,
+    CONSTRAINT fk_cart_item_bread FOREIGN KEY (bread_id) REFERENCES bread(id),
+    CONSTRAINT uk_cart_item_cart_id_bread_id UNIQUE (cart_id, bread_id),
+    CONSTRAINT chk_cart_item_quantity CHECK (quantity > 0)
+);
+
+-- ============================================================
+-- order / order_item
+-- ============================================================
+
+-- orders: 주문 (테이블명 'orders' — SQL 예약어 'order' 회피)
+CREATE TABLE orders (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    store_id BIGINT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    total_amount INT NOT NULL,
+    idempotency_key VARCHAR(255) NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    CONSTRAINT fk_orders_users FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_orders_store FOREIGN KEY (store_id) REFERENCES store(id),
+    CONSTRAINT chk_orders_total_amount CHECK (total_amount > 0),
+    UNIQUE INDEX uk_orders_user_id_idempotency_key (user_id, idempotency_key),
+    INDEX idx_orders_user_id (user_id),
+    INDEX idx_orders_store_id (store_id),
+    INDEX idx_orders_user_id_created_at (user_id, created_at DESC),
+    INDEX idx_orders_status_created_at (status, created_at, id)
+);
+
+-- order_item: 주문 항목 (빵 정보 스냅샷 저장)
+CREATE TABLE order_item (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    order_id BIGINT NOT NULL,
+    bread_id BIGINT NULL,
+    bread_name VARCHAR(100) NOT NULL,
+    bread_price INT NOT NULL,
+    quantity INT NOT NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    CONSTRAINT fk_order_item_orders FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    CONSTRAINT fk_order_item_bread FOREIGN KEY (bread_id) REFERENCES bread(id) ON DELETE SET NULL,
+    CONSTRAINT chk_order_item_quantity CHECK (quantity > 0),
+    INDEX idx_order_item_order_id (order_id)
+);
+
+-- ============================================================
+-- payment
+-- ============================================================
+
+-- payment: 결제 (order_id UNIQUE — 주문당 하나의 결제)
+CREATE TABLE payment (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    order_id BIGINT NOT NULL UNIQUE,
+    amount INT NOT NULL,
+    status VARCHAR(20) NOT NULL,
+    paid_at DATETIME(6) NULL,
+    idempotency_key VARCHAR(255) NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    CONSTRAINT fk_payment_orders FOREIGN KEY (order_id) REFERENCES orders(id),
+    CONSTRAINT chk_payment_amount CHECK (amount > 0),
+    INDEX idx_payment_order_id_idempotency_key (order_id, idempotency_key)
 );

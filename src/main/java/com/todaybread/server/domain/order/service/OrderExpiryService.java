@@ -32,7 +32,7 @@ public class OrderExpiryService {
      * 만료 대상 PENDING 주문을 조회합니다.
      * 현재 시각에서 만료 기준 시간을 뺀 cutoffTime 이전에 생성된 PENDING 주문을 반환합니다.
      *
-     * @return 만료 대상 주문 목록 (ID 오름차순)
+     * @return 만료 대상 주문 목록 (생성 시각 오름차순, ID 오름차순)
      */
     public List<OrderEntity> findExpiredPendingOrders() {
         LocalDateTime now = LocalDateTime.now(clock);
