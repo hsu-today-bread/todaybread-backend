@@ -1,15 +1,13 @@
 package com.todaybread.server.domain.order.service;
 
+import com.todaybread.server.domain.order.config.OrderExpiryProperties;
 import com.todaybread.server.domain.order.entity.OrderEntity;
 import com.todaybread.server.domain.order.entity.OrderStatus;
 import com.todaybread.server.domain.order.repository.OrderRepository;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -28,22 +26,7 @@ public class OrderExpiryService {
     private final OrderRepository orderRepository;
     private final OrderExpiryCanceller orderExpiryCanceller;
     private final Clock clock;
-
-    @Value("${order.expiry.timeout-minutes:10}")
-    private long expiryTimeoutMinutes;
-
-    @Value("${order.expiry.batch-size:100}")
-    private int batchSize;
-
-    @PostConstruct
-    void validateConfiguration() {
-        if (expiryTimeoutMinutes <= 0) {
-            throw new IllegalStateException("order.expiry.timeout-minutes must be positive, got: " + expiryTimeoutMinutes);
-        }
-        if (batchSize <= 0) {
-            throw new IllegalStateException("order.expiry.batch-size must be positive, got: " + batchSize);
-        }
-    }
+    private final OrderExpiryProperties properties;
 
     /**
      * 만료 대상 PENDING 주문을 조회합니다.
@@ -51,17 +34,20 @@ public class OrderExpiryService {
      *
      * @return 만료 대상 주문 목록 (ID 오름차순)
      */
-    @Transactional(readOnly = true)
     public List<OrderEntity> findExpiredPendingOrders() {
         LocalDateTime now = LocalDateTime.now(clock);
-        LocalDateTime cutoffTime = now.minusMinutes(expiryTimeoutMinutes);
-        return orderRepository.findExpiredPendingOrders(OrderStatus.PENDING, cutoffTime, PageRequest.of(0, batchSize));
+        LocalDateTime cutoffTime = now.minusMinutes(properties.getTimeoutMinutes());
+        return orderRepository.findExpiredPendingOrders(OrderStatus.PENDING, cutoffTime, PageRequest.of(0, properties.getBatchSize()));
     }
 
     /**
      * 만료 대상 PENDING 주문을 일괄 처리합니다.
      * 각 주문은 OrderExpiryCanceller에서 개별 트랜잭션으로 처리되므로
      * 이 메서드에는 트랜잭션 어노테이션을 적용하지 않습니다.
+     *
+     * <p>한 번의 실행에서 최대 {@code batch-size}건만 처리합니다.
+     * 만료 대상이 batch-size를 초과하면 다음 스케줄러 실행에서 나머지를 처리합니다.
+     * fixedDelay 방식이므로 이전 실행 완료 후 즉시 다음 실행이 시작됩니다.</p>
      *
      * @return 취소된 주문 건수
      */

@@ -2,6 +2,7 @@ package com.todaybread.server.domain.order.service;
 
 import com.todaybread.server.domain.bread.entity.BreadEntity;
 import com.todaybread.server.domain.bread.repository.BreadRepository;
+import com.todaybread.server.domain.order.config.OrderExpiryProperties;
 import com.todaybread.server.domain.order.entity.OrderEntity;
 import com.todaybread.server.domain.order.entity.OrderItemEntity;
 import com.todaybread.server.domain.order.entity.OrderStatus;
@@ -23,7 +24,6 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -61,14 +61,18 @@ class OrderExpiryServicePropertyTest {
     @BeforeProperty
     void setUp() {
         MockitoAnnotations.openMocks(this);
+
+        OrderExpiryProperties properties = new OrderExpiryProperties();
+        properties.setTimeoutMinutes(EXPIRY_TIMEOUT_MINUTES);
+        properties.setBatchSize(100);
+
         orderExpiryService = new OrderExpiryService(
-                orderRepository, orderExpiryCanceller, FIXED_CLOCK
+                orderRepository, orderExpiryCanceller, FIXED_CLOCK, properties
         );
-        ReflectionTestUtils.setField(orderExpiryService, "expiryTimeoutMinutes", EXPIRY_TIMEOUT_MINUTES);
-        ReflectionTestUtils.setField(orderExpiryService, "batchSize", 100);
 
         // Create a real canceller for Properties 2-4 that test cancellation logic directly
-        realCanceller = new OrderExpiryCanceller(orderRepository, orderItemRepository, breadRepository);
+        InventoryRestorer inventoryRestorer = new InventoryRestorer(breadRepository);
+        realCanceller = new OrderExpiryCanceller(orderRepository, orderItemRepository, inventoryRestorer);
     }
 
     /**
@@ -217,7 +221,7 @@ class OrderExpiryServicePropertyTest {
     @Property(tries = 100)
     @Tag("Feature: pending-order-expiry, Property 3: 취소 시 재고 복원 round-trip")
     void cancelExpiredOrder_restoresInventoryByOrderItemQuantity(
-            @ForAll("pendingOrderWithItemsForInventory") PendingOrderTestData testData
+            @ForAll("pendingOrderWithItems") PendingOrderTestData testData
     ) {
         Long orderId = testData.order.getId();
 
@@ -268,7 +272,7 @@ class OrderExpiryServicePropertyTest {
     }
 
     @Provide
-    Arbitrary<PendingOrderTestData> pendingOrderWithItemsForInventory() {
+    Arbitrary<PendingOrderTestData> pendingOrderWithItems() {
         return Combinators.combine(
                 Arbitraries.longs().between(1, 10000),       // orderId
                 Arbitraries.longs().between(1, 1000),         // userId
@@ -285,63 +289,6 @@ class OrderExpiryServicePropertyTest {
             ReflectionTestUtils.setField(order, "id", orderId);
 
             return Combinators.combine(
-                    Arbitraries.integers().between(1, 10).list().ofSize(itemCount),       // quantities
-                    Arbitraries.integers().between(100, 50000).list().ofSize(itemCount),   // bread prices
-                    Arbitraries.integers().between(0, 1000).list().ofSize(itemCount)       // remaining quantities
-            ).as((quantities, prices, remainingQtys) -> {
-                List<OrderItemEntity> items = new java.util.ArrayList<>();
-                List<BreadEntity> breads = new java.util.ArrayList<>();
-
-                for (int i = 0; i < itemCount; i++) {
-                    long breadId = 2000L + i; // unique breadId per item (offset to avoid collision)
-
-                    OrderItemEntity item = OrderItemEntity.builder()
-                            .orderId(orderId)
-                            .breadId(breadId)
-                            .breadName("빵-" + breadId)
-                            .breadPrice(prices.get(i))
-                            .quantity(quantities.get(i))
-                            .build();
-                    ReflectionTestUtils.setField(item, "id", (long) (i + 1));
-                    items.add(item);
-
-                    BreadEntity bread = BreadEntity.builder()
-                            .storeId(storeId)
-                            .name("빵-" + breadId)
-                            .description("설명")
-                            .originalPrice(prices.get(i))
-                            .salePrice(prices.get(i))
-                            .remainingQuantity(remainingQtys.get(i))
-                            .build();
-                    ReflectionTestUtils.setField(bread, "id", breadId);
-                    breads.add(bread);
-                }
-
-                return new PendingOrderTestData(order, items, breads);
-            });
-        });
-    }
-
-    @Provide
-    Arbitrary<PendingOrderTestData> pendingOrderWithItems() {
-        return Combinators.combine(
-                Arbitraries.longs().between(1, 10000),       // orderId
-                Arbitraries.longs().between(1, 1000),         // userId
-                Arbitraries.longs().between(1, 500),          // storeId
-                Arbitraries.integers().between(100, 100000),  // totalAmount
-                Arbitraries.integers().between(1, 5)          // number of items
-        ).flatAs((orderId, userId, storeId, totalAmount, itemCount) -> {
-            // Create PENDING order
-            OrderEntity order = OrderEntity.builder()
-                    .userId(userId)
-                    .storeId(storeId)
-                    .status(OrderStatus.PENDING)
-                    .totalAmount(totalAmount)
-                    .build();
-            ReflectionTestUtils.setField(order, "id", orderId);
-
-            // Generate order items with unique breadIds
-            Arbitrary<PendingOrderTestData> dataArbitrary = Combinators.combine(
                     Arbitraries.integers().between(1, 10).list().ofSize(itemCount),       // quantities
                     Arbitraries.integers().between(100, 50000).list().ofSize(itemCount),   // bread prices
                     Arbitraries.integers().between(0, 1000).list().ofSize(itemCount)       // remaining quantities
@@ -376,8 +323,6 @@ class OrderExpiryServicePropertyTest {
 
                 return new PendingOrderTestData(order, items, breads);
             });
-
-            return dataArbitrary;
         });
     }
 

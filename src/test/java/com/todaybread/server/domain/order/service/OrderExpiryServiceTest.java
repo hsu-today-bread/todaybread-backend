@@ -1,28 +1,21 @@
 package com.todaybread.server.domain.order.service;
 
-import com.todaybread.server.domain.bread.entity.BreadEntity;
-import com.todaybread.server.domain.bread.repository.BreadRepository;
+import com.todaybread.server.domain.order.config.OrderExpiryProperties;
 import com.todaybread.server.domain.order.entity.OrderEntity;
-import com.todaybread.server.domain.order.entity.OrderItemEntity;
 import com.todaybread.server.domain.order.entity.OrderStatus;
-import com.todaybread.server.domain.order.repository.OrderItemRepository;
 import com.todaybread.server.domain.order.repository.OrderRepository;
 import com.todaybread.server.support.TestFixtures;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -40,13 +33,17 @@ class OrderExpiryServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+
+        OrderExpiryProperties properties = new OrderExpiryProperties();
+        properties.setTimeoutMinutes(10L);
+        properties.setBatchSize(100);
+
         orderExpiryService = new OrderExpiryService(
                 orderRepository,
                 orderExpiryCanceller,
-                TestFixtures.FIXED_CLOCK
+                TestFixtures.FIXED_CLOCK,
+                properties
         );
-        ReflectionTestUtils.setField(orderExpiryService, "expiryTimeoutMinutes", 10L);
-        ReflectionTestUtils.setField(orderExpiryService, "batchSize", 100);
     }
 
     @Test

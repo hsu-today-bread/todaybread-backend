@@ -1,6 +1,8 @@
 package com.todaybread.server.config;
 
+import com.todaybread.server.domain.order.config.OrderExpiryProperties;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
@@ -10,6 +12,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  */
 @Configuration
 @EnableScheduling
+@EnableConfigurationProperties(OrderExpiryProperties.class)
 @ConditionalOnProperty(name = "order.expiry.scheduler-enabled", havingValue = "true", matchIfMissing = true)
 public class SchedulingConfig {
 }

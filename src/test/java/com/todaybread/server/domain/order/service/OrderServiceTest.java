@@ -59,12 +59,14 @@ class OrderServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        InventoryRestorer inventoryRestorer = new InventoryRestorer(breadRepository);
         orderService = new OrderService(
                 orderRepository,
                 orderItemRepository,
                 cartService,
                 breadRepository,
-                storeRepository
+                storeRepository,
+                inventoryRestorer
         );
     }
 

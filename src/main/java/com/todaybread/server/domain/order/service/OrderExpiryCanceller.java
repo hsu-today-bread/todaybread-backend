@@ -1,7 +1,5 @@
 package com.todaybread.server.domain.order.service;
 
-import com.todaybread.server.domain.bread.entity.BreadEntity;
-import com.todaybread.server.domain.bread.repository.BreadRepository;
 import com.todaybread.server.domain.order.entity.OrderEntity;
 import com.todaybread.server.domain.order.entity.OrderItemEntity;
 import com.todaybread.server.domain.order.entity.OrderStatus;
@@ -14,11 +12,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * 개별 만료 주문의 취소 및 재고 복원을 담당하는 서비스입니다.
@@ -31,7 +25,7 @@ public class OrderExpiryCanceller {
 
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
-    private final BreadRepository breadRepository;
+    private final InventoryRestorer inventoryRestorer;
 
     /**
      * 개별 만료 주문을 취소하고 재고를 복원합니다.
@@ -59,31 +53,7 @@ public class OrderExpiryCanceller {
         order.updateStatus(OrderStatus.CANCELLED);
 
         List<OrderItemEntity> orderItems = orderItemRepository.findByOrderId(orderId);
-
-        List<Long> breadIds = orderItems.stream()
-                .map(OrderItemEntity::getBreadId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-
-        if (breadIds.isEmpty()) {
-            log.info("주문 취소 완료 (복원할 재고 없음): orderId={}", orderId);
-            return CancelResult.CANCELLED;
-        }
-
-        List<BreadEntity> breads = breadRepository.findAllByIdWithLock(breadIds);
-
-        Map<Long, BreadEntity> breadMap = breads.stream()
-                .collect(Collectors.toMap(BreadEntity::getId, Function.identity()));
-
-        for (OrderItemEntity item : orderItems) {
-            BreadEntity bread = breadMap.get(item.getBreadId());
-            if (bread == null) {
-                log.warn("빵을 찾을 수 없어 재고 복원 건너뜀: orderId={}, breadId={}", orderId, item.getBreadId());
-                continue;
-            }
-            bread.increaseQuantity(item.getQuantity());
-        }
+        inventoryRestorer.restoreInventory(orderId, orderItems);
 
         log.info("주문 취소 완료: orderId={}", orderId);
         return CancelResult.CANCELLED;

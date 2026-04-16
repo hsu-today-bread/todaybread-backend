@@ -28,7 +28,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -47,6 +46,7 @@ public class OrderService {
     private final CartService cartService;
     private final BreadRepository breadRepository;
     private final StoreRepository storeRepository;
+    private final InventoryRestorer inventoryRestorer;
 
     /**
      * 장바구니 기반 주문을 생성합니다.
@@ -242,26 +242,7 @@ public class OrderService {
         order.updateStatus(OrderStatus.CANCELLED);
 
         List<OrderItemEntity> orderItems = orderItemRepository.findByOrderId(orderId);
-        List<Long> breadIds = orderItems.stream()
-                .map(OrderItemEntity::getBreadId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-
-        if (!breadIds.isEmpty()) {
-            Map<Long, BreadEntity> breadMap = breadRepository.findAllByIdWithLock(breadIds).stream()
-                    .collect(Collectors.toMap(BreadEntity::getId, Function.identity()));
-
-            for (OrderItemEntity item : orderItems) {
-                if (item.getBreadId() == null) continue;
-                BreadEntity bread = breadMap.get(item.getBreadId());
-                if (bread != null) {
-                    bread.increaseQuantity(item.getQuantity());
-                } else {
-                    log.warn("주문 취소 시 빵을 찾을 수 없어 재고 복원 건너뜀: orderId={}, breadId={}", orderId, item.getBreadId());
-                }
-            }
-        }
+        inventoryRestorer.restoreInventory(orderId, orderItems);
 
         log.info("주문 취소 완료: orderId={}, userId={}", orderId, userId);
     }
