@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -68,4 +69,34 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long> {
      */
     @Query("SELECT o FROM OrderEntity o WHERE o.status = :status AND o.createdAt < :cutoffTime ORDER BY o.createdAt ASC, o.id ASC")
     List<OrderEntity> findExpiredPendingOrders(@Param("status") OrderStatus status, @Param("cutoffTime") LocalDateTime cutoffTime, Pageable pageable);
+
+    /**
+     * 가게의 특정 상태 주문을 생성 시각 내림차순으로 조회합니다.
+     *
+     * @param storeId 가게 ID
+     * @param status  주문 상태
+     * @return 주문 엔티티 목록 (최신순)
+     */
+    List<OrderEntity> findByStoreIdAndStatusOrderByCreatedAtDesc(Long storeId, OrderStatus status);
+
+    /**
+     * 가게의 특정 상태 주문을 생성 시각 내림차순으로 페이지네이션 조회합니다.
+     *
+     * @param storeId  가게 ID
+     * @param status   주문 상태
+     * @param pageable 페이지 정보
+     * @return 주문 엔티티 페이지 (최신순)
+     */
+    Page<OrderEntity> findByStoreIdAndStatusOrderByCreatedAtDesc(Long storeId, OrderStatus status, Pageable pageable);
+
+    /**
+     * 가게 + 주문 날짜 + 주문 번호로 주문 존재 여부를 확인합니다.
+     * 주문 번호 중복 체크에 사용합니다.
+     *
+     * @param storeId     가게 ID
+     * @param orderDate   주문 날짜
+     * @param orderNumber 주문 번호
+     * @return 존재하면 true
+     */
+    boolean existsByStoreIdAndOrderDateAndOrderNumber(Long storeId, LocalDate orderDate, String orderNumber);
 }

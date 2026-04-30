@@ -130,6 +130,7 @@ public enum ErrorCode {
     ORDER_NOT_FOUND("ORDER_001", "주문을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     ORDER_ACCESS_DENIED("ORDER_002", "주문에 접근할 권한이 없습니다.", HttpStatus.FORBIDDEN),
     ORDER_STATUS_CANNOT_CHANGE("ORDER_003", "변경할 수 없는 주문 상태입니다.", HttpStatus.CONFLICT),
+    ORDER_NUMBER_GENERATION_FAILED("ORDER_004", "주문 번호 생성에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
 
     /**
      * ============================

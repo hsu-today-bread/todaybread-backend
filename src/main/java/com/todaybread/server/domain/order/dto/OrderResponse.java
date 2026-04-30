@@ -8,17 +8,19 @@ import java.time.LocalDateTime;
 /**
  * 주문 목록 응답 DTO
  *
- * @param orderId 주문 ID
- * @param storeName 매장 이름
- * @param status 주문 상태
+ * @param orderId     주문 ID
+ * @param storeName   매장 이름
+ * @param status      주문 상태
  * @param totalAmount 총 결제 금액
- * @param createdAt 주문 생성 시각
+ * @param orderNumber 주문 번호
+ * @param createdAt   주문 생성 시각
  */
 public record OrderResponse(
         Long orderId,
         String storeName,
         OrderStatus status,
         int totalAmount,
+        String orderNumber,
         LocalDateTime createdAt
 ) {
     /**
@@ -34,6 +36,7 @@ public record OrderResponse(
                 storeName,
                 order.getStatus(),
                 order.getTotalAmount(),
+                order.getOrderNumber(),
                 order.getCreatedAt()
         );
     }

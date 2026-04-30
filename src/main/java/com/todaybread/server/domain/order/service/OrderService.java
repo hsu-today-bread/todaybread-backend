@@ -29,6 +29,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -47,6 +49,8 @@ public class OrderService {
     private final BreadRepository breadRepository;
     private final StoreRepository storeRepository;
     private final InventoryRestorer inventoryRestorer;
+    private final OrderNumberGenerator orderNumberGenerator;
+    private final Clock clock;
 
     /**
      * 장바구니 기반 주문을 생성합니다.
@@ -142,6 +146,13 @@ public class OrderService {
         }
         orderItemRepository.saveAll(orderItems);
 
+        // 6-1. 주문 번호 발급
+        LocalDate orderDate = LocalDate.now(clock);
+        order.setOrderDate(orderDate);
+        String orderNumber = orderNumberGenerator.generate(order.getStoreId(), orderDate);
+        order.assignOrderNumber(orderNumber);
+        orderRepository.save(order);
+
         // 7. Cart 비우기
         cartService.clearCart(userId);
 
@@ -210,6 +221,13 @@ public class OrderService {
                 .quantity(request.quantity())
                 .build();
         orderItemRepository.save(orderItem);
+
+        // 주문 번호 발급
+        LocalDate orderDate = LocalDate.now(clock);
+        order.setOrderDate(orderDate);
+        String orderNumber = orderNumberGenerator.generate(order.getStoreId(), orderDate);
+        order.assignOrderNumber(orderNumber);
+        orderRepository.save(order);
 
         Optional<StoreEntity> storeOpt = storeRepository.findById(bread.getStoreId());
         if (storeOpt.isEmpty()) {

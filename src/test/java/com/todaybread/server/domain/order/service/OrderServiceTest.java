@@ -27,6 +27,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 
@@ -54,19 +55,25 @@ class OrderServiceTest {
     @Mock
     private StoreRepository storeRepository;
 
+    @Mock
+    private OrderNumberGenerator orderNumberGenerator;
+
     private OrderService orderService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
         InventoryRestorer inventoryRestorer = new InventoryRestorer(breadRepository);
+        Clock clock = com.todaybread.server.support.TestFixtures.FIXED_CLOCK;
         orderService = new OrderService(
                 orderRepository,
                 orderItemRepository,
                 cartService,
                 breadRepository,
                 storeRepository,
-                inventoryRestorer
+                inventoryRestorer,
+                orderNumberGenerator,
+                clock
         );
     }
 
@@ -105,12 +112,14 @@ class OrderServiceTest {
             ReflectionTestUtils.setField(order, "id", 500L);
             return order;
         });
+        given(orderNumberGenerator.generate(any(), any())).willReturn("A2B3");
         given(storeRepository.findById(100L)).willReturn(Optional.of(store));
 
         OrderDetailResponse response = orderService.createOrderFromCart(1L, "order-key");
 
         assertThat(response.orderId()).isEqualTo(500L);
         assertThat(response.totalAmount()).isEqualTo(4_000);
+        assertThat(response.orderNumber()).isEqualTo("A2B3");
         assertThat(bread.getRemainingQuantity()).isEqualTo(3);
         verify(orderItemRepository).saveAll(any());
         verify(cartService).clearCart(1L);
@@ -149,12 +158,14 @@ class OrderServiceTest {
             ReflectionTestUtils.setField(order, "id", 500L);
             return order;
         });
+        given(orderNumberGenerator.generate(any(), any())).willReturn("A2B3");
         given(storeRepository.findById(100L)).willReturn(Optional.of(store));
 
         OrderDetailResponse response = orderService.createDirectOrder(1L, new DirectOrderRequest(10L, 2), "direct-key");
 
         assertThat(response.orderId()).isEqualTo(500L);
         assertThat(response.totalAmount()).isEqualTo(4_000);
+        assertThat(response.orderNumber()).isEqualTo("A2B3");
         assertThat(bread.getRemainingQuantity()).isEqualTo(3);
         verify(orderItemRepository).save(any(OrderItemEntity.class));
     }
