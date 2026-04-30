@@ -66,13 +66,17 @@ class BossOrderSalesApiIntegrationTest extends ApiIntegrationTestSupport {
                         .header("Authorization", "Bearer " + bossToken)
                         .param("date", "2026-04-05"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$.items.length()").value(2))
+                .andExpect(jsonPath("$.totalSales").value(10500))
+                .andExpect(jsonPath("$.totalQuantity").value(4))
                 // 소보로빵: confirmed(2) + pickedUp(1) = 3 qty, 2500*2 + 2500*1 = 7500
-                .andExpect(jsonPath("$[?(@.breadName == '소보로빵')].totalQuantity").value(3))
-                .andExpect(jsonPath("$[?(@.breadName == '소보로빵')].totalSales").value(7500))
+                .andExpect(jsonPath("$.items[?(@.breadName == '소보로빵')].totalQuantity").value(3))
+                .andExpect(jsonPath("$.items[?(@.breadName == '소보로빵')].totalSales").value(7500))
+                .andExpect(jsonPath("$.items[?(@.breadName == '소보로빵')].breadPrice").value(2500))
                 // 크로와상: pickedUp(1) = 1 qty, 3000*1 = 3000
-                .andExpect(jsonPath("$[?(@.breadName == '크로와상')].totalQuantity").value(1))
-                .andExpect(jsonPath("$[?(@.breadName == '크로와상')].totalSales").value(3000));
+                .andExpect(jsonPath("$.items[?(@.breadName == '크로와상')].totalQuantity").value(1))
+                .andExpect(jsonPath("$.items[?(@.breadName == '크로와상')].totalSales").value(3000))
+                .andExpect(jsonPath("$.items[?(@.breadName == '크로와상')].breadPrice").value(3000));
     }
 
     @Test
@@ -98,10 +102,17 @@ class BossOrderSalesApiIntegrationTest extends ApiIntegrationTestSupport {
                         .param("year", "2026")
                         .param("month", "4"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].breadName").value("식빵"))
-                .andExpect(jsonPath("$[0].totalQuantity").value(8))
-                .andExpect(jsonPath("$[0].totalSales").value(8000));
+                .andExpect(jsonPath("$.totalSales").value(8000))
+                .andExpect(jsonPath("$.totalQuantity").value(8))
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].breadName").value("식빵"))
+                .andExpect(jsonPath("$.items[0].totalQuantity").value(8))
+                .andExpect(jsonPath("$.items[0].totalSales").value(8000))
+                .andExpect(jsonPath("$.dailySales.length()").value(2))
+                .andExpect(jsonPath("$.dailySales[0].date").value("2026-04-01"))
+                .andExpect(jsonPath("$.dailySales[0].totalSales").value(5000))
+                .andExpect(jsonPath("$.dailySales[1].date").value("2026-04-15"))
+                .andExpect(jsonPath("$.dailySales[1].totalSales").value(3000));
     }
 
     @Test
@@ -123,7 +134,9 @@ class BossOrderSalesApiIntegrationTest extends ApiIntegrationTestSupport {
                         .header("Authorization", "Bearer " + bossToken)
                         .param("date", "2026-04-05"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(0));
+                .andExpect(jsonPath("$.totalSales").value(0))
+                .andExpect(jsonPath("$.totalQuantity").value(0))
+                .andExpect(jsonPath("$.items.length()").value(0));
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -256,11 +269,12 @@ class BossOrderSalesApiIntegrationTest extends ApiIntegrationTestSupport {
         OrderEntity saved = orderRepository.save(order);
         orderRepository.flush();
 
-        // Use TransactionTemplate + native query to override @CreatedDate managed createdAt
+        // Use TransactionTemplate + native query to override @CreatedDate managed createdAt and set order_date
         TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
         txTemplate.execute(txStatus -> {
-            entityManager.createNativeQuery("UPDATE orders SET created_at = :createdAt WHERE id = :id")
+            entityManager.createNativeQuery("UPDATE orders SET created_at = :createdAt, order_date = :orderDate WHERE id = :id")
                     .setParameter("createdAt", createdAt)
+                    .setParameter("orderDate", createdAt.toLocalDate())
                     .setParameter("id", saved.getId())
                     .executeUpdate();
             return null;

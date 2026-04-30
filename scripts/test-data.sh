@@ -52,10 +52,10 @@ SCHEMA_READY="$(
     -u"${MYSQL_USER_NAME}" \
     "${PASSWORD_ARG[@]}" \
     -D "${DATABASE_NAME}" \
-    -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${DATABASE_NAME}' AND table_name IN ('users', 'store', 'favourite_store');"
+    -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${DATABASE_NAME}' AND table_name IN ('users', 'store', 'favourite_store', 'orders', 'order_item');"
 )"
 
-if [[ "${SCHEMA_READY}" != "3" ]]; then
+if [[ "${SCHEMA_READY}" != "5" ]]; then
   cat >&2 <<'EOF'
 Database schema is not initialized yet.
 Run the Spring Boot app once so Flyway can create the tables, then run:
@@ -80,6 +80,9 @@ Sample accounts
 - demo-user@todaybread.local / todaybread123
 - demo-boss-gangnam@todaybread.local / todaybread123
 - demo-boss-seolleung@todaybread.local / todaybread123
+- demo-boss-yeoksam@todaybread.local / todaybread123
+- demo-boss-samsung@todaybread.local / todaybread123
+- demo-boss-daechi@todaybread.local / todaybread123
 
 Recommended nearby query
 - lat=37.4980950

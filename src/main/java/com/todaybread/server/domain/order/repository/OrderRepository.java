@@ -1,5 +1,6 @@
 package com.todaybread.server.domain.order.repository;
 
+import com.todaybread.server.domain.order.dto.DailySalesProjection;
 import com.todaybread.server.domain.order.entity.OrderEntity;
 import com.todaybread.server.domain.order.entity.OrderStatus;
 import jakarta.persistence.LockModeType;
@@ -99,4 +100,31 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long> {
      * @return 존재하면 true
      */
     boolean existsByStoreIdAndOrderDateAndOrderNumber(Long storeId, LocalDate orderDate, String orderNumber);
+
+    /**
+     * 일별 매출 합산 쿼리입니다.
+     * 가게 + 상태 + 날짜 범위로 orderDate별 매출 합계를 집계합니다.
+     *
+     * @param storeId       가게 ID
+     * @param statuses      포함할 주문 상태 목록
+     * @param startDateTime 시작 시각 (포함)
+     * @param endDateTime   종료 시각 (미포함)
+     * @return 일별 매출 프로젝션 목록 (날짜 오름차순)
+     */
+    @Query("""
+            SELECT o.orderDate AS salesDate,
+                   SUM(o.totalAmount) AS totalSales
+            FROM OrderEntity o
+            WHERE o.storeId = :storeId
+              AND o.status IN :statuses
+              AND o.createdAt >= :startDateTime
+              AND o.createdAt < :endDateTime
+            GROUP BY o.orderDate
+            ORDER BY o.orderDate
+            """)
+    List<DailySalesProjection> aggregateDailySales(
+            @Param("storeId") Long storeId,
+            @Param("statuses") List<OrderStatus> statuses,
+            @Param("startDateTime") LocalDateTime startDateTime,
+            @Param("endDateTime") LocalDateTime endDateTime);
 }

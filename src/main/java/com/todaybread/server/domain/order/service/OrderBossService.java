@@ -1,9 +1,13 @@
 package com.todaybread.server.domain.order.service;
 
 import com.todaybread.server.domain.order.dto.BossOrderResponse;
+import com.todaybread.server.domain.order.dto.DailySalesEntry;
+import com.todaybread.server.domain.order.dto.DailySalesProjection;
+import com.todaybread.server.domain.order.dto.MonthlySalesResponse;
 import com.todaybread.server.domain.order.dto.OrderItemResponse;
 import com.todaybread.server.domain.order.dto.SalesAggregateProjection;
 import com.todaybread.server.domain.order.dto.SalesItemResponse;
+import com.todaybread.server.domain.order.dto.SalesSummaryResponse;
 import com.todaybread.server.domain.order.entity.OrderEntity;
 import com.todaybread.server.domain.order.entity.OrderItemEntity;
 import com.todaybread.server.domain.order.entity.OrderStatus;
@@ -144,9 +148,9 @@ public class OrderBossService {
      *
      * @param userId 사장님 유저 ID
      * @param date   조회 날짜
-     * @return 매출 항목 응답 목록
+     * @return 매출 요약 응답 (총 매출 + 메뉴별 항목)
      */
-    public List<SalesItemResponse> getDailySales(Long userId, LocalDate date) {
+    public SalesSummaryResponse getDailySales(Long userId, LocalDate date) {
         Long storeId = getStoreIdByUserId(userId);
 
         LocalDateTime startDateTime = date.atStartOfDay();
@@ -156,34 +160,50 @@ public class OrderBossService {
                 storeId, List.of(OrderStatus.CONFIRMED, OrderStatus.PICKED_UP),
                 startDateTime, endDateTime);
 
-        return projections.stream()
+        List<SalesItemResponse> items = projections.stream()
                 .map(SalesItemResponse::of)
                 .toList();
+        return SalesSummaryResponse.of(items);
     }
 
     /**
      * 월별 매출을 조회합니다.
-     * 해당 월의 CONFIRMED + PICKED_UP 주문에 대해 메뉴별 판매 수량과 매출을 집계합니다.
+     * 해당 월의 CONFIRMED + PICKED_UP 주문에 대해 일별 매출 합산과 메뉴별 판매 수량/매출을 집계합니다.
      *
      * @param userId 사장님 유저 ID
      * @param year   조회 연도
      * @param month  조회 월
-     * @return 매출 항목 응답 목록
+     * @return 월별 매출 응답 (총 매출 + 일별 합산 + 메뉴별 항목)
      */
-    public List<SalesItemResponse> getMonthlySales(Long userId, int year, int month) {
+    public MonthlySalesResponse getMonthlySales(Long userId, int year, int month) {
         Long storeId = getStoreIdByUserId(userId);
 
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDateTime startDateTime = startDate.atStartOfDay();
         LocalDateTime endDateTime = startDate.plusMonths(1).atStartOfDay();
 
-        List<SalesAggregateProjection> projections = orderItemRepository.aggregateSales(
-                storeId, List.of(OrderStatus.CONFIRMED, OrderStatus.PICKED_UP),
-                startDateTime, endDateTime);
+        List<OrderStatus> statuses = List.of(OrderStatus.CONFIRMED, OrderStatus.PICKED_UP);
 
-        return projections.stream()
+        // 메뉴별 집계
+        List<SalesAggregateProjection> projections = orderItemRepository.aggregateSales(
+                storeId, statuses, startDateTime, endDateTime);
+
+        List<SalesItemResponse> items = projections.stream()
                 .map(SalesItemResponse::of)
                 .toList();
+
+        // 일별 매출 합산
+        List<DailySalesProjection> dailyProjections = orderRepository.aggregateDailySales(
+                storeId, statuses, startDateTime, endDateTime);
+
+        List<DailySalesEntry> dailySales = dailyProjections.stream()
+                .map(p -> new DailySalesEntry(p.getSalesDate(), p.getTotalSales()))
+                .toList();
+
+        long totalSales = items.stream().mapToLong(SalesItemResponse::totalSales).sum();
+        long totalQuantity = items.stream().mapToLong(SalesItemResponse::totalQuantity).sum();
+
+        return new MonthlySalesResponse(totalSales, totalQuantity, dailySales, items);
     }
 
     /**

@@ -21,6 +21,13 @@ public interface SalesAggregateProjection {
     String getBreadName();
 
     /**
+     * 빵 단가를 반환합니다 (스냅샷 기준).
+     *
+     * @return 빵 단가
+     */
+    Integer getBreadPrice();
+
+    /**
      * 총 판매 수량을 반환합니다.
      *
      * @return 총 판매 수량

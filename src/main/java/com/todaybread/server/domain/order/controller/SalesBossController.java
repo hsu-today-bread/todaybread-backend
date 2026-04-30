@@ -1,6 +1,7 @@
 package com.todaybread.server.domain.order.controller;
 
-import com.todaybread.server.domain.order.dto.SalesItemResponse;
+import com.todaybread.server.domain.order.dto.MonthlySalesResponse;
+import com.todaybread.server.domain.order.dto.SalesSummaryResponse;
 import com.todaybread.server.domain.order.service.OrderBossService;
 import com.todaybread.server.global.util.JwtRoleHelper;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,7 +17,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.List;
 
 /**
  * 사장님 매출 조회 전용 컨트롤러입니다.
@@ -41,7 +41,7 @@ public class SalesBossController {
      */
     @Operation(summary = "일별 매출 조회")
     @GetMapping("/daily")
-    public List<SalesItemResponse> getDailySales(
+    public SalesSummaryResponse getDailySales(
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         Long userId = JwtRoleHelper.getUserId(jwt);
@@ -54,11 +54,11 @@ public class SalesBossController {
      * @param jwt   JWT 토큰
      * @param year  조회 연도
      * @param month 조회 월
-     * @return 매출 항목 응답 목록
+     * @return 월별 매출 응답 (일별 합산 + 메뉴별 항목)
      */
     @Operation(summary = "월별 매출 조회")
     @GetMapping("/monthly")
-    public List<SalesItemResponse> getMonthlySales(
+    public MonthlySalesResponse getMonthlySales(
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam @Min(2000) int year,
             @RequestParam @Min(1) @Max(12) int month) {

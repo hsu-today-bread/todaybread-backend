@@ -44,6 +44,7 @@ public interface OrderItemRepository extends JpaRepository<OrderItemEntity, Long
     @Query("""
             SELECT oi.breadId AS breadId,
                    oi.breadName AS breadName,
+                   oi.breadPrice AS breadPrice,
                    SUM(oi.quantity) AS totalQuantity,
                    SUM(oi.breadPrice * oi.quantity) AS totalSales
             FROM OrderItemEntity oi
@@ -52,7 +53,7 @@ public interface OrderItemRepository extends JpaRepository<OrderItemEntity, Long
               AND o.status IN :statuses
               AND o.createdAt >= :startDateTime
               AND o.createdAt < :endDateTime
-            GROUP BY oi.breadId, oi.breadName
+            GROUP BY oi.breadId, oi.breadName, oi.breadPrice
             """)
     List<SalesAggregateProjection> aggregateSales(
             @Param("storeId") Long storeId,

@@ -5,12 +5,14 @@ package com.todaybread.server.domain.order.dto;
  *
  * @param breadId       빵 ID (삭제된 메뉴는 null)
  * @param breadName     빵 이름
+ * @param breadPrice    빵 단가 (스냅샷 기준)
  * @param totalQuantity 총 판매 수량
  * @param totalSales    총 매출액
  */
 public record SalesItemResponse(
         Long breadId,
         String breadName,
+        int breadPrice,
         long totalQuantity,
         long totalSales
 ) {
@@ -24,6 +26,7 @@ public record SalesItemResponse(
         return new SalesItemResponse(
                 projection.getBreadId(),
                 projection.getBreadName(),
+                projection.getBreadPrice() != null ? projection.getBreadPrice() : 0,
                 projection.getTotalQuantity(),
                 projection.getTotalSales()
         );
