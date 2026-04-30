@@ -17,160 +17,1629 @@
 - `demo-user@todaybread.local` / `todaybread123`
 - `demo-boss-gangnam@todaybread.local` / `todaybread123`
 - `demo-boss-seolleung@todaybread.local` / `todaybread123`
+- `demo-boss-yeoksam@todaybread.local` / `todaybread123`
+- `demo-boss-samsung@todaybread.local` / `todaybread123`
+- `demo-boss-daechi@todaybread.local` / `todaybread123`
+
+근처 매장/빵 조회 추천 좌표: `lat=37.4980950`, `lng=127.0276100`, `radius=3`
 
 ---
 
 ## API 목록
 
-### 인증 (Auth)
+### 1. 인증 (Auth)
 
-| 메서드 | 경로 | 설명 | 인증 |
-|--------|------|------|------|
-| `POST` | `/api/auth/reissue` | 토큰 재발급 | X |
-| `POST` | `/api/auth/logout` | 로그아웃 | O |
+#### `POST /api/auth/reissue` — 토큰 재발급
 
-### 사용자 (User)
+| 항목 | 값 |
+|------|-----|
+| 인증 | X |
 
-| 메서드 | 경로 | 설명 | 인증 |
-|--------|------|------|------|
-| `POST` | `/api/user/register` | 회원가입 | X |
-| `POST` | `/api/user/login` | 로그인 | X |
-| `GET` | `/api/user/exist/email?value=` | 이메일 중복 확인 | X |
-| `GET` | `/api/user/exist/nickname?value=` | 닉네임 중복 확인 | X |
-| `GET` | `/api/user/exist/phone?value=` | 전화번호 중복 확인 | X |
-| `PATCH` | `/api/user/update-profile` | 프로필 수정 | O |
-| `POST` | `/api/user/boss-approve` | 사장님 등록 | O |
+**요청 바디:**
 
-### 계정 복구 (User Recovery)
+```json
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiJ9..."
+}
+```
+
+**응답 형식:**
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiJ9..."
+}
+```
+
+**에러 응답:** `AUTH_003`
+
+---
+
+#### `POST /api/auth/logout` — 로그아웃
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+
+**응답 형식:**
+
+```json
+{
+  "success": true
+}
+```
+
+**에러 응답:** `AUTH_001`, `AUTH_002`
+
+---
+
+### 2. 사용자 (User)
+
+#### `POST /api/user/register` — 회원가입
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | X |
+
+**요청 바디:**
+
+```json
+{
+  "email": "user@todaybread.local",
+  "nickname": "빵순이",
+  "name": "김빵순",
+  "password": "todaybread123",
+  "phoneNumber": "010-1234-5678"
+}
+```
+
+**응답 형식:**
+
+```json
+{
+  "success": true,
+  "message": "회원가입 완료"
+}
+```
+
+**에러 응답:** `USER_001`, `USER_002`, `USER_003`, `COMMON_001`
+
+---
+
+#### `POST /api/user/login` — 로그인
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | X |
+
+**요청 바디:**
+
+```json
+{
+  "email": "demo-user@todaybread.local",
+  "password": "todaybread123"
+}
+```
+
+**응답 형식:**
+
+```json
+{
+  "success": true,
+  "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiJ9...",
+  "nickname": "demo-user",
+  "name": "데모 유저",
+  "phoneNumber": "010-7000-1001"
+}
+```
+
+**에러 응답:** `USER_004`, `COMMON_001`
+
+---
+
+#### `GET /api/user/exist/email?value=` — 이메일 중복 확인
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | X |
+
+**쿼리 파라미터:** `value` (이메일)
+
+**응답 형식:**
+
+```json
+true
+```
+
+> `true`: 이미 존재, `false`: 사용 가능
+
+---
+
+#### `GET /api/user/exist/nickname?value=` — 닉네임 중복 확인
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | X |
+
+**쿼리 파라미터:** `value` (닉네임)
+
+**응답 형식:**
+
+```json
+false
+```
+
+---
+
+#### `GET /api/user/exist/phone?value=` — 전화번호 중복 확인
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | X |
+
+**쿼리 파라미터:** `value` (전화번호)
+
+**응답 형식:**
+
+```json
+false
+```
+
+---
+
+#### `PATCH /api/user/update-profile` — 프로필 수정
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+
+**요청 바디:**
+
+```json
+{
+  "nickname": "빵덕후",
+  "name": "김빵순",
+  "phoneNumber": "010-9876-5432"
+}
+```
+
+**응답 형식:**
+
+```json
+{
+  "nickname": "빵덕후",
+  "name": "김빵순",
+  "phoneNumber": "010-9876-5432"
+}
+```
+
+**에러 응답:** `USER_003`, `USER_004`, `COMMON_001`
+
+---
+
+#### `POST /api/user/boss-approve` — 사장님 등록
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+
+**요청 바디:**
+
+```json
+{
+  "bossNumber": "123-45-67890"
+}
+```
+
+**응답 형식:**
+
+```json
+{
+  "success": true,
+  "message": "사업자 등록이 완료되었습니다.",
+  "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiJ9..."
+}
+```
+
+> 사장님 등록 후 역할이 BOSS로 변경되므로 새 토큰이 발급됩니다.
+
+**에러 응답:** `USER_004`, `USER_006`, `USER_007`
+
+---
+
+### 3. 계정 복구 (User Recovery)
 
 > 아래 API는 인증 없이 접근 가능합니다. 현재 별도의 인증 토큰(OTP 등) 없이 동작하므로,
 > 운영 배포 전 Rate Limiting 또는 일회용 토큰 검증 추가를 권장합니다.
 
-| 메서드 | 경로 | 설명 | 인증 |
-|--------|------|------|------|
-| `GET` | `/api/user/find-email?phone=` | 이메일 찾기 (마스킹된 이메일 반환) | X |
-| `GET` | `/api/user/verify-identity?phone=&email=` | 본인 확인 | X |
-| `POST` | `/api/user/reset-password` | 비밀번호 재설정 (기존 세션 무효화 포함) | X |
+#### `GET /api/user/find-email?phone=` — 이메일 찾기
 
-### 빵 — 일반 유저 (Bread)
+| 항목 | 값 |
+|------|-----|
+| 인증 | X |
 
-| 메서드 | 경로 | 설명 | 인증 |
-|--------|------|------|------|
-| `GET` | `/api/bread/nearby?lat=&lng=&radius=&sort=` | 근처 빵 목록 (위치 기반) | O |
-| `GET` | `/api/bread/detail/{breadId}` | 빵 상세 조회 | O |
-| `GET` | `/api/bread/{storeId}` | 가게별 메뉴 목록 | O |
+**쿼리 파라미터:** `phone` (전화번호)
 
-### 빵 — 사장님 (Bread Boss)
+**응답 형식:**
 
-| 메서드 | 경로 | 설명 | 인증 | 권한 |
-|--------|------|------|------|------|
-| `GET` | `/api/boss/bread` | 내 가게 메뉴 목록 | O | BOSS |
-| `POST` | `/api/boss/bread` | 메뉴 등록 (multipart) | O | BOSS |
-| `PUT` | `/api/boss/bread/{breadId}` | 메뉴 수정 (multipart) | O | BOSS |
-| `PATCH` | `/api/boss/bread/{breadId}/stock` | 재고 변경 / 품절 처리 | O | BOSS |
-| `DELETE` | `/api/boss/bread/{breadId}` | 메뉴 삭제 | O | BOSS |
+```json
+{
+  "maskedEmail": "de****@todaybread.local"
+}
+```
 
-### 매장 — 일반 유저 (Store)
+**에러 응답:** `USER_005`
 
-| 메서드 | 경로 | 설명 | 인증 |
-|--------|------|------|------|
-| `GET` | `/api/store/nearby?lat=&lng=&radius=` | 근처 가게 목록 (위치 기반) | O |
-| `GET` | `/api/store/{storeId}` | 가게 상세 조회 (정보 + 이미지 + 메뉴 + 판매 상태) | O |
+---
 
-### 매장 — 사장님 (Store Boss)
+#### `GET /api/user/verify-identity?phone=&email=` — 본인 확인
 
-| 메서드 | 경로 | 설명 | 인증 | 권한 |
-|--------|------|------|------|------|
-| `GET` | `/api/boss/store/status` | 가게 등록 상태 조회 | O | BOSS |
-| `GET` | `/api/boss/store` | 내 가게 정보 + 이미지 + 영업시간 조회 | O | BOSS |
-| `POST` | `/api/boss/store` | 가게 등록 (정보 + 영업시간 7개 + 이미지, multipart) | O | BOSS |
-| `PUT` | `/api/boss/store` | 가게 정보 + 영업시간 수정 | O | BOSS |
-| `PUT` | `/api/boss/store/images` | 가게 이미지 일괄 교체 (multipart) | O | BOSS |
+| 항목 | 값 |
+|------|-----|
+| 인증 | X |
 
-### 주문 — 사장님 (Boss Orders)
+**쿼리 파라미터:** `phone` (전화번호), `email` (이메일)
 
-| 메서드 | 경로 | 설명 | 인증 | 권한 |
-|--------|------|------|------|------|
-| `GET` | `/api/boss/orders?page=&size=` | 픽업 대기 주문 목록 (CONFIRMED, 페이지네이션) | O | BOSS |
-| `POST` | `/api/boss/orders/{orderId}/pickup` | 픽업 완료 처리 (CONFIRMED → PICKED_UP) | O | BOSS |
+**응답 형식:**
 
-### 매출 — 사장님 (Boss Sales)
+```json
+{
+  "verified": true,
+  "email": "demo-user@todaybread.local"
+}
+```
 
-| 메서드 | 경로 | 설명 | 인증 | 권한 |
-|--------|------|------|------|------|
-| `GET` | `/api/boss/sales/daily?date=` | 일별 매출 조회 (메뉴별 수량/매출) | O | BOSS |
-| `GET` | `/api/boss/sales/monthly?year=&month=` | 월별 매출 조회 (메뉴별 수량/매출) | O | BOSS |
+**에러 응답:** `USER_005`
 
-### 키워드 (Keyword)
+---
 
-| 메서드 | 경로 | 설명 | 인증 |
-|--------|------|------|------|
-| `POST` | `/api/keywords` | 키워드 등록 | O |
-| `GET` | `/api/keywords` | 내 키워드 목록 조회 | O |
-| `DELETE` | `/api/keywords/{userKeywordId}` | 키워드 삭제 | O |
+#### `POST /api/user/reset-password` — 비밀번호 재설정
 
-### 단골 가게 (Favourite Store)
+| 항목 | 값 |
+|------|-----|
+| 인증 | X |
 
-| 메서드 | 경로 | 설명 | 인증 |
-|--------|------|------|------|
-| `POST` | `/api/favourite-stores` | 단골 가게 토글 (추가/해제) | O |
-| `GET` | `/api/favourite-stores` | 단골 가게 목록 조회 | O |
+**요청 바디:**
 
-### 찜목록 (Wishlist)
+```json
+{
+  "email": "demo-user@todaybread.local",
+  "newPassword": "newpassword123"
+}
+```
 
-| 메서드 | 경로 | 설명 | 인증 |
-|--------|------|------|------|
-| `GET` | `/api/wishlist` | 찜목록 통합 조회 (키워드 + 단골 가게) | O |
+**응답 형식:**
 
-### 장바구니 (Cart)
+```json
+{
+  "success": true,
+  "message": "비밀번호가 재설정되었습니다."
+}
+```
 
-| 메서드 | 경로 | 설명 | 인증 |
-|--------|------|------|------|
-| `POST` | `/api/cart` | 장바구니에 빵 추가 | O |
-| `GET` | `/api/cart` | 장바구니 조회 | O |
-| `PATCH` | `/api/cart/items/{cartItemId}` | 장바구니 항목 수량 변경 | O |
-| `DELETE` | `/api/cart/items/{cartItemId}` | 장바구니 항목 삭제 | O |
-| `DELETE` | `/api/cart` | 장바구니 비우기 | O |
+> 비밀번호 재설정 시 기존 세션(Refresh Token)이 모두 무효화됩니다.
 
-### 주문 (Order)
+**에러 응답:** `USER_005`, `COMMON_001`
+
+---
+
+### 4. 빵 — 일반 유저 (Bread)
+
+#### `GET /api/bread/nearby?lat=&lng=&radius=&sort=` — 근처 빵 목록
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+
+**쿼리 파라미터:**
+
+| 파라미터 | 타입 | 필수 | 기본값 | 설명 |
+|----------|------|------|--------|------|
+| `lat` | BigDecimal | O | — | 위도 (-90 ~ 90) |
+| `lng` | BigDecimal | O | — | 경도 (-180 ~ 180) |
+| `radius` | int | X | 1 | 검색 반경 km (1 ~ 10) |
+| `sort` | String | X | none | 정렬: `none`, `distance`, `price`, `discount` |
+
+**응답 형식:**
+
+```json
+[
+  {
+    "id": 1,
+    "name": "시그니처 소금빵",
+    "originalPrice": 3500,
+    "salePrice": 2500,
+    "imageUrl": "/images/bread/1.jpg",
+    "storeId": 1,
+    "storeName": "투데이브레드 데모 강남점",
+    "isSelling": true,
+    "lastOrderTime": "22:30:00",
+    "distance": 0.35
+  }
+]
+```
+
+**에러 응답:** `COMMON_001`
+
+---
+
+#### `GET /api/bread/detail/{breadId}` — 빵 상세 조회
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+
+**경로 변수:** `breadId` (빵 ID)
+
+**응답 형식:**
+
+```json
+{
+  "id": 1,
+  "name": "시그니처 소금빵",
+  "originalPrice": 3500,
+  "salePrice": 2500,
+  "remainingQuantity": 14,
+  "description": "겉은 바삭하고 속은 촉촉한 대표 메뉴입니다.",
+  "imageUrl": "/images/bread/1.jpg",
+  "storeId": 1,
+  "storeName": "투데이브레드 데모 강남점",
+  "isSelling": true
+}
+```
+
+**에러 응답:** `BREAD_001`
+
+---
+
+#### `GET /api/bread/{storeId}` — 가게별 메뉴 목록
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+
+**경로 변수:** `storeId` (가게 ID)
+
+**응답 형식:**
+
+```json
+[
+  {
+    "id": 1,
+    "storeId": 1,
+    "name": "시그니처 소금빵",
+    "originalPrice": 3500,
+    "salePrice": 2500,
+    "remainingQuantity": 14,
+    "description": "겉은 바삭하고 속은 촉촉한 대표 메뉴입니다.",
+    "imageUrl": "/images/bread/1.jpg"
+  }
+]
+```
+
+**에러 응답:** `STORE_004`
+
+---
+
+### 5. 빵 — 사장님 (Bread Boss)
+
+#### `GET /api/boss/bread` — 내 가게 메뉴 목록
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+| 권한 | BOSS |
+
+**응답 형식:**
+
+```json
+[
+  {
+    "id": 1,
+    "storeId": 1,
+    "name": "시그니처 소금빵",
+    "originalPrice": 3500,
+    "salePrice": 2500,
+    "remainingQuantity": 14,
+    "description": "겉은 바삭하고 속은 촉촉한 대표 메뉴입니다.",
+    "imageUrl": "/images/bread/1.jpg"
+  }
+]
+```
+
+**에러 응답:** `STORE_001`, `STORE_004`
+
+---
+
+#### `POST /api/boss/bread` — 메뉴 등록 (multipart)
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+| 권한 | BOSS |
+| Content-Type | `multipart/form-data` |
+
+**요청 파트:**
+
+- `request` (JSON):
+```json
+{
+  "name": "크림치즈 베이글",
+  "originalPrice": 4000,
+  "salePrice": 2800,
+  "remainingQuantity": 10,
+  "description": "부드러운 크림치즈가 듬뿍 들어간 베이글입니다."
+}
+```
+- `image` (파일, 선택): 빵 이미지
+
+**응답 형식:**
+
+```json
+{
+  "id": 4,
+  "storeId": 1,
+  "name": "크림치즈 베이글",
+  "originalPrice": 4000,
+  "salePrice": 2800,
+  "remainingQuantity": 10,
+  "description": "부드러운 크림치즈가 듬뿍 들어간 베이글입니다.",
+  "imageUrl": "/images/bread/4.jpg"
+}
+```
+
+**에러 응답:** `STORE_001`, `STORE_004`, `BREAD_004`, `COMMON_001`, `COMMON_005`, `COMMON_006`, `COMMON_007`
+
+---
+
+#### `PUT /api/boss/bread/{breadId}` — 메뉴 수정 (multipart)
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+| 권한 | BOSS |
+| Content-Type | `multipart/form-data` |
+
+**경로 변수:** `breadId` (빵 ID)
+
+**요청 파트:**
+
+- `request` (JSON):
+```json
+{
+  "name": "크림치즈 베이글",
+  "originalPrice": 4500,
+  "salePrice": 3000,
+  "remainingQuantity": 15,
+  "description": "리뉴얼! 크림치즈가 더 듬뿍."
+}
+```
+- `image` (파일, 선택): 새 이미지
+
+**응답 형식:**
+
+```json
+{
+  "id": 4,
+  "storeId": 1,
+  "name": "크림치즈 베이글",
+  "originalPrice": 4500,
+  "salePrice": 3000,
+  "remainingQuantity": 15,
+  "description": "리뉴얼! 크림치즈가 더 듬뿍.",
+  "imageUrl": "/images/bread/4.jpg"
+}
+```
+
+**에러 응답:** `BREAD_001`, `BREAD_002`, `BREAD_004`, `COMMON_001`, `COMMON_005`, `COMMON_006`, `COMMON_007`
+
+---
+
+#### `PATCH /api/boss/bread/{breadId}/stock` — 재고 변경 / 품절 처리
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+| 권한 | BOSS |
+
+**경로 변수:** `breadId` (빵 ID)
+
+**요청 바디:**
+
+```json
+{
+  "remainingQuantity": 0
+}
+```
+
+> `remainingQuantity`를 0으로 설정하면 품절 처리됩니다.
+
+**응답 형식:**
+
+```json
+{
+  "success": true
+}
+```
+
+**에러 응답:** `BREAD_001`, `BREAD_002`, `COMMON_001`
+
+---
+
+#### `DELETE /api/boss/bread/{breadId}` — 메뉴 삭제
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+| 권한 | BOSS |
+
+**경로 변수:** `breadId` (빵 ID)
+
+**응답 형식:**
+
+```json
+{
+  "success": true
+}
+```
+
+**에러 응답:** `BREAD_001`, `BREAD_002`
+
+---
+
+### 6. 매장 — 일반 유저 (Store)
+
+#### `GET /api/store/nearby?lat=&lng=&radius=` — 근처 가게 목록
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+
+**쿼리 파라미터:**
+
+| 파라미터 | 타입 | 필수 | 기본값 | 설명 |
+|----------|------|------|--------|------|
+| `lat` | BigDecimal | O | — | 위도 (-90 ~ 90) |
+| `lng` | BigDecimal | O | — | 경도 (-180 ~ 180) |
+| `radius` | int | X | 1 | 검색 반경 km (1 ~ 10) |
+
+**응답 형식:**
+
+```json
+[
+  {
+    "storeId": 1,
+    "name": "투데이브레드 데모 강남점",
+    "storeAddressLine1": "서울특별시 강남구 테헤란로 123",
+    "storeAddressLine2": "1층",
+    "latitude": 37.4980950,
+    "longitude": 127.0276100,
+    "primaryImageUrl": "/images/store/1_0.jpg",
+    "isSelling": true,
+    "distance": 0.35,
+    "lastOrderTime": "22:30:00"
+  }
+]
+```
+
+**에러 응답:** `COMMON_001`
+
+---
+
+#### `GET /api/store/{storeId}` — 가게 상세 조회
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+
+**경로 변수:** `storeId` (가게 ID)
+
+**응답 형식:**
+
+```json
+{
+  "store": {
+    "id": 1,
+    "name": "투데이브레드 데모 강남점",
+    "phone": "02-7000-3001",
+    "description": "강남역 근처에서 소금빵과 식사용 빵을 판매하는 프론트 연동용 데모 매장입니다.",
+    "addressLine1": "서울특별시 강남구 테헤란로 123",
+    "addressLine2": "1층",
+    "latitude": 37.4980950,
+    "longitude": 127.0276100,
+    "businessHours": [
+      {
+        "dayOfWeek": 1,
+        "isClosed": false,
+        "startTime": "07:00:00",
+        "endTime": "23:00:00",
+        "lastOrderTime": "22:30:00"
+      },
+      {
+        "dayOfWeek": 7,
+        "isClosed": true,
+        "startTime": null,
+        "endTime": null,
+        "lastOrderTime": null
+      }
+    ]
+  },
+  "images": [
+    {
+      "id": 1,
+      "imageUrl": "/images/store/1_0.jpg",
+      "displayOrder": 0
+    }
+  ],
+  "breads": [
+    {
+      "id": 1,
+      "storeId": 1,
+      "name": "시그니처 소금빵",
+      "originalPrice": 3500,
+      "salePrice": 2500,
+      "remainingQuantity": 14,
+      "description": "겉은 바삭하고 속은 촉촉한 대표 메뉴입니다.",
+      "imageUrl": "/images/bread/1.jpg"
+    }
+  ],
+  "isSelling": true
+}
+```
+
+**에러 응답:** `STORE_004`
+
+---
+
+### 7. 매장 — 사장님 (Store Boss)
+
+#### `GET /api/boss/store/status` — 가게 등록 상태 조회
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+| 권한 | BOSS |
+
+**응답 형식:**
+
+```json
+{
+  "hasStore": true
+}
+```
+
+---
+
+#### `GET /api/boss/store` — 내 가게 정보 + 이미지 조회
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+| 권한 | BOSS |
+
+**응답 형식:**
+
+```json
+{
+  "store": {
+    "id": 1,
+    "name": "투데이브레드 데모 강남점",
+    "phone": "02-7000-3001",
+    "description": "강남역 근처에서 소금빵과 식사용 빵을 판매하는 프론트 연동용 데모 매장입니다.",
+    "addressLine1": "서울특별시 강남구 테헤란로 123",
+    "addressLine2": "1층",
+    "latitude": 37.4980950,
+    "longitude": 127.0276100,
+    "businessHours": [
+      {
+        "dayOfWeek": 1,
+        "isClosed": false,
+        "startTime": "07:00:00",
+        "endTime": "23:00:00",
+        "lastOrderTime": "22:30:00"
+      }
+    ]
+  },
+  "images": [
+    {
+      "id": 1,
+      "imageUrl": "/images/store/1_0.jpg",
+      "displayOrder": 0
+    },
+    {
+      "id": 2,
+      "imageUrl": "/images/store/1_1.jpg",
+      "displayOrder": 1
+    }
+  ]
+}
+```
+
+**에러 응답:** `STORE_001`, `STORE_004`
+
+---
+
+#### `POST /api/boss/store` — 가게 등록 (multipart)
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+| 권한 | BOSS |
+| Content-Type | `multipart/form-data` |
+
+**요청 파트:**
+
+- `request` (JSON):
+```json
+{
+  "name": "투데이브레드 강남점",
+  "phone": "02-7000-3001",
+  "description": "강남역 근처 빵집입니다.",
+  "addressLine1": "서울특별시 강남구 테헤란로 123",
+  "addressLine2": "1층",
+  "latitude": 37.4980950,
+  "longitude": 127.0276100,
+  "businessHours": [
+    {
+      "dayOfWeek": 1,
+      "isClosed": false,
+      "startTime": "07:00:00",
+      "endTime": "23:00:00",
+      "lastOrderTime": "22:30:00"
+    },
+    {
+      "dayOfWeek": 2,
+      "isClosed": false,
+      "startTime": "07:00:00",
+      "endTime": "23:00:00",
+      "lastOrderTime": "22:30:00"
+    },
+    {
+      "dayOfWeek": 3,
+      "isClosed": false,
+      "startTime": "07:00:00",
+      "endTime": "23:00:00",
+      "lastOrderTime": "22:30:00"
+    },
+    {
+      "dayOfWeek": 4,
+      "isClosed": false,
+      "startTime": "07:00:00",
+      "endTime": "23:00:00",
+      "lastOrderTime": "22:30:00"
+    },
+    {
+      "dayOfWeek": 5,
+      "isClosed": false,
+      "startTime": "07:00:00",
+      "endTime": "23:00:00",
+      "lastOrderTime": "22:30:00"
+    },
+    {
+      "dayOfWeek": 6,
+      "isClosed": false,
+      "startTime": "07:00:00",
+      "endTime": "23:00:00",
+      "lastOrderTime": "22:30:00"
+    },
+    {
+      "dayOfWeek": 7,
+      "isClosed": true,
+      "startTime": null,
+      "endTime": null,
+      "lastOrderTime": null
+    }
+  ]
+}
+```
+- `images` (파일 목록, 1~5장): 가게 이미지
+
+**응답 형식:**
+
+```json
+{
+  "store": {
+    "id": 1,
+    "name": "투데이브레드 강남점",
+    "phone": "02-7000-3001",
+    "description": "강남역 근처 빵집입니다.",
+    "addressLine1": "서울특별시 강남구 테헤란로 123",
+    "addressLine2": "1층",
+    "latitude": 37.4980950,
+    "longitude": 127.0276100,
+    "businessHours": [
+      {
+        "dayOfWeek": 1,
+        "isClosed": false,
+        "startTime": "07:00:00",
+        "endTime": "23:00:00",
+        "lastOrderTime": "22:30:00"
+      }
+    ]
+  },
+  "images": [
+    {
+      "id": 1,
+      "imageUrl": "/images/store/1_0.jpg",
+      "displayOrder": 0
+    }
+  ]
+}
+```
+
+**에러 응답:** `STORE_001`, `STORE_002`, `STORE_003`, `STORE_005`, `STORE_006`, `COMMON_001`, `COMMON_005`, `COMMON_006`, `COMMON_007`, `STORE_IMAGE_002`
+
+---
+
+#### `PUT /api/boss/store` — 가게 정보 + 영업시간 수정
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+| 권한 | BOSS |
+
+**요청 바디:**
+
+```json
+{
+  "name": "투데이브레드 강남점",
+  "phone": "02-7000-3001",
+  "description": "리뉴얼 오픈! 강남역 근처 빵집입니다.",
+  "addressLine1": "서울특별시 강남구 테헤란로 123",
+  "addressLine2": "1층",
+  "latitude": 37.4980950,
+  "longitude": 127.0276100,
+  "businessHours": [
+    {
+      "dayOfWeek": 1,
+      "isClosed": false,
+      "startTime": "08:00:00",
+      "endTime": "22:00:00",
+      "lastOrderTime": "21:30:00"
+    }
+  ]
+}
+```
+
+**응답 형식:**
+
+```json
+{
+  "id": 1,
+  "name": "투데이브레드 강남점",
+  "phone": "02-7000-3001",
+  "description": "리뉴얼 오픈! 강남역 근처 빵집입니다.",
+  "addressLine1": "서울특별시 강남구 테헤란로 123",
+  "addressLine2": "1층",
+  "latitude": 37.4980950,
+  "longitude": 127.0276100,
+  "businessHours": [
+    {
+      "dayOfWeek": 1,
+      "isClosed": false,
+      "startTime": "08:00:00",
+      "endTime": "22:00:00",
+      "lastOrderTime": "21:30:00"
+    }
+  ]
+}
+```
+
+**에러 응답:** `STORE_001`, `STORE_003`, `STORE_004`, `STORE_005`, `STORE_006`, `COMMON_001`
+
+---
+
+#### `PUT /api/boss/store/images` — 가게 이미지 일괄 교체 (multipart)
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+| 권한 | BOSS |
+| Content-Type | `multipart/form-data` |
+
+**요청 파트:** `images` (파일 목록, 1~5장)
+
+**응답 형식:**
+
+```json
+[
+  {
+    "id": 10,
+    "imageUrl": "/images/store/1_0.jpg",
+    "displayOrder": 0
+  },
+  {
+    "id": 11,
+    "imageUrl": "/images/store/1_1.jpg",
+    "displayOrder": 1
+  }
+]
+```
+
+**에러 응답:** `STORE_001`, `STORE_004`, `STORE_IMAGE_002`, `COMMON_005`, `COMMON_006`, `COMMON_007`
+
+---
+
+### 8. 주문 — 사장님 (Boss Orders)
+
+#### `GET /api/boss/orders?page=&size=` — 픽업 대기 주문 목록
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+| 권한 | BOSS |
+
+**쿼리 파라미터:**
+
+| 파라미터 | 타입 | 필수 | 기본값 | 설명 |
+|----------|------|------|--------|------|
+| `page` | int | X | 0 | 페이지 번호 (0부터) |
+| `size` | int | X | 20 | 페이지 크기 (최대 100) |
+
+**응답 형식 (Spring Page):**
+
+```json
+{
+  "content": [
+    {
+      "orderId": 42,
+      "orderNumber": "W6X7",
+      "totalAmount": 7500,
+      "createdAt": "2026-04-15T18:30:00",
+      "items": [
+        {
+          "breadName": "시그니처 소금빵",
+          "breadPrice": 2500,
+          "quantity": 3
+        }
+      ]
+    }
+  ],
+  "pageable": {
+    "pageNumber": 0,
+    "pageSize": 20
+  },
+  "totalElements": 2,
+  "totalPages": 1,
+  "last": true,
+  "first": true,
+  "empty": false
+}
+```
+
+**에러 응답:** `STORE_001`, `STORE_004`
+
+---
+
+#### `POST /api/boss/orders/{orderId}/pickup` — 픽업 완료 처리
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+| 권한 | BOSS |
+
+**경로 변수:** `orderId` (주문 ID)
+
+**응답 형식:** 응답 바디 없음 (HTTP 200)
+
+**에러 응답:** `ORDER_001`, `ORDER_002`, `ORDER_003`
+
+---
+
+### 9. 매출 — 사장님 (Boss Sales)
+
+#### `GET /api/boss/sales/daily?date=` — 일별 매출 조회
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+| 권한 | BOSS |
+
+**쿼리 파라미터:** `date` (ISO DATE, 예: `2026-04-15`)
+
+**응답 형식:**
+
+```json
+{
+  "totalSales": 18900,
+  "totalQuantity": 6,
+  "items": [
+    {
+      "breadId": 1,
+      "breadName": "시그니처 소금빵",
+      "breadPrice": 2500,
+      "totalQuantity": 4,
+      "totalSales": 10000
+    },
+    {
+      "breadId": 2,
+      "breadName": "바질 치아바타",
+      "breadPrice": 3900,
+      "totalQuantity": 2,
+      "totalSales": 7800
+    }
+  ]
+}
+```
+
+> 삭제된 메뉴의 `breadId`는 `null`로 표시됩니다.
+
+**에러 응답:** `STORE_001`, `STORE_004`
+
+---
+
+#### `GET /api/boss/sales/monthly?year=&month=` — 월별 매출 조회
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+| 권한 | BOSS |
+
+**쿼리 파라미터:**
+
+| 파라미터 | 타입 | 필수 | 설명 |
+|----------|------|------|------|
+| `year` | int | O | 연도 (2000 이상) |
+| `month` | int | O | 월 (1 ~ 12) |
+
+**응답 형식:**
+
+```json
+{
+  "totalSales": 76000,
+  "totalQuantity": 28,
+  "dailySales": [
+    {
+      "date": "2026-03-02",
+      "totalSales": 7800
+    },
+    {
+      "date": "2026-03-04",
+      "totalSales": 9600
+    }
+  ],
+  "items": [
+    {
+      "breadId": 1,
+      "breadName": "시그니처 소금빵",
+      "breadPrice": 2500,
+      "totalQuantity": 10,
+      "totalSales": 25000
+    },
+    {
+      "breadId": 2,
+      "breadName": "바질 치아바타",
+      "breadPrice": 3900,
+      "totalQuantity": 5,
+      "totalSales": 19500
+    }
+  ]
+}
+```
+
+**에러 응답:** `STORE_001`, `STORE_004`, `COMMON_001`
+
+---
+
+### 10. 키워드 (Keyword)
+
+#### `POST /api/keywords` — 키워드 등록
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+
+**요청 바디:**
+
+```json
+{
+  "keyword": "크루아상"
+}
+```
+
+**응답 형식:**
+
+```json
+{
+  "success": true
+}
+```
+
+**에러 응답:** `KEYWORD_001`, `KEYWORD_002`, `KEYWORD_003`, `COMMON_001`
+
+---
+
+#### `GET /api/keywords` — 내 키워드 목록 조회
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+
+**응답 형식:**
+
+```json
+[
+  {
+    "userKeywordId": 1,
+    "displayText": "크루아상"
+  },
+  {
+    "userKeywordId": 2,
+    "displayText": "소금빵"
+  }
+]
+```
+
+---
+
+#### `DELETE /api/keywords/{userKeywordId}` — 키워드 삭제
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+
+**경로 변수:** `userKeywordId` (사용자-키워드 관계 ID)
+
+**응답 형식:**
+
+```json
+{
+  "success": true,
+  "message": "키워드가 삭제되었습니다."
+}
+```
+
+**에러 응답:** `KEYWORD_004`, `KEYWORD_005`
+
+---
+
+### 11. 단골 가게 (Favourite Store)
+
+#### `POST /api/favourite-stores` — 단골 가게 토글 (추가/해제)
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+
+**요청 바디:**
+
+```json
+{
+  "storeId": 1
+}
+```
+
+**응답 형식:**
+
+```json
+{
+  "added": true
+}
+```
+
+> `added: true` → 단골 추가됨, `added: false` → 단골 해제됨
+
+**에러 응답:** `STORE_004`, `FAVOURITE_STORE_001`
+
+---
+
+#### `GET /api/favourite-stores` — 단골 가게 목록 조회
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+
+**응답 형식:**
+
+```json
+[
+  {
+    "storeId": 1,
+    "name": "투데이브레드 데모 강남점",
+    "address": "서울특별시 강남구 테헤란로 123 1층",
+    "imageUrl": "/images/store/1_0.jpg",
+    "isSelling": true
+  }
+]
+```
+
+---
+
+### 12. 찜목록 (Wishlist)
+
+#### `GET /api/wishlist` — 찜목록 통합 조회
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+
+**응답 형식:**
+
+```json
+{
+  "keywords": [
+    {
+      "userKeywordId": 1,
+      "displayText": "크루아상"
+    },
+    {
+      "userKeywordId": 2,
+      "displayText": "소금빵"
+    }
+  ],
+  "favouriteStores": [
+    {
+      "storeId": 1,
+      "name": "투데이브레드 데모 강남점",
+      "address": "서울특별시 강남구 테헤란로 123 1층",
+      "imageUrl": "/images/store/1_0.jpg",
+      "isSelling": true
+    }
+  ]
+}
+```
+
+---
+
+### 13. 장바구니 (Cart)
+
+#### `POST /api/cart` — 장바구니에 빵 추가
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+| 응답 코드 | 201 Created |
+
+**요청 바디:**
+
+```json
+{
+  "breadId": 1,
+  "quantity": 2
+}
+```
+
+**응답 형식:** 응답 바디 없음 (HTTP 201)
+
+**에러 응답:** `BREAD_001`, `CART_001`, `COMMON_001`
+
+---
+
+#### `GET /api/cart` — 장바구니 조회
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+
+**응답 형식:**
+
+```json
+{
+  "storeName": "투데이브레드 데모 강남점",
+  "lastOrderTime": "22:30:00",
+  "items": [
+    {
+      "cartItemId": 1,
+      "breadId": 1,
+      "breadName": "시그니처 소금빵",
+      "description": "겉은 바삭하고 속은 촉촉한 대표 메뉴입니다.",
+      "quantity": 2,
+      "imageUrl": "/images/bread/1.jpg",
+      "salePrice": 2500
+    }
+  ]
+}
+```
+
+---
+
+#### `PATCH /api/cart/items/{cartItemId}` — 장바구니 수량 변경
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+
+**경로 변수:** `cartItemId` (장바구니 항목 ID)
+
+**요청 바디:**
+
+```json
+{
+  "quantity": 3
+}
+```
+
+**응답 형식:** 응답 바디 없음 (HTTP 200)
+
+**에러 응답:** `CART_002`, `COMMON_001`
+
+---
+
+#### `DELETE /api/cart/items/{cartItemId}` — 장바구니 항목 삭제
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+| 응답 코드 | 204 No Content |
+
+**경로 변수:** `cartItemId` (장바구니 항목 ID)
+
+**응답 형식:** 응답 바디 없음 (HTTP 204)
+
+**에러 응답:** `CART_002`
+
+---
+
+#### `DELETE /api/cart` — 장바구니 비우기
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+| 응답 코드 | 204 No Content |
+
+**응답 형식:** 응답 바디 없음 (HTTP 204)
+
+---
+
+### 14. 주문 (Order)
 
 > 주문 생성 API(`POST /api/orders/cart`, `POST /api/orders/direct`)는 `Idempotency-Key` 헤더가 필수입니다.
 > 네트워크 오류 등으로 응답을 받지 못했을 때 같은 key로 재요청하면 동일한 주문 결과를 반환합니다.
 > 새로운 주문을 생성하려면 반드시 새로운 key를 사용하세요. (UUID v4 권장)
 
-| 메서드 | 경로 | 설명 | 인증 | 필수 헤더 |
-|--------|------|------|------|----------|
-| `POST` | `/api/orders/cart` | 장바구니 기반 주문 생성 | O | `Idempotency-Key` |
-| `POST` | `/api/orders/direct` | 바로 구매 (장바구니 미경유) | O | `Idempotency-Key` |
-| `POST` | `/api/orders/{orderId}/cancel` | 주문 취소 | O | — |
-| `GET` | `/api/orders?page=&size=` | 주문 내역 목록 (최신순, 페이지네이션) | O | — |
-| `GET` | `/api/orders/{orderId}` | 주문 상세 조회 | O | — |
+#### `POST /api/orders/cart` — 장바구니 기반 주문 생성
 
-### 결제 (Payment)
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+| 필수 헤더 | `Idempotency-Key` |
+
+**응답 형식:**
+
+```json
+{
+  "orderId": 42,
+  "storeName": "투데이브레드 데모 강남점",
+  "status": "PENDING",
+  "totalAmount": 7500,
+  "orderNumber": "W6X7",
+  "createdAt": "2026-04-15T18:30:00",
+  "items": [
+    {
+      "breadName": "시그니처 소금빵",
+      "breadPrice": 2500,
+      "quantity": 3
+    }
+  ]
+}
+```
+
+**에러 응답:** `CART_003`, `BREAD_003`, `COMMON_008`, `ORDER_004`
+
+---
+
+#### `POST /api/orders/direct` — 바로 구매
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+| 필수 헤더 | `Idempotency-Key` |
+
+**요청 바디:**
+
+```json
+{
+  "breadId": 1,
+  "quantity": 2
+}
+```
+
+**응답 형식:**
+
+```json
+{
+  "orderId": 43,
+  "storeName": "투데이브레드 데모 강남점",
+  "status": "PENDING",
+  "totalAmount": 5000,
+  "orderNumber": "A1B2",
+  "createdAt": "2026-04-15T19:00:00",
+  "items": [
+    {
+      "breadName": "시그니처 소금빵",
+      "breadPrice": 2500,
+      "quantity": 2
+    }
+  ]
+}
+```
+
+**에러 응답:** `BREAD_001`, `BREAD_003`, `COMMON_001`, `COMMON_008`, `ORDER_004`
+
+---
+
+#### `POST /api/orders/{orderId}/cancel` — 주문 취소
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+
+**경로 변수:** `orderId` (주문 ID)
+
+**응답 형식:** 응답 바디 없음 (HTTP 200)
+
+**에러 응답:** `ORDER_001`, `ORDER_002`, `ORDER_003`
+
+---
+
+#### `GET /api/orders?page=&size=` — 주문 내역 목록
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+
+**쿼리 파라미터:**
+
+| 파라미터 | 타입 | 필수 | 기본값 | 설명 |
+|----------|------|------|--------|------|
+| `page` | int | X | 0 | 페이지 번호 (0부터) |
+| `size` | int | X | 20 | 페이지 크기 (최대 100) |
+
+**응답 형식 (Spring Page):**
+
+```json
+{
+  "content": [
+    {
+      "orderId": 42,
+      "storeName": "투데이브레드 데모 강남점",
+      "status": "CONFIRMED",
+      "totalAmount": 7500,
+      "orderNumber": "W6X7",
+      "createdAt": "2026-04-15T18:30:00"
+    }
+  ],
+  "pageable": {
+    "pageNumber": 0,
+    "pageSize": 20
+  },
+  "totalElements": 15,
+  "totalPages": 1,
+  "last": true,
+  "first": true,
+  "empty": false
+}
+```
+
+> 주문 상태: `PENDING`, `CONFIRMED`, `CANCELLED`, `PICKED_UP`
+
+---
+
+#### `GET /api/orders/{orderId}` — 주문 상세 조회
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+
+**경로 변수:** `orderId` (주문 ID)
+
+**응답 형식:**
+
+```json
+{
+  "orderId": 42,
+  "storeName": "투데이브레드 데모 강남점",
+  "status": "CONFIRMED",
+  "totalAmount": 7500,
+  "orderNumber": "W6X7",
+  "createdAt": "2026-04-15T18:30:00",
+  "items": [
+    {
+      "breadName": "시그니처 소금빵",
+      "breadPrice": 2500,
+      "quantity": 3
+    }
+  ]
+}
+```
+
+**에러 응답:** `ORDER_001`, `ORDER_002`
+
+---
+
+### 15. 결제 (Payment)
 
 > 결제 API(`POST /api/payments`)는 `Idempotency-Key` 헤더가 필수입니다.
 > 같은 key로 재요청하면 PG를 중복 호출하지 않고 기존 결제 결과를 반환합니다.
 > 결제 실패 후 재시도할 때는 새로운 key를 사용하세요.
 
-| 메서드 | 경로 | 설명 | 인증 | 필수 헤더 |
-|--------|------|------|------|----------|
-| `POST` | `/api/payments` | 결제 요청 (Stub → 토스 교체 예정) | O | `Idempotency-Key` |
+#### `POST /api/payments` — 결제 요청
 
-### 시스템 (System)
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+| 필수 헤더 | `Idempotency-Key` |
 
-| 메서드 | 경로 | 설명 | 인증 |
-|--------|------|------|------|
-| `GET` | `/api/system/health` | 서버 상태 확인 | X |
+**요청 바디:**
+
+```json
+{
+  "orderId": 42,
+  "amount": 7500
+}
+```
+
+**응답 형식:**
+
+```json
+{
+  "paymentId": 1,
+  "orderId": 42,
+  "amount": 7500,
+  "status": "APPROVED",
+  "paidAt": "2026-04-15T18:31:00"
+}
+```
+
+> 결제 상태: `PENDING`, `APPROVED`, `FAILED`
+>
+> 현재 Stub PG를 사용하며, 추후 토스 결제로 교체 예정입니다.
+
+**에러 응답:** `PAYMENT_001`, `PAYMENT_002`, `PAYMENT_003`, `ORDER_001`, `COMMON_008`
+
+---
+
+### 16. 시스템 (System)
+
+#### `GET /api/system/health` — 서버 상태 확인
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | X |
+
+**응답 형식:**
+
+```
+"UP"
+```
 
 ---
 
 ## 인증 구조
 
 - JWT (HMAC-SHA256) 기반 stateless 인증
+- 비밀번호 암호화: Argon2
 - 역할 계층: `BOSS > USER`
-- 인증 불필요 경로: 회원가입, 로그인, 이메일/닉네임/전화번호 중복확인, 토큰 재발급, 계정 복구, 헬스체크, Swagger, 이미지 정적 파일
+- 인증 불필요 경로 (permitAll):
+  - `/api/user/register` — 회원가입
+  - `/api/user/login` — 로그인
+  - `/api/user/exist/**` — 이메일/닉네임/전화번호 중복확인
+  - `/api/auth/reissue` — 토큰 재발급
+  - `/api/user/find-email` — 이메일 찾기
+  - `/api/user/verify-identity` — 본인 확인
+  - `/api/user/reset-password` — 비밀번호 재설정
+  - `/api/system/health` — 헬스체크
+  - `/swagger-ui/**` — Swagger UI
+  - `/v3/api-docs/**` — OpenAPI 스펙
+  - `/images/**` — 이미지 정적 파일
 - 그 외 모든 경로는 `Authorization: Bearer {accessToken}` 필요
 - 사장님 전용 API (`/api/boss/**`)는 `@PreAuthorize("hasRole('BOSS')")` 적용
+
+---
+
+## 공통 에러 응답 형식
+
+모든 에러는 아래 형식으로 반환됩니다:
+
+```json
+{
+  "code": "ERROR_CODE",
+  "message": "에러 메시지"
+}
+```
 
 ---
 
@@ -244,7 +1713,7 @@
 | `BREAD_003` | 409 | 해당 상품의 재고가 부족합니다. |
 | `BREAD_004` | 400 | 가격은 0원 이상이여야 합니다. |
 
-> 빵 이미지 관련 에러(파일 형식, 크기, 저장 실패)는 공통 에러 코드 `COMMON_006`, `COMMON_005`, `COMMON_007`을 사용합니다.
+> 빵 이미지 관련 에러(파일 형식, 크기, 저장 실패)는 공통 에러 코드 `COMMON_005`, `COMMON_006`, `COMMON_007`을 사용합니다.
 
 ### 인증 (AUTH)
 
