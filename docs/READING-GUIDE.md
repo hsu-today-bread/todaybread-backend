@@ -91,6 +91,7 @@
 - `docs/CONVENTION.md`: 레이어 규칙, 예외 처리 규칙, 협업 규칙
 - `docs/DB-SETUP.md`: MySQL, Flyway, 로컬 환경 구조
 - `docs/JWT-GUIDE.md`: JWT 인증이 실제 컨트롤러에 어떻게 녹는지
+- `docs/CLASS-DIAGRAM.md`: 커머스 코어 엔티티 관계를 Mermaid로 빠르게 파악할 때
 
 ## 추천 방식
 
