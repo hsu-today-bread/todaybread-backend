@@ -129,7 +129,7 @@
 | `POST` | `/api/orders/cart` | 장바구니 기반 주문 생성 | O | `Idempotency-Key` |
 | `POST` | `/api/orders/direct` | 바로 구매 (장바구니 미경유) | O | `Idempotency-Key` |
 | `POST` | `/api/orders/{orderId}/cancel` | 주문 취소 | O | — |
-| `GET` | `/api/orders` | 주문 내역 목록 (최신순) | O | — |
+| `GET` | `/api/orders?page=&size=` | 주문 내역 목록 (최신순, 페이지네이션) | O | — |
 | `GET` | `/api/orders/{orderId}` | 주문 상세 조회 | O | — |
 
 ### 결제 (Payment)
