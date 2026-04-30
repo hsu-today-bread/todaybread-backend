@@ -9,6 +9,10 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+import java.util.Map;
+import java.util.Set;
+
 /**
  * 주문 정보를 나타내는 엔티티입니다.
  * 유저가 장바구니 또는 바로 구매를 통해 생성한 주문을 관리합니다.
@@ -45,6 +49,18 @@ public class OrderEntity extends BaseEntity {
     @Column(name = "idempotency_key", length = 255)
     private String idempotencyKey;
 
+    @Column(name = "order_number", length = 4)
+    private String orderNumber;
+
+    @Column(name = "order_date")
+    private LocalDate orderDate;
+
+    /** 허용된 상태 전이 맵 */
+    private static final Map<OrderStatus, Set<OrderStatus>> ALLOWED_TRANSITIONS = Map.of(
+            OrderStatus.PENDING, Set.of(OrderStatus.CONFIRMED, OrderStatus.CANCELLED),
+            OrderStatus.CONFIRMED, Set.of(OrderStatus.PICKED_UP)
+    );
+
     @Builder
     private OrderEntity(Long userId, Long storeId, OrderStatus status, int totalAmount, String idempotencyKey) {
         this.userId = userId;
@@ -56,14 +72,34 @@ public class OrderEntity extends BaseEntity {
 
     /**
      * 주문 상태를 변경합니다.
-     * PENDING 상태에서만 변경이 가능합니다.
+     * 허용된 전환: PENDING→CONFIRMED, PENDING→CANCELLED, CONFIRMED→PICKED_UP
      *
      * @param newStatus 변경할 상태
+     * @throws CustomException 허용되지 않은 전환 시 ORDER_STATUS_CANNOT_CHANGE 예외
      */
     public void updateStatus(OrderStatus newStatus) {
-        if (this.status != OrderStatus.PENDING) {
+        Set<OrderStatus> allowed = ALLOWED_TRANSITIONS.getOrDefault(this.status, Set.of());
+        if (!allowed.contains(newStatus)) {
             throw new CustomException(ErrorCode.ORDER_STATUS_CANNOT_CHANGE);
         }
         this.status = newStatus;
+    }
+
+    /**
+     * 주문 번호를 설정합니다.
+     *
+     * @param orderNumber 주문 번호 (영숫자 4자리)
+     */
+    public void assignOrderNumber(String orderNumber) {
+        this.orderNumber = orderNumber;
+    }
+
+    /**
+     * 주문 날짜를 설정합니다.
+     *
+     * @param orderDate 주문 날짜
+     */
+    public void setOrderDate(LocalDate orderDate) {
+        this.orderDate = orderDate;
     }
 }

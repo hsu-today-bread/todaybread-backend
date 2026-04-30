@@ -87,6 +87,20 @@
 | `PUT` | `/api/boss/store` | 가게 정보 + 영업시간 수정 | O | BOSS |
 | `PUT` | `/api/boss/store/images` | 가게 이미지 일괄 교체 (multipart) | O | BOSS |
 
+### 주문 — 사장님 (Boss Orders)
+
+| 메서드 | 경로 | 설명 | 인증 | 권한 |
+|--------|------|------|------|------|
+| `GET` | `/api/boss/orders?page=&size=` | 픽업 대기 주문 목록 (CONFIRMED, 페이지네이션) | O | BOSS |
+| `POST` | `/api/boss/orders/{orderId}/pickup` | 픽업 완료 처리 (CONFIRMED → PICKED_UP) | O | BOSS |
+
+### 매출 — 사장님 (Boss Sales)
+
+| 메서드 | 경로 | 설명 | 인증 | 권한 |
+|--------|------|------|------|------|
+| `GET` | `/api/boss/sales/daily?date=` | 일별 매출 조회 (메뉴별 수량/매출) | O | BOSS |
+| `GET` | `/api/boss/sales/monthly?year=&month=` | 월별 매출 조회 (메뉴별 수량/매출) | O | BOSS |
+
 ### 키워드 (Keyword)
 
 | 메서드 | 경로 | 설명 | 인증 |
@@ -255,6 +269,7 @@
 | `ORDER_001` | 404 | 주문을 찾을 수 없습니다. |
 | `ORDER_002` | 403 | 주문에 접근할 권한이 없습니다. |
 | `ORDER_003` | 409 | 변경할 수 없는 주문 상태입니다. |
+| `ORDER_004` | 500 | 주문 번호 생성에 실패했습니다. |
 
 ### 결제 (PAYMENT)
 
