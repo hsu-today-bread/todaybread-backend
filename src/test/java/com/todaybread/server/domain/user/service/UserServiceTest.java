@@ -2,6 +2,7 @@ package com.todaybread.server.domain.user.service;
 
 import com.todaybread.server.config.jwt.JwtTokenService;
 import com.todaybread.server.domain.auth.service.AuthService;
+import com.todaybread.server.domain.user.dto.BusinessStatusResponse;
 import com.todaybread.server.domain.user.dto.UserBossRequest;
 import com.todaybread.server.domain.user.dto.UserBossResponse;
 import com.todaybread.server.domain.user.dto.UserLoginRequest;
@@ -20,13 +21,18 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.client.RestTemplate;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
@@ -44,6 +50,9 @@ class UserServiceTest {
 
     @Mock
     private JwtTokenService jwtTokenService;
+
+    @Mock
+    private RestTemplate restTemplate;
 
     @InjectMocks
     private UserService userService;
@@ -133,6 +142,12 @@ class UserServiceTest {
     void approveBoss_updatesRoleAndReturnsNewTokens() {
         UserEntity user = TestFixtures.user(1L, false);
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        BusinessStatusResponse apiResponse = new BusinessStatusResponse(
+                "OK",
+                List.of(new BusinessStatusResponse.BusinessData("1234567890", "01"))
+        );
+        given(restTemplate.postForEntity(anyString(), any(), eq(BusinessStatusResponse.class)))
+                .willReturn(ResponseEntity.ok(apiResponse));
         given(jwtTokenService.generateAccessToken(1L, user.getEmail(), "BOSS")).willReturn("boss-access");
         given(jwtTokenService.generateRefreshToken(1L)).willReturn("boss-refresh");
 
