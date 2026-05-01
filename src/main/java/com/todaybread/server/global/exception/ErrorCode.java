@@ -55,6 +55,8 @@ public enum ErrorCode {
     USER_RECOVERY_NOT_FOUND("USER_005","가입 정보를 찾을 수 없습니다.",HttpStatus.NOT_FOUND),
     USER_BOSS_ALREADY_APPROVED("USER_006", "이미 사장님 등록이 완료된 상태입니다.", HttpStatus.CONFLICT),
     USER_BOSS_NUMBER_FORMAT_ERROR("USER_007","사업자 번호 형식이 맞지 않습니다.",HttpStatus.BAD_REQUEST),
+    USER_BOSS_NUMBER_INVALID("USER_008", "유효하지 않은 사업자 번호입니다.", HttpStatus.BAD_REQUEST),
+    USER_BOSS_API_ERROR("USER_009", "사업자 등록 확인 중 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
 
     /**
      * ============================

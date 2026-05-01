@@ -8,9 +8,13 @@ import com.todaybread.server.domain.user.repository.UserRepository;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.Optional;
 
@@ -26,6 +30,13 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final AuthService authService;
     private final JwtTokenService jwtTokenService;
+    private final RestTemplate restTemplate;
+
+    @Value("${boss.api.key}")
+    private String bossApiKey;
+
+    @Value("${boss.api.url}")
+    private String bossApiUrl;
 
     /**
      * 이메일 중복 여부를 체크합니다.
@@ -161,13 +172,12 @@ public class UserService {
 
     /**
      * 사업자 등록을 처리합니다.
-     * 토큰을 업데이트합니다.
+     * 국세청 API로 사업자 번호 유효성을 검증한 후 토큰을 업데이트합니다.
      *
      * @param userId 유저 ID
      * @param request 요청 DTO
      * @return 응답 DTO
      */
-    // TODO 사업자 등록 서비스 로직 수행
     @Transactional
     public UserBossResponse approveBoss(Long userId, UserBossRequest request) {
         Optional<UserEntity> userEntityOptional = userRepository.findById(userId);
@@ -186,6 +196,8 @@ public class UserService {
             throw new CustomException(ErrorCode.USER_BOSS_NUMBER_FORMAT_ERROR);
         }
 
+        verifyBusinessNumber(bossNumber);
+
         userEntity.approveBoss();
 
         String userEmail = userEntity.getEmail();
@@ -199,5 +211,27 @@ public class UserService {
         return UserBossResponse.ok(accessToken, refreshToken);
     }
 
+    private void verifyBusinessNumber(String bossNumber) {
+        String url = bossApiUrl + "?serviceKey=" + bossApiKey;
+        BusinessStatusRequest apiRequest = BusinessStatusRequest.of(bossNumber);
 
+        try {
+            ResponseEntity<BusinessStatusResponse> response =
+                    restTemplate.postForEntity(url, apiRequest, BusinessStatusResponse.class);
+
+            BusinessStatusResponse body = response.getBody();
+            if (body == null || body.data() == null || body.data().isEmpty()) {
+                throw new CustomException(ErrorCode.USER_BOSS_API_ERROR);
+            }
+
+            String statusCode = body.data().get(0).b_stt_cd();
+            if (!"01".equals(statusCode)) {
+                throw new CustomException(ErrorCode.USER_BOSS_NUMBER_INVALID);
+            }
+        } catch (CustomException e) {
+            throw e;
+        } catch (RestClientException e) {
+            throw new CustomException(ErrorCode.USER_BOSS_API_ERROR);
+        }
+    }
 }
