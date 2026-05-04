@@ -127,4 +127,19 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long> {
             @Param("statuses") List<OrderStatus> statuses,
             @Param("startDateTime") LocalDateTime startDateTime,
             @Param("endDateTime") LocalDateTime endDateTime);
+
+    /**
+     * 특정 가게에서 특정 상태의 주문 수를 유저별로 일괄 집계합니다.
+     * 사장님 리뷰 관리 목록에서 각 리뷰 작성자의 구매 횟수를 효율적으로 조회하기 위해 사용합니다.
+     *
+     * @param storeId 가게 ID
+     * @param status  주문 상태
+     * @param userIds 유저 ID 목록
+     * @return [userId, count] 형태의 Object 배열 목록
+     */
+    @Query("SELECT o.userId, COUNT(o) FROM OrderEntity o WHERE o.storeId = :storeId AND o.status = :status AND o.userId IN :userIds GROUP BY o.userId")
+    List<Object[]> countByStoreIdAndStatusAndUserIdIn(
+            @Param("storeId") Long storeId,
+            @Param("status") OrderStatus status,
+            @Param("userIds") List<Long> userIds);
 }

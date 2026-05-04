@@ -144,7 +144,16 @@ public enum ErrorCode {
     PAYMENT_CONFIRM_FAILED("PAYMENT_005", "결제 승인에 실패했습니다.", HttpStatus.BAD_REQUEST),
     PAYMENT_ALREADY_PROCESSED("PAYMENT_006", "이미 처리된 결제입니다.", HttpStatus.CONFLICT),
     PAYMENT_CANCEL_FAILED("PAYMENT_007", "결제 취소 처리 중 오류가 발생했습니다.", HttpStatus.BAD_GATEWAY),
-    PAYMENT_IDEMPOTENCY_KEY_MISSING("PAYMENT_008", "Idempotency-Key 헤더가 필요합니다.", HttpStatus.BAD_REQUEST);
+    PAYMENT_IDEMPOTENCY_KEY_MISSING("PAYMENT_008", "Idempotency-Key 헤더가 필요합니다.", HttpStatus.BAD_REQUEST),
+
+    /**
+     * ============================
+     * 리뷰 오류
+     * ============================
+     */
+    REVIEW_PURCHASE_REQUIRED("REVIEW_001", "구매 이력이 없어 리뷰를 작성할 수 없습니다.", HttpStatus.BAD_REQUEST),
+    REVIEW_ALREADY_EXISTS("REVIEW_002", "이미 해당 주문 항목에 대한 리뷰를 작성했습니다.", HttpStatus.CONFLICT),
+    REVIEW_IMAGE_LIMIT_EXCEEDED("REVIEW_005", "리뷰 이미지는 최대 2장까지 첨부할 수 있습니다.", HttpStatus.BAD_REQUEST);
 
     private final String code;
     private final String message;

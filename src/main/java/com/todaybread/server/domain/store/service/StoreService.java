@@ -120,7 +120,8 @@ public class StoreService {
         boolean isSelling = SellingStatusUtil.isSelling(
                 storeEntity.getIsActive(), businessHours, hasStock, clock);
 
-        return StoreDetailResponse.of(storeResponse, images, breads, isSelling);
+        return StoreDetailResponse.of(storeResponse, images, breads, isSelling,
+                storeEntity.getAverageRating(), storeEntity.getReviewCount());
     }
 
     /**
@@ -339,7 +340,9 @@ public class StoreService {
                     primaryImageMap.get(store.getId()),
                     isSelling,
                     projection.getDistance(),
-                    lastOrderTime
+                    lastOrderTime,
+                    store.getAverageRating(),
+                    store.getReviewCount()
             ));
         }
 

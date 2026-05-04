@@ -16,6 +16,8 @@ import com.todaybread.server.domain.store.entity.StoreEntity;
  * @param storeId 가게 ID
  * @param storeName 가게 이름
  * @param isSelling 판매 상태 (영업시간 내 + 재고 있음)
+ * @param averageRating 가게 평균 평점
+ * @param reviewCount 가게 리뷰 수
  */
 public record BreadDetailResponse(
         Long id,
@@ -27,7 +29,9 @@ public record BreadDetailResponse(
         String imageUrl,
         Long storeId,
         String storeName,
-        boolean isSelling
+        boolean isSelling,
+        double averageRating,
+        int reviewCount
 ) {
     public static BreadDetailResponse of(
             BreadEntity bread, StoreEntity store, String imageUrl, boolean isSelling) {
@@ -41,7 +45,9 @@ public record BreadDetailResponse(
                 imageUrl,
                 store.getId(),
                 store.getName(),
-                isSelling
+                isSelling,
+                store.getAverageRating(),
+                store.getReviewCount()
         );
     }
 }
