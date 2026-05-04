@@ -1,197 +1,189 @@
 # TodayBread
 
-한성대학교 캡스톤 프로젝트 — TodayBread 백엔드 서버
-
----
+한성대학교 캡스톤 프로젝트 TodayBread 백엔드 서버입니다.
 
 ## 개발 환경
 
-| 항목 | 버전 |
+| 항목 | 내용 |
 |------|------|
-| Language | Java 21 LTS |
+| Language | Java 21 |
 | Framework | Spring Boot 3.5.11 |
-| Build | Gradle (Groovy) |
-| Packaging | Jar |
-| DB | MySQL 8.0.45 (Docker) |
+| Build | Gradle |
+| DB | MySQL 8.0.45, H2 테스트 |
 | Migration | Flyway |
-| Auth | Spring Security + JWT (HMAC) |
-| API 문서 | SpringDoc OpenAPI (Swagger UI) |
-| 비밀번호 | Argon2 (BouncyCastle) |
-
----
+| Auth | Spring Security + JWT |
+| API Docs | SpringDoc OpenAPI, Swagger UI |
+| Password | Argon2 |
+| Payment | Toss Payments, local stub profile |
 
 ## 빠른 시작
 
+`.env` 없이도 Docker Compose와 Spring Boot가 기본값으로 동작합니다.
+
 ```bash
-# 1. 리포지터리 클론
-git clone {repository-url}
-
-# 2. Docker 컨테이너 시작 (.env 없이도 기본값으로 동작)
 docker compose up -d
-
-# 3. Spring Boot 실행 (IntelliJ 또는 터미널)
-#    첫 실행 시 Flyway가 테이블을 생성합니다.
-#    테이블 생성만 끝나면 서버를 계속 켜둘 필요는 없습니다.
 ./gradlew bootRun
+```
 
-# 4. 프론트 연동용 테스트 데이터 삽입 (선택)
-#    샘플 유저/사장님/가게/영업시간/빵 데이터를 넣습니다.
+서버 실행 후 Swagger UI에서 API를 확인할 수 있습니다.
+
+```text
+http://localhost:8080/swagger-ui/index.html
+```
+
+개발용 seed 데이터가 필요하면, 서버를 한 번 실행해서 Flyway가 테이블을 만든 뒤 실행합니다.
+
+```bash
 ./scripts/test-data.sh
+```
 
-# 5. MySQL 접속이 필요하면 프로젝트 스크립트 사용
-#    utf8mb4로 접속해서 터미널에서도 한글이 깨지지 않음
+MySQL CLI 접속은 아래 스크립트를 사용합니다.
+
+```bash
 ./scripts/mysql-connect.sh
 ```
 
-> Swagger UI: http://localhost:8080/swagger-ui/index.html
+## 테스트 데이터
 
----
-
-## 개발용 테스트 데이터
-
-프론트 연동이나 Swagger/Postman 수동 확인용 샘플 데이터가 필요하면 아래 스크립트를 실행하세요.
-단, MySQL 테이블은 Flyway가 만들기 때문에 서버를 한 번 먼저 실행해야 합니다.
-
-```bash
-./gradlew bootRun
-# Flyway 적용이 끝나면 종료해도 됨
-./scripts/test-data.sh
-```
+`./scripts/test-data.sh`는 `scripts/test-data.sql`을 적용하고 `uploads/`에 seed 이미지를 준비합니다. `scripts/seed-images/`에 실제 이미지가 있으면 해당 파일을 사용하고, 없으면 SVG placeholder를 생성합니다.
 
 샘플 계정:
 
-- `demo-user@todaybread.local` / `todaybread123`
-- `demo-boss-gangnam@todaybread.local` / `todaybread123`
-- `demo-boss-seolleung@todaybread.local` / `todaybread123`
+| 역할 | 계정 | 비밀번호 |
+|------|------|----------|
+| 일반 유저 | `demo-user@todaybread.com` | `todaybread123` |
+| 사장님 | `demo-boss1@todaybread.com` ~ `demo-boss10@todaybread.com` | `todaybread123` |
 
-추천 근처 조회 좌표:
+근처 매장/빵 조회 추천 좌표:
 
-- `lat=37.4980950`
-- `lng=127.0276100`
-- `radius=3`
+```text
+lat=37.4980950
+lng=127.0276100
+radius=5
+```
 
-> Docker 볼륨(`mysql_data`)은 재사용되므로, 테스트 데이터가 꼬였을 때는 `./scripts/test-data.sh`를 다시 실행하면 됩니다.
-> 스키마 자체가 꼬였거나 레거시 컬럼이 남아 있으면 `docker compose down -v`로 볼륨까지 초기화한 뒤 다시 올리세요.
+토큰은 seed하지 않습니다. 로그인 API가 access token과 refresh token을 발급하고, refresh token은 DB에 해시로 저장합니다.
 
----
+## 주문/결제 테스트
 
-## DB GUI로 보기
+stub 결제 모드에서는 토스 키 없이 주문 생성부터 결제, 주문 취소까지 확인할 수 있습니다.
 
-쿼리를 직접 치지 않고 테이블 데이터를 표처럼 보고 싶다면 DBeaver나 TablePlus 같은 DB GUI 툴을 사용하면 됩니다.
+```bash
+SPRING_PROFILES_ACTIVE=stub ./gradlew bootRun
+./scripts/test-order.sh
+```
 
-권장 연결 정보:
+토스 연동 모드는 주문 생성 후 confirm API 호출용 `curl` 예시를 출력합니다. 실제 승인에는 프론트엔드 토스 SDK에서 받은 `paymentKey`가 필요합니다.
 
-- Host: `127.0.0.1`
-- Port: `3306`
-- Database: `todaybread`
-- Username: `todaybread`
-- Password: `todaybread`
+```bash
+./scripts/test-order.sh --toss
+```
 
-DBeaver/MySQL 드라이버에서는 아래 속성을 같이 넣어두면 연결이 안정적입니다.
+토스 테스트 키는 환경 변수로 설정합니다.
 
-- `allowPublicKeyRetrieval=true`
-- `useSSL=false`
+```bash
+TOSS_SECRET_KEY=test_sk_...
+TOSS_CLIENT_KEY=test_ck_...
+./gradlew bootRun
+```
 
-주의:
-
-- `todaybread` 계정은 애플리케이션용 계정이라 `mysql.user` 같은 시스템 테이블은 볼 수 없습니다.
-- DBeaver에서는 `Show all databases`를 끄고 `todaybread` 스키마만 보도록 설정하는 편이 낫습니다.
-
----
-
-## 문서
+## 주요 문서
 
 | 문서 | 설명 |
 |------|------|
-| [API 문서](docs/API.md) | 전체 API 목록, 인증 구조, 프론트 연동용 샘플 계정 |
-| [DB 환경 설정 가이드](docs/DB-SETUP.md) | Docker, .env, Flyway, 테스트 데이터 스크립트, DBeaver 연결 가이드 |
-| [컨벤션](docs/CONVENTION.md) | 코드 컨벤션, 협업 컨벤션, 에러 코드 규격 |
-| [JWT 가이드 문서](docs/JWT-GUIDE.md) | JWT 토큰 발급/검증/재발급 흐름 |
-
----
+| [API.md](docs/API.md) | 전체 API 목록, 요청/응답 예시, 에러 코드 |
+| [DB-SETUP.md](docs/DB-SETUP.md) | Docker MySQL, `.env`, Flyway, DBeaver/TablePlus 연결 |
+| [SCRIPTS.md](docs/SCRIPTS.md) | `scripts/` 폴더의 실행 스크립트와 seed 이미지 규칙 |
+| [TOSS.md](docs/TOSS.md) | 토스 페이먼츠 결제 흐름, 키 관리, confirm/cancel 구조 |
+| [JWT-GUIDE.md](docs/JWT-GUIDE.md) | JWT 인증 엔드포인트 작성 패턴 |
+| [CLASS-DIAGRAM.md](docs/CLASS-DIAGRAM.md) | 커머스 코어 엔티티 관계 |
+| [CONVENTION.md](docs/CONVENTION.md) | 코드, API, 예외, 협업 컨벤션 |
+| [READING-GUIDE.md](docs/READING-GUIDE.md) | 프로젝트를 처음 읽을 때 추천 순서 |
 
 ## 프로젝트 구조
 
-```
+```text
 .
-├── docker-compose.yml                     # MySQL Docker 실행 설정
-├── build.gradle                           # Gradle 빌드 설정
-├── docs/                                  # 프로젝트 문서
+├── docker-compose.yml
+├── build.gradle
+├── docs/
 ├── scripts/
-│   ├── mysql-connect.sh                   # utf8mb4로 MySQL CLI 접속
-│   ├── test-data.sh                       # 개발용 테스트 데이터 주입 스크립트
-│   └── test-data.sql                      # 프론트 연동용 샘플 데이터 SQL
+│   ├── mysql-connect.sh
+│   ├── test-data.sh
+│   ├── test-data.sql
+│   ├── test-order.sh
+│   └── seed-images/
+├── uploads/
 ├── src/main/java/com/todaybread/server/
-│   ├── ServerApplication.java             # Spring Boot 시작점 + Clock 빈 등록
+│   ├── ServerApplication.java
 │   ├── config/
-│   │   ├── OpenApiConfig.java             # Swagger 설정
-│   │   ├── SecurityConfig.java            # Spring Security 설정
-│   │   ├── WebConfig.java                 # 정적 리소스 매핑 (/images/**)
-│   │   └── jwt/
-│   │       └── JwtTokenService.java       # JWT 발급/검증 (Access + Refresh)
 │   ├── domain/
-│   │   ├── auth/                          # 인증/토큰 도메인
-│   │   ├── bread/                         # 빵(메뉴) 도메인
-│   │   ├── keyword/                       # 키워드 도메인
-│   │   ├── store/                         # 매장/이미지/영업시간/단골 도메인
-│   │   ├── user/                          # 사용자 도메인
-│   │   └── wishlist/                      # 찜목록 통합 조회
+│   │   ├── auth/
+│   │   ├── bread/
+│   │   ├── cart/
+│   │   ├── keyword/
+│   │   ├── order/
+│   │   ├── payment/
+│   │   ├── store/
+│   │   ├── user/
+│   │   └── wishlist/
 │   ├── global/
-│   │   ├── entity/BaseEntity.java         # 공통 엔티티 (createdAt, updatedAt)
-│   │   ├── exception/
-│   │   │   ├── CustomException.java       # 비즈니스 예외
-│   │   │   ├── ErrorCode.java             # 에러 코드 enum
-│   │   │   ├── ErrorResponse.java         # 에러 응답 DTO
-│   │   │   └── GlobalExceptionHandler.java # 전역 예외 핸들러
-│   │   ├── storage/
-│   │   │   ├── FileStorage.java           # 파일 저장소 인터페이스
-│   │   │   ├── ImageValidationHelper.java # 이미지 검증 헬퍼
-│   │   │   └── LocalFileStorage.java      # 로컬 파일 저장소 구현
-│   │   └── util/
-│   │       └── JwtRoleHelper.java         # JWT에서 userId/role 추출
 │   └── system/
-│       └── HealthController.java          # 헬스 체크 API
 └── src/main/resources/
-    ├── application.properties             # 애플리케이션 설정
+    ├── application.properties
     └── db/migration/
-        └── V1__init_schema.sql            # 전체 스키마 (통합 마이그레이션)
+        └── V1__init_schema.sql
 ```
 
-### 도메인별 구조
+각 도메인은 대체로 아래 레이어를 따릅니다.
 
-각 도메인은 동일한 레이어드 패턴을 따릅니다:
-
-```
+```text
 domain/{name}/
-├── controller/    # REST API 엔드포인트
-├── dto/           # 요청/응답 DTO (record 타입)
-├── entity/        # JPA 엔티티
-├── repository/    # Spring Data JPA 리포지터리
-├── service/       # 비즈니스 로직
-└── util/          # 유틸리티 (해당 도메인에만 존재)
+├── controller/
+├── dto/
+├── entity/
+├── repository/
+├── service/
+└── util/
 ```
-
----
 
 ## DB 마이그레이션
 
-기존 V1~V12 마이그레이션을 단일 파일로 통합했습니다.
+현재 로컬 신규 환경용 Flyway 마이그레이션은 단일 baseline 파일입니다.
 
 | 파일 | 설명 |
 |------|------|
-| `V1__init_schema.sql` | 전체 스키마 (users, refresh_token, keyword, user_keyword, store, favourite_store, store_image, store_business_hours, bread, bread_image) |
+| `src/main/resources/db/migration/V1__init_schema.sql` | 현재 전체 스키마 생성 |
 
-### 테이블 목록
+주요 테이블:
 
 | 테이블 | 설명 |
 |--------|------|
 | `users` | 사용자 정보 |
-| `refresh_token` | JWT Refresh Token (해시 저장) |
-| `keyword` | 정규화된 키워드 마스터 |
-| `user_keyword` | 사용자-키워드 M:N 관계 |
-| `store` | 가게 정보 (위치, 활성 상태) |
-| `favourite_store` | 단골 가게 (유저-가게 관계) |
-| `store_image` | 가게 이미지 (최대 5장) |
-| `store_business_hours` | 요일별 영업시간 (가게당 7개) |
-| `bread` | 빵 메뉴 (가격, 재고) |
-| `bread_image` | 빵 이미지 (메뉴당 1장) |
+| `refresh_token` | JWT refresh token 해시 |
+| `keyword`, `user_keyword` | 키워드 마스터와 사용자 키워드 |
+| `store`, `store_image`, `store_business_hours`, `favourite_store` | 매장, 이미지, 영업시간, 단골 매장 |
+| `bread`, `bread_image` | 빵 메뉴와 이미지 |
+| `cart`, `cart_item` | 장바구니 |
+| `orders`, `order_item` | 주문과 주문 항목 |
+| `payment` | 결제 승인/취소 정보 |
+
+기존 로컬 DB에 오래된 Flyway 이력이 남아 있으면 baseline과 맞지 않을 수 있습니다. 개발 DB를 새 스키마로 맞추려면 볼륨을 초기화합니다.
+
+```bash
+docker compose down -v
+docker compose up -d
+./gradlew bootRun
+./scripts/test-data.sh
+```
+
+## 자주 쓰는 명령
+
+```bash
+./gradlew test
+docker compose ps
+./scripts/mysql-connect.sh -e "SHOW TABLES;"
+./scripts/test-data.sh
+SPRING_PROFILES_ACTIVE=stub ./gradlew bootRun
+./scripts/test-order.sh
+```

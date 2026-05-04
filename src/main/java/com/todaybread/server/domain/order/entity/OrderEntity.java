@@ -58,7 +58,7 @@ public class OrderEntity extends BaseEntity {
     /** 허용된 상태 전이 맵 */
     private static final Map<OrderStatus, Set<OrderStatus>> ALLOWED_TRANSITIONS = Map.of(
             OrderStatus.PENDING, Set.of(OrderStatus.CONFIRMED, OrderStatus.CANCELLED),
-            OrderStatus.CONFIRMED, Set.of(OrderStatus.PICKED_UP)
+            OrderStatus.CONFIRMED, Set.of(OrderStatus.PICKED_UP, OrderStatus.CANCELLED)
     );
 
     @Builder

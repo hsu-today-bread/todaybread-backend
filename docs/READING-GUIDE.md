@@ -2,8 +2,8 @@
 
 이 문서는 TodayBread 서버 프로젝트를 처음 읽을 때 어디서부터 봐야 하는지 정리한 순서표입니다.
 
-현재 워크트리 기준으로는 `user / auth / store / bread / keyword / wishlist` 도메인이 실제 소스에 보입니다.
-반면 `docs/API.md`에는 `cart / order / payment`도 문서화되어 있으므로, 문서와 현재 소스 트리를 구분해서 읽는 것이 좋습니다.
+현재 워크트리 기준으로는 `user / auth / store / bread / keyword / cart / order / payment / wishlist` 도메인이 실제 소스에 보입니다.
+전체 API 표면은 `docs/API.md`와 Swagger UI를 함께 확인하는 것이 좋습니다.
 
 ## 가장 빠른 시작 순서
 
@@ -67,6 +67,18 @@
 5. `src/main/java/com/todaybread/server/domain/wishlist/controller/WishlistController.java`
 
 이 구간은 개인화 기능과 조회 보조 기능을 보는 순서입니다.
+
+### 5. 커머스/결제
+
+1. `src/main/java/com/todaybread/server/domain/cart/controller/CartController.java`
+2. `src/main/java/com/todaybread/server/domain/cart/service/CartService.java`
+3. `src/main/java/com/todaybread/server/domain/order/controller/OrderController.java`
+4. `src/main/java/com/todaybread/server/domain/order/service/OrderService.java`
+5. `src/main/java/com/todaybread/server/domain/payment/controller/PaymentController.java`
+6. `src/main/java/com/todaybread/server/domain/payment/service/PaymentService.java`
+7. `docs/TOSS.md`
+
+이 구간은 장바구니, 주문, 결제, 취소 흐름을 보는 순서입니다.
 
 ## 도메인 하나를 읽는 고정 순서
 

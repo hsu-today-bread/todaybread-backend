@@ -66,6 +66,8 @@ class OrderEntity {
   OrderStatus status
   int totalAmount
   String idempotencyKey
+  String orderNumber
+  LocalDate orderDate
 }
 
 class OrderItemEntity {
@@ -84,6 +86,10 @@ class PaymentEntity {
   PaymentStatus status
   LocalDateTime paidAt
   String idempotencyKey
+  String paymentKey
+  String method
+  String cancelReason
+  LocalDateTime cancelledAt
 }
 
 class OrderStatus {
@@ -91,6 +97,7 @@ class OrderStatus {
   PENDING
   CONFIRMED
   CANCELLED
+  PICKED_UP
 }
 
 class PaymentStatus {
@@ -98,6 +105,7 @@ class PaymentStatus {
   PENDING
   APPROVED
   FAILED
+  CANCELLED
 }
 
 BaseEntity <|-- UserEntity
@@ -131,7 +139,9 @@ OrderEntity "1" --> "0..1" PaymentEntity : paid by
 - `StoreEntity.userId` 때문에 한 명의 사장님은 최대 한 개의 가게를 가집니다.
 - `CartEntity.storeId` 때문에 장바구니는 한 시점에 하나의 매장 빵만 담도록 설계되어 있습니다.
 - `OrderItemEntity`는 주문 시점의 `breadName`, `breadPrice`를 별도로 저장하는 스냅샷 엔티티입니다.
+- `OrderEntity.orderNumber`와 `orderDate`는 매장별 일자별 픽업 확인 번호를 관리합니다.
 - `PaymentEntity.orderId`가 unique라서 주문 하나당 결제는 최대 하나입니다.
+- `PaymentEntity.paymentKey`와 `method`는 토스 승인 결과, `cancelReason`과 `cancelledAt`은 취소 결과를 저장합니다.
 
 ## 기준 파일
 

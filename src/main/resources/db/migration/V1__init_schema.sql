@@ -1,8 +1,6 @@
 /*
  신규 환경에서 현재 최종 스키마를 한 번에 구성하기 위한 통합 baseline migration입니다.
  users, auth, keyword, store, bread, cart, order, payment 도메인 테이블과 인덱스를 포함합니다.
-
- 기존 환경에서는 이미 적용된 migration 이력을 그대로 유지합니다.
  */
 
 -- ============================================================
@@ -184,12 +182,15 @@ CREATE TABLE orders (
     status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
     total_amount INT NOT NULL,
     idempotency_key VARCHAR(255) NULL,
+    order_number VARCHAR(4) NULL,
+    order_date DATE NULL,
     created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
     CONSTRAINT fk_orders_users FOREIGN KEY (user_id) REFERENCES users(id),
     CONSTRAINT fk_orders_store FOREIGN KEY (store_id) REFERENCES store(id),
     CONSTRAINT chk_orders_total_amount CHECK (total_amount > 0),
     UNIQUE INDEX uk_orders_user_id_idempotency_key (user_id, idempotency_key),
+    UNIQUE INDEX uk_orders_store_order_date_number (store_id, order_date, order_number),
     INDEX idx_orders_user_id (user_id),
     INDEX idx_orders_store_id (store_id),
     INDEX idx_orders_user_id_created_at (user_id, created_at DESC),
@@ -224,9 +225,15 @@ CREATE TABLE payment (
     status VARCHAR(20) NOT NULL,
     paid_at DATETIME(6) NULL,
     idempotency_key VARCHAR(255) NULL,
+    payment_key VARCHAR(200) NULL,
+    method VARCHAR(50) NULL,
+    cancel_reason VARCHAR(200) NULL,
+    cancelled_at DATETIME(6) NULL,
     created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
     CONSTRAINT fk_payment_orders FOREIGN KEY (order_id) REFERENCES orders(id),
     CONSTRAINT chk_payment_amount CHECK (amount > 0),
-    INDEX idx_payment_order_id_idempotency_key (order_id, idempotency_key)
+    INDEX idx_payment_order_id_idempotency_key (order_id, idempotency_key),
+    INDEX idx_payment_payment_key (payment_key),
+    INDEX idx_payment_idempotency_key (idempotency_key)
 );

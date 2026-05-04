@@ -1,6 +1,7 @@
 package com.todaybread.server;
 
 import com.todaybread.server.domain.order.config.OrderExpiryProperties;
+import com.todaybread.server.domain.payment.config.TossPaymentProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -14,7 +15,7 @@ import java.time.Clock;
  */
 @SpringBootApplication
 @EnableJpaAuditing
-@EnableConfigurationProperties(OrderExpiryProperties.class)
+@EnableConfigurationProperties({OrderExpiryProperties.class, TossPaymentProperties.class})
 public class ServerApplication {
 
 	public static void main(String[] args) {

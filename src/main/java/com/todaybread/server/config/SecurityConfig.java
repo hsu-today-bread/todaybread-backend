@@ -129,7 +129,8 @@ public class SecurityConfig {
                                 "/api/user/find-email",
                                 "/api/user/verify-identity",
                                 "/api/user/reset-password",
-                                "/images/**"
+                                "/images/**",
+                                "/api/payments/client-key"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

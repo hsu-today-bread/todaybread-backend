@@ -61,7 +61,7 @@ import java.util.UUID;
 
 @SpringBootTest(classes = {ServerApplication.class, ApiIntegrationTestSupport.FixedClockConfig.class})
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
+@ActiveProfiles({"test", "stub"})
 @SpringJUnitConfig
 abstract class ApiIntegrationTestSupport {
 

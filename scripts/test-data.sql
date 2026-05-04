@@ -2,32 +2,39 @@ SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 SET collation_connection = 'utf8mb4_unicode_ci';
 
 /*
- 개발용 테스트 데이터 스크립트
+ 개발용 테스트 데이터 스크립트 (v2)
 
  재실행 가능하도록, 아래 샘플 계정/매장에 해당하는 데이터만 먼저 정리한 뒤 다시 삽입합니다.
 
  샘플 로그인 계정
- - 일반 유저: demo-user@todaybread.local / todaybread123
- - 사장님 1: demo-boss-gangnam@todaybread.local / todaybread123
- - 사장님 2: demo-boss-seolleung@todaybread.local / todaybread123
- - 사장님 3: demo-boss-yeoksam@todaybread.local / todaybread123
- - 사장님 4: demo-boss-samsung@todaybread.local / todaybread123
- - 사장님 5: demo-boss-daechi@todaybread.local / todaybread123
+ - 일반 유저:  demo-user@todaybread.com / todaybread123
+ - 사장님 1~10: demo-boss1@todaybread.com ~ demo-boss10@todaybread.com / todaybread123
 
- 근처 매장/빵 조회 추천 좌표
+ 근처 매장/빵 조회 추천 좌표 (강남역 기준)
  - lat=37.4980950
  - lng=127.0276100
- - radius=3
+ - radius=5
+
+ 이미지
+ - 빵 이미지 10장(seed_bread_01 ~ seed_bread_10)을 돌려서 사용
+ - 매장 이미지 10장(seed_store_01 ~ seed_store_10)을 중복 없이 하나씩 사용
+ - scripts/test-data.sh 가 uploads/ 에 SVG 플레이스홀더를 생성합니다.
+   실제 이미지로 교체하려면 scripts/seed-images/ 에 같은 파일명으로 넣어주세요.
  */
 
-SET @test_data_password_hash = '$argon2id$v=19$m=16384,t=2,p=1$q74E5AXcCNxyfKx3iCCtEQ$12t7qic0oWGPI8R9E3T8uCO+q0sP+fsK1paO8Hc3hXY';
+SET @pw = '$argon2id$v=19$m=16384,t=2,p=1$q74E5AXcCNxyfKx3iCCtEQ$12t7qic0oWGPI8R9E3T8uCO+q0sP+fsK1paO8Hc3hXY';
 
-SET @demo_user_email = 'demo-user@todaybread.local';
-SET @demo_boss_gangnam_email = 'demo-boss-gangnam@todaybread.local';
-SET @demo_boss_seolleung_email = 'demo-boss-seolleung@todaybread.local';
-SET @demo_boss_yeoksam_email = 'demo-boss-yeoksam@todaybread.local';
-SET @demo_boss_samsung_email = 'demo-boss-samsung@todaybread.local';
-SET @demo_boss_daechi_email = 'demo-boss-daechi@todaybread.local';
+SET @e_user   = 'demo-user@todaybread.com';
+SET @e_boss1  = 'demo-boss1@todaybread.com';
+SET @e_boss2  = 'demo-boss2@todaybread.com';
+SET @e_boss3  = 'demo-boss3@todaybread.com';
+SET @e_boss4  = 'demo-boss4@todaybread.com';
+SET @e_boss5  = 'demo-boss5@todaybread.com';
+SET @e_boss6  = 'demo-boss6@todaybread.com';
+SET @e_boss7  = 'demo-boss7@todaybread.com';
+SET @e_boss8  = 'demo-boss8@todaybread.com';
+SET @e_boss9  = 'demo-boss9@todaybread.com';
+SET @e_boss10 = 'demo-boss10@todaybread.com';
 
 START TRANSACTION;
 
@@ -35,232 +42,176 @@ START TRANSACTION;
    기존 데이터 정리 (재실행 가능)
    ============================================================ */
 
-DELETE fs
-FROM favourite_store fs
-LEFT JOIN users u ON fs.user_id = u.id
-LEFT JOIN store s ON fs.store_id = s.id
-LEFT JOIN users su ON s.user_id = su.id
-WHERE u.email = @demo_user_email
+/* -- 구버전(v1) seed 이메일도 함께 정리 -- */
+SET @old_user   = 'demo-user@todaybread.local';
+SET @old_boss1  = 'demo-boss-gangnam@todaybread.local';
+SET @old_boss2  = 'demo-boss-seolleung@todaybread.local';
+SET @old_boss3  = 'demo-boss-yeoksam@todaybread.local';
+SET @old_boss4  = 'demo-boss-samsung@todaybread.local';
+SET @old_boss5  = 'demo-boss-daechi@todaybread.local';
+
+DELETE fs FROM favourite_store fs
+LEFT JOIN users u  ON fs.user_id  = u.id
+LEFT JOIN store s  ON fs.store_id = s.id
+LEFT JOIN users su ON s.user_id   = su.id
+WHERE u.email IN (@e_user, @old_user)
    OR su.email IN (
-       @demo_boss_gangnam_email,
-       @demo_boss_seolleung_email,
-       @demo_boss_yeoksam_email,
-       @demo_boss_samsung_email,
-       @demo_boss_daechi_email
+       @e_boss1,@e_boss2,@e_boss3,@e_boss4,@e_boss5,
+       @e_boss6,@e_boss7,@e_boss8,@e_boss9,@e_boss10,
+       @old_boss1,@old_boss2,@old_boss3,@old_boss4,@old_boss5
    );
 
-DELETE uk
-FROM user_keyword uk
+DELETE uk FROM user_keyword uk
 JOIN users u ON uk.user_id = u.id
-WHERE u.email = @demo_user_email;
+WHERE u.email IN (@e_user, @old_user);
 
-/* 주문 관련 정리 (order_item → payment → orders 순서) */
 DELETE oi FROM order_item oi
 JOIN orders o ON oi.order_id = o.id
-JOIN store s ON o.store_id = s.id
-JOIN users u ON s.user_id = u.id
+JOIN store s  ON o.store_id  = s.id
+JOIN users u  ON s.user_id   = u.id
 WHERE u.email IN (
-    @demo_boss_gangnam_email,
-    @demo_boss_seolleung_email,
-    @demo_boss_yeoksam_email,
-    @demo_boss_samsung_email,
-    @demo_boss_daechi_email
+    @e_boss1,@e_boss2,@e_boss3,@e_boss4,@e_boss5,
+    @e_boss6,@e_boss7,@e_boss8,@e_boss9,@e_boss10,
+    @old_boss1,@old_boss2,@old_boss3,@old_boss4,@old_boss5
 );
 
 DELETE p FROM payment p
 JOIN orders o ON p.order_id = o.id
-JOIN store s ON o.store_id = s.id
-JOIN users u ON s.user_id = u.id
+JOIN store s  ON o.store_id = s.id
+JOIN users u  ON s.user_id  = u.id
 WHERE u.email IN (
-    @demo_boss_gangnam_email,
-    @demo_boss_seolleung_email,
-    @demo_boss_yeoksam_email,
-    @demo_boss_samsung_email,
-    @demo_boss_daechi_email
+    @e_boss1,@e_boss2,@e_boss3,@e_boss4,@e_boss5,
+    @e_boss6,@e_boss7,@e_boss8,@e_boss9,@e_boss10,
+    @old_boss1,@old_boss2,@old_boss3,@old_boss4,@old_boss5
 );
 
 DELETE o FROM orders o
 JOIN store s ON o.store_id = s.id
-JOIN users u ON s.user_id = u.id
+JOIN users u ON s.user_id  = u.id
 WHERE u.email IN (
-    @demo_boss_gangnam_email,
-    @demo_boss_seolleung_email,
-    @demo_boss_yeoksam_email,
-    @demo_boss_samsung_email,
-    @demo_boss_daechi_email
+    @e_boss1,@e_boss2,@e_boss3,@e_boss4,@e_boss5,
+    @e_boss6,@e_boss7,@e_boss8,@e_boss9,@e_boss10,
+    @old_boss1,@old_boss2,@old_boss3,@old_boss4,@old_boss5
 );
 
-DELETE bi
-FROM bread_image bi
+DELETE ci FROM cart_item ci
+JOIN cart c ON ci.cart_id = c.id
+LEFT JOIN users cu ON c.user_id = cu.id
+LEFT JOIN store s  ON c.store_id = s.id
+LEFT JOIN users su ON s.user_id  = su.id
+WHERE cu.email IN (@e_user, @old_user,
+    @e_boss1,@e_boss2,@e_boss3,@e_boss4,@e_boss5,
+    @e_boss6,@e_boss7,@e_boss8,@e_boss9,@e_boss10)
+   OR su.email IN (
+    @e_boss1,@e_boss2,@e_boss3,@e_boss4,@e_boss5,
+    @e_boss6,@e_boss7,@e_boss8,@e_boss9,@e_boss10,
+    @old_boss1,@old_boss2,@old_boss3,@old_boss4,@old_boss5
+);
+
+DELETE c FROM cart c
+LEFT JOIN users cu ON c.user_id = cu.id
+LEFT JOIN store s  ON c.store_id = s.id
+LEFT JOIN users su ON s.user_id  = su.id
+WHERE cu.email IN (@e_user, @old_user,
+    @e_boss1,@e_boss2,@e_boss3,@e_boss4,@e_boss5,
+    @e_boss6,@e_boss7,@e_boss8,@e_boss9,@e_boss10)
+   OR su.email IN (
+    @e_boss1,@e_boss2,@e_boss3,@e_boss4,@e_boss5,
+    @e_boss6,@e_boss7,@e_boss8,@e_boss9,@e_boss10,
+    @old_boss1,@old_boss2,@old_boss3,@old_boss4,@old_boss5
+);
+
+DELETE bi FROM bread_image bi
 JOIN bread b ON bi.bread_id = b.id
-JOIN store s ON b.store_id = s.id
-JOIN users u ON s.user_id = u.id
+JOIN store s ON b.store_id  = s.id
+JOIN users u ON s.user_id   = u.id
 WHERE u.email IN (
-    @demo_boss_gangnam_email,
-    @demo_boss_seolleung_email,
-    @demo_boss_yeoksam_email,
-    @demo_boss_samsung_email,
-    @demo_boss_daechi_email
+    @e_boss1,@e_boss2,@e_boss3,@e_boss4,@e_boss5,
+    @e_boss6,@e_boss7,@e_boss8,@e_boss9,@e_boss10,
+    @old_boss1,@old_boss2,@old_boss3,@old_boss4,@old_boss5
 );
 
-DELETE b
-FROM bread b
+DELETE b FROM bread b
 JOIN store s ON b.store_id = s.id
-JOIN users u ON s.user_id = u.id
+JOIN users u ON s.user_id  = u.id
 WHERE u.email IN (
-    @demo_boss_gangnam_email,
-    @demo_boss_seolleung_email,
-    @demo_boss_yeoksam_email,
-    @demo_boss_samsung_email,
-    @demo_boss_daechi_email
+    @e_boss1,@e_boss2,@e_boss3,@e_boss4,@e_boss5,
+    @e_boss6,@e_boss7,@e_boss8,@e_boss9,@e_boss10,
+    @old_boss1,@old_boss2,@old_boss3,@old_boss4,@old_boss5
 );
 
-DELETE si
-FROM store_image si
+DELETE si FROM store_image si
 JOIN store s ON si.store_id = s.id
-JOIN users u ON s.user_id = u.id
+JOIN users u ON s.user_id   = u.id
 WHERE u.email IN (
-    @demo_boss_gangnam_email,
-    @demo_boss_seolleung_email,
-    @demo_boss_yeoksam_email,
-    @demo_boss_samsung_email,
-    @demo_boss_daechi_email
+    @e_boss1,@e_boss2,@e_boss3,@e_boss4,@e_boss5,
+    @e_boss6,@e_boss7,@e_boss8,@e_boss9,@e_boss10,
+    @old_boss1,@old_boss2,@old_boss3,@old_boss4,@old_boss5
 );
 
-DELETE sbh
-FROM store_business_hours sbh
+DELETE sbh FROM store_business_hours sbh
 JOIN store s ON sbh.store_id = s.id
-JOIN users u ON s.user_id = u.id
+JOIN users u ON s.user_id    = u.id
 WHERE u.email IN (
-    @demo_boss_gangnam_email,
-    @demo_boss_seolleung_email,
-    @demo_boss_yeoksam_email,
-    @demo_boss_samsung_email,
-    @demo_boss_daechi_email
+    @e_boss1,@e_boss2,@e_boss3,@e_boss4,@e_boss5,
+    @e_boss6,@e_boss7,@e_boss8,@e_boss9,@e_boss10,
+    @old_boss1,@old_boss2,@old_boss3,@old_boss4,@old_boss5
 );
 
-DELETE s
-FROM store s
+DELETE s FROM store s
 JOIN users u ON s.user_id = u.id
 WHERE u.email IN (
-    @demo_boss_gangnam_email,
-    @demo_boss_seolleung_email,
-    @demo_boss_yeoksam_email,
-    @demo_boss_samsung_email,
-    @demo_boss_daechi_email
+    @e_boss1,@e_boss2,@e_boss3,@e_boss4,@e_boss5,
+    @e_boss6,@e_boss7,@e_boss8,@e_boss9,@e_boss10,
+    @old_boss1,@old_boss2,@old_boss3,@old_boss4,@old_boss5
 );
 
-DELETE rt
-FROM refresh_token rt
+DELETE rt FROM refresh_token rt
 JOIN users u ON rt.user_id = u.id
 WHERE u.email IN (
-    @demo_user_email,
-    @demo_boss_gangnam_email,
-    @demo_boss_seolleung_email,
-    @demo_boss_yeoksam_email,
-    @demo_boss_samsung_email,
-    @demo_boss_daechi_email
+    @e_user, @old_user,
+    @e_boss1,@e_boss2,@e_boss3,@e_boss4,@e_boss5,
+    @e_boss6,@e_boss7,@e_boss8,@e_boss9,@e_boss10,
+    @old_boss1,@old_boss2,@old_boss3,@old_boss4,@old_boss5
 );
 
-DELETE FROM keyword
-WHERE normalised_text IN (
-    'tb-seed-croissant',
-    'tb-seed-salt-bread',
-    'tb-seed-late-night',
-    'tb-test-data-croissant',
-    'tb-test-data-salt-bread',
-    'tb-test-data-late-night'
-);
+DELETE FROM keyword WHERE normalised_text LIKE 'tb-test-data-%' OR normalised_text LIKE 'tb-seed-%';
 
-DELETE FROM users
-WHERE email IN (
-    @demo_user_email,
-    @demo_boss_gangnam_email,
-    @demo_boss_seolleung_email,
-    @demo_boss_yeoksam_email,
-    @demo_boss_samsung_email,
-    @demo_boss_daechi_email
+DELETE FROM users WHERE email IN (
+    @e_user, @old_user,
+    @e_boss1,@e_boss2,@e_boss3,@e_boss4,@e_boss5,
+    @e_boss6,@e_boss7,@e_boss8,@e_boss9,@e_boss10,
+    @old_boss1,@old_boss2,@old_boss3,@old_boss4,@old_boss5
 );
 
 /* ============================================================
-   유저 삽입
+   유저 삽입 (일반 유저 1 + 사장님 10)
    ============================================================ */
 
-INSERT INTO users (
-    email,
-    name,
-    password_hash,
-    nickname,
-    phone_number,
-    is_boss
-) VALUES
-    (
-        @demo_user_email,
-        '데모 유저',
-        @test_data_password_hash,
-        'demo-user',
-        '010-7000-1001',
-        FALSE
-    ),
-    (
-        @demo_boss_gangnam_email,
-        '강남 사장님',
-        @test_data_password_hash,
-        'demo-boss-gangnam',
-        '010-7000-2001',
-        TRUE
-    ),
-    (
-        @demo_boss_seolleung_email,
-        '선릉 사장님',
-        @test_data_password_hash,
-        'demo-boss-seolleung',
-        '010-7000-2002',
-        TRUE
-    ),
-    (
-        @demo_boss_yeoksam_email,
-        '역삼 사장님',
-        @test_data_password_hash,
-        'demo-boss-yeoksam',
-        '010-7000-2003',
-        TRUE
-    ),
-    (
-        @demo_boss_samsung_email,
-        '삼성 사장님',
-        @test_data_password_hash,
-        'demo-boss-samsung',
-        '010-7000-2004',
-        TRUE
-    ),
-    (
-        @demo_boss_daechi_email,
-        '대치 사장님',
-        @test_data_password_hash,
-        'demo-boss-daechi',
-        '010-7000-2005',
-        TRUE
-    );
+INSERT INTO users (email, name, password_hash, nickname, phone_number, is_boss) VALUES
+    (@e_user,   '데모 유저',    @pw, 'demo-user',   '010-9000-0001', FALSE),
+    (@e_boss1,  '사장님 01',    @pw, 'demo-boss1',  '010-9000-1001', TRUE),
+    (@e_boss2,  '사장님 02',    @pw, 'demo-boss2',  '010-9000-1002', TRUE),
+    (@e_boss3,  '사장님 03',    @pw, 'demo-boss3',  '010-9000-1003', TRUE),
+    (@e_boss4,  '사장님 04',    @pw, 'demo-boss4',  '010-9000-1004', TRUE),
+    (@e_boss5,  '사장님 05',    @pw, 'demo-boss5',  '010-9000-1005', TRUE),
+    (@e_boss6,  '사장님 06',    @pw, 'demo-boss6',  '010-9000-1006', TRUE),
+    (@e_boss7,  '사장님 07',    @pw, 'demo-boss7',  '010-9000-1007', TRUE),
+    (@e_boss8,  '사장님 08',    @pw, 'demo-boss8',  '010-9000-1008', TRUE),
+    (@e_boss9,  '사장님 09',    @pw, 'demo-boss9',  '010-9000-1009', TRUE),
+    (@e_boss10, '사장님 10',    @pw, 'demo-boss10', '010-9000-1010', TRUE);
 
-SET @demo_user_id = (
-    SELECT id FROM users WHERE email = @demo_user_email
-);
-SET @demo_boss_gangnam_id = (
-    SELECT id FROM users WHERE email = @demo_boss_gangnam_email
-);
-SET @demo_boss_seolleung_id = (
-    SELECT id FROM users WHERE email = @demo_boss_seolleung_email
-);
-SET @demo_boss_yeoksam_id = (
-    SELECT id FROM users WHERE email = @demo_boss_yeoksam_email
-);
-SET @demo_boss_samsung_id = (
-    SELECT id FROM users WHERE email = @demo_boss_samsung_email
-);
-SET @demo_boss_daechi_id = (
-    SELECT id FROM users WHERE email = @demo_boss_daechi_email
-);
+SET @uid  = (SELECT id FROM users WHERE email = @e_user);
+SET @b1   = (SELECT id FROM users WHERE email = @e_boss1);
+SET @b2   = (SELECT id FROM users WHERE email = @e_boss2);
+SET @b3   = (SELECT id FROM users WHERE email = @e_boss3);
+SET @b4   = (SELECT id FROM users WHERE email = @e_boss4);
+SET @b5   = (SELECT id FROM users WHERE email = @e_boss5);
+SET @b6   = (SELECT id FROM users WHERE email = @e_boss6);
+SET @b7   = (SELECT id FROM users WHERE email = @e_boss7);
+SET @b8   = (SELECT id FROM users WHERE email = @e_boss8);
+SET @b9   = (SELECT id FROM users WHERE email = @e_boss9);
+SET @b10  = (SELECT id FROM users WHERE email = @e_boss10);
 
 /* ============================================================
    키워드
@@ -268,1172 +219,439 @@ SET @demo_boss_daechi_id = (
 
 INSERT INTO keyword (normalised_text) VALUES
     ('tb-test-data-croissant'),
-    ('tb-test-data-salt-bread'),
-    ('tb-test-data-late-night');
+    ('tb-test-data-sourdough'),
+    ('tb-test-data-bagel');
 
 INSERT INTO user_keyword (user_id, keyword_id, display_text)
-SELECT
-    @demo_user_id,
-    k.id,
+SELECT @uid, k.id,
     CASE k.normalised_text
         WHEN 'tb-test-data-croissant' THEN '크루아상'
-        WHEN 'tb-test-data-salt-bread' THEN '소금빵'
-        WHEN 'tb-test-data-late-night' THEN '늦게까지 영업'
+        WHEN 'tb-test-data-sourdough' THEN '사워도우'
+        WHEN 'tb-test-data-bagel'     THEN '베이글'
     END
 FROM keyword k
-WHERE k.normalised_text IN (
-    'tb-test-data-croissant',
-    'tb-test-data-salt-bread',
-    'tb-test-data-late-night'
-);
+WHERE k.normalised_text IN ('tb-test-data-croissant','tb-test-data-sourdough','tb-test-data-bagel');
+
+/* ============================================================
+   매장 삽입 (10개) — 강남역(37.4981, 127.0276) 반경 ~5km
+   ============================================================ */
+
+INSERT INTO store (user_id, name, phone_number, description, address_line1, address_line2, latitude, longitude, is_active) VALUES
+    (@b1,  '르뺑드마리 강남점',   '02-9000-3001', '프랑스식 정통 빵을 굽는 강남역 근처 베이커리입니다.',       '서울특별시 강남구 테헤란로 123',   '1층',     37.4981000, 127.0276000, TRUE),
+    (@b2,  '밀도 선릉점',         '02-9000-3002', '매일 아침 갓 구운 식빵과 샌드위치를 판매합니다.',           '서울특별시 강남구 선릉로 431',     '2층',     37.5045000, 127.0489000, TRUE),
+    (@b3,  '나폴레옹과자점 역삼점','02-9000-3003', '40년 전통의 수제 과자와 빵을 만듭니다.',                   '서울특별시 강남구 역삼로 210',     '1층',     37.5000000, 127.0365000, TRUE),
+    (@b4,  '오월의종 삼성점',      '02-9000-3004', '천연 발효종으로 만든 건강한 빵을 판매합니다.',              '서울특별시 강남구 삼성로 512',     '지하 1층', 37.5088000, 127.0630000, TRUE),
+    (@b5,  '빵명장 대치점',        '02-9000-3005', '장인이 직접 구운 프리미엄 빵을 만나보세요.',               '서울특별시 강남구 대치로 85',      '2층',     37.4945000, 127.0580000, TRUE),
+    (@b6,  '쿠헨 논현점',          '02-9000-3006', '독일식 호밀빵과 프레첼 전문 베이커리입니다.',              '서울특별시 강남구 논현로 654',     '1층',     37.5110000, 127.0230000, TRUE),
+    (@b7,  '아티장베이커리 청담점', '02-9000-3007', '유기농 밀가루로 만든 수제 빵을 판매합니다.',               '서울특별시 강남구 청담동 12-3',    '1층',     37.5200000, 127.0470000, TRUE),
+    (@b8,  '브레드랩 서초점',       '02-9000-3008', '실험적인 레시피로 새로운 빵을 연구합니다.',               '서울특별시 서초구 서초대로 321',   '3층',     37.4920000, 127.0100000, TRUE),
+    (@b9,  '밀밭제과 잠실점',       '02-9000-3009', '동네 주민이 사랑하는 따뜻한 동네 빵집입니다.',            '서울특별시 송파구 올림픽로 240',   '1층',     37.5130000, 127.0850000, TRUE),
+    (@b10, '뚜레쥬르 양재점',       '02-9000-3010', '매일 신선한 빵과 케이크를 만듭니다.',                    '서울특별시 서초구 양재대로 55',    '1층',     37.4840000, 127.0340000, TRUE);
+
+SET @s1  = (SELECT id FROM store WHERE user_id = @b1);
+SET @s2  = (SELECT id FROM store WHERE user_id = @b2);
+SET @s3  = (SELECT id FROM store WHERE user_id = @b3);
+SET @s4  = (SELECT id FROM store WHERE user_id = @b4);
+SET @s5  = (SELECT id FROM store WHERE user_id = @b5);
+SET @s6  = (SELECT id FROM store WHERE user_id = @b6);
+SET @s7  = (SELECT id FROM store WHERE user_id = @b7);
+SET @s8  = (SELECT id FROM store WHERE user_id = @b8);
+SET @s9  = (SELECT id FROM store WHERE user_id = @b9);
+SET @s10 = (SELECT id FROM store WHERE user_id = @b10);
+
+/* ============================================================
+   매장 이미지 (10장을 중복 없이 하나씩)
+   ============================================================ */
+
+INSERT INTO store_image (store_id, original_filename, stored_filename, display_order) VALUES
+    (@s1,  'seed-store-01.svg', 'seed_store_01.svg', 0),
+    (@s2,  'seed-store-02.svg', 'seed_store_02.svg', 0),
+    (@s3,  'seed-store-03.svg', 'seed_store_03.svg', 0),
+    (@s4,  'seed-store-04.svg', 'seed_store_04.svg', 0),
+    (@s5,  'seed-store-05.svg', 'seed_store_05.svg', 0),
+    (@s6,  'seed-store-06.svg', 'seed_store_06.svg', 0),
+    (@s7,  'seed-store-07.svg', 'seed_store_07.svg', 0),
+    (@s8,  'seed-store-08.svg', 'seed_store_08.svg', 0),
+    (@s9,  'seed-store-09.svg', 'seed_store_09.svg', 0),
+    (@s10, 'seed-store-10.svg', 'seed_store_10.svg', 0);
+
+/* ============================================================
+   영업시간 — 개발 편의상 모든 요일 00:00~23:59 영업
+   ============================================================ */
+
+INSERT INTO store_business_hours (store_id, day_of_week, is_closed, start_time, end_time, last_order_time)
+SELECT s.id, d.day, FALSE, '00:00:00', '23:59:00', '23:58:00'
+FROM store s
+JOIN (SELECT 1 AS day UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6 UNION SELECT 7) d
+WHERE s.id IN (@s1,@s2,@s3,@s4,@s5,@s6,@s7,@s8,@s9,@s10);
 
 
 /* ============================================================
-   매장 삽입 (5개)
+   빵 삽입 (각 가게 6~8개, 총 70개)
+   빵 이미지 10장(seed_bread_01~10)을 돌려서 사용
    ============================================================ */
 
-INSERT INTO store (
-    user_id,
-    name,
-    phone_number,
-    description,
-    address_line1,
-    address_line2,
-    latitude,
-    longitude,
-    is_active
-) VALUES
-    (
-        @demo_boss_gangnam_id,
-        '투데이브레드 데모 강남점',
-        '02-7000-3001',
-        '강남역 근처에서 소금빵과 식사용 빵을 판매하는 프론트 연동용 데모 매장입니다.',
-        '서울특별시 강남구 테헤란로 123',
-        '1층',
-        37.4980950,
-        127.0276100,
-        TRUE
-    ),
-    (
-        @demo_boss_seolleung_id,
-        '투데이브레드 데모 선릉점',
-        '02-7000-3002',
-        '선릉역 근처에서 크루아상과 사워도우를 판매하는 프론트 연동용 데모 매장입니다.',
-        '서울특별시 강남구 선릉로 431',
-        '2층',
-        37.5045000,
-        127.0489000,
-        TRUE
-    ),
-    (
-        @demo_boss_yeoksam_id,
-        '투데이브레드 데모 역삼점',
-        '02-7000-3003',
-        '역삼역 인근에서 베이글과 머핀을 판매하는 프론트 연동용 데모 매장입니다.',
-        '서울특별시 강남구 역삼로 210',
-        '1층',
-        37.5000000,
-        127.0365000,
-        TRUE
-    ),
-    (
-        @demo_boss_samsung_id,
-        '투데이브레드 데모 삼성점',
-        '02-7000-3004',
-        '삼성역 근처에서 식빵과 간식빵을 판매하는 프론트 연동용 데모 매장입니다.',
-        '서울특별시 강남구 삼성로 512',
-        '지하 1층',
-        37.5088000,
-        127.0630000,
-        TRUE
-    ),
-    (
-        @demo_boss_daechi_id,
-        '투데이브레드 데모 대치점',
-        '02-7000-3005',
-        '대치동에서 건강빵과 디저트를 판매하는 프론트 연동용 데모 매장입니다.',
-        '서울특별시 강남구 대치로 85',
-        '2층',
-        37.4945000,
-        127.0580000,
-        TRUE
-    );
+/* ── 가게 1: 르뺑드마리 강남점 (7개) ── */
+INSERT INTO bread (store_id, name, original_price, sale_price, remaining_quantity, description) VALUES
+    (@s1, '클래식 크루아상',     4200, 3200, 12, '겹겹이 바삭한 정통 프랑스식 크루아상입니다.'),
+    (@s1, '통밀 캄파뉴',         7500, 5500,  3, '천연 발효종으로 만든 묵직한 캄파뉴입니다.'),
+    (@s1, '에그 타르트',         3800, 2800,  8, '바삭한 페이스트리에 부드러운 커스터드가 가득합니다.'),
+    (@s1, '갈릭 바게트',         5000, 3500, 15, '마늘 버터가 듬뿍 발린 바삭한 바게트입니다.'),
+    (@s1, '초코 브리오슈',       4500, 3200,  0, '진한 초콜릿이 들어간 부드러운 브리오슈입니다.'),
+    (@s1, '블루베리 스콘',       3500, 2500,  6, '블루베리가 톡톡 터지는 영국식 스콘입니다.'),
+    (@s1, '호두 크랜베리 빵',    5500, 4000,  4, '호두와 크랜베리가 듬뿍 들어간 건강빵입니다.');
 
-SET @demo_store_gangnam_id = (
-    SELECT id FROM store WHERE user_id = @demo_boss_gangnam_id
-);
-SET @demo_store_seolleung_id = (
-    SELECT id FROM store WHERE user_id = @demo_boss_seolleung_id
-);
-SET @demo_store_yeoksam_id = (
-    SELECT id FROM store WHERE user_id = @demo_boss_yeoksam_id
-);
-SET @demo_store_samsung_id = (
-    SELECT id FROM store WHERE user_id = @demo_boss_samsung_id
-);
-SET @demo_store_daechi_id = (
-    SELECT id FROM store WHERE user_id = @demo_boss_daechi_id
-);
+/* ── 가게 2: 밀도 선릉점 (7개) ── */
+INSERT INTO bread (store_id, name, original_price, sale_price, remaining_quantity, description) VALUES
+    (@s2, '우유 식빵',           4500, 3200, 10, '부드럽고 달콤한 프리미엄 우유식빵입니다.'),
+    (@s2, '크림치즈 베이글',     4000, 2800,  7, '크림치즈가 듬뿍 들어간 쫄깃한 베이글입니다.'),
+    (@s2, '시나몬 롤',           4800, 3500,  5, '달콤한 시나몬 향이 가득한 롤빵입니다.'),
+    (@s2, '올리브 포카치아',     5200, 3800, 11, '올리브와 로즈마리가 올라간 이탈리안 포카치아입니다.'),
+    (@s2, '단팥 크루아상',       4200, 3000,  0, '달콤한 팥앙금이 들어간 크루아상입니다.'),
+    (@s2, '레몬 파운드케이크',   5000, 3500,  9, '상큼한 레몬 글레이즈가 올라간 파운드케이크입니다.'),
+    (@s2, '흑미 식빵',           5500, 4000,  2, '흑미로 만든 건강한 식빵입니다.');
 
-/* ============================================================
-   영업시간 (월~토 영업, 일요일 휴무 — 가게마다 시간 다름)
-   day_of_week: 1=월 ~ 7=일
-   ============================================================ */
+/* ── 가게 3: 나폴레옹과자점 역삼점 (7개) ── */
+INSERT INTO bread (store_id, name, original_price, sale_price, remaining_quantity, description) VALUES
+    (@s3, '소보로빵',            3000, 2100, 14, '바삭한 소보로 토핑이 올라간 추억의 빵입니다.'),
+    (@s3, '카레빵',              3800, 2700,  6, '매콤한 카레가 가득 찬 튀김빵입니다.'),
+    (@s3, '크림빵',              3200, 2300, 13, '부드러운 커스터드 크림이 가득합니다.'),
+    (@s3, '피자빵',              4000, 2800,  0, '토마토소스와 치즈가 올라간 피자빵입니다.'),
+    (@s3, '꽈배기 도넛',         2800, 2000, 10, '달콤한 설탕이 묻은 꽈배기 도넛입니다.'),
+    (@s3, '햄치즈 샌드위치빵',   4500, 3200,  8, '햄과 치즈가 들어간 든든한 샌드위치빵입니다.'),
+    (@s3, '밤식빵',              6800, 5000,  1, '달콤한 밤이 듬뿍 들어간 식빵입니다.');
 
-/* 강남점: 07:00~23:00 */
-INSERT INTO store_business_hours (store_id, day_of_week, is_closed, start_time, end_time, last_order_time) VALUES
-    (@demo_store_gangnam_id, 1, FALSE, '07:00:00', '23:00:00', '22:30:00'),
-    (@demo_store_gangnam_id, 2, FALSE, '07:00:00', '23:00:00', '22:30:00'),
-    (@demo_store_gangnam_id, 3, FALSE, '07:00:00', '23:00:00', '22:30:00'),
-    (@demo_store_gangnam_id, 4, FALSE, '07:00:00', '23:00:00', '22:30:00'),
-    (@demo_store_gangnam_id, 5, FALSE, '07:00:00', '23:00:00', '22:30:00'),
-    (@demo_store_gangnam_id, 6, FALSE, '07:00:00', '23:00:00', '22:30:00'),
-    (@demo_store_gangnam_id, 7, TRUE,  NULL,       NULL,       NULL);
+/* ── 가게 4: 오월의종 삼성점 (7개) ── */
+INSERT INTO bread (store_id, name, original_price, sale_price, remaining_quantity, description) VALUES
+    (@s4, '사워도우 부울',       8500, 6500,  4, '48시간 발효한 정통 사워도우입니다.'),
+    (@s4, '호밀빵',              6000, 4200,  7, '100% 호밀로 만든 독일식 빵입니다.'),
+    (@s4, '치아바타',            5200, 3900,  9, '겉은 바삭하고 속은 쫄깃한 이탈리안 치아바타입니다.'),
+    (@s4, '무화과 호두빵',       7000, 5200,  2, '무화과와 호두가 박힌 건강한 빵입니다.'),
+    (@s4, '올리브 치아바타',     5500, 4000, 11, '블랙 올리브가 들어간 치아바타입니다.'),
+    (@s4, '통밀 바게트',         4800, 3500,  0, '통밀로 만든 바삭한 바게트입니다.'),
+    (@s4, '크랜베리 호밀빵',     6500, 4800,  5, '크랜베리가 들어간 새콤달콤한 호밀빵입니다.');
 
-/* 선릉점: 09:00~21:00 */
-INSERT INTO store_business_hours (store_id, day_of_week, is_closed, start_time, end_time, last_order_time) VALUES
-    (@demo_store_seolleung_id, 1, FALSE, '09:00:00', '21:00:00', '20:30:00'),
-    (@demo_store_seolleung_id, 2, FALSE, '09:00:00', '21:00:00', '20:30:00'),
-    (@demo_store_seolleung_id, 3, FALSE, '09:00:00', '21:00:00', '20:30:00'),
-    (@demo_store_seolleung_id, 4, FALSE, '09:00:00', '21:00:00', '20:30:00'),
-    (@demo_store_seolleung_id, 5, FALSE, '09:00:00', '21:00:00', '20:30:00'),
-    (@demo_store_seolleung_id, 6, FALSE, '09:00:00', '21:00:00', '20:30:00'),
-    (@demo_store_seolleung_id, 7, TRUE,  NULL,       NULL,       NULL);
+/* ── 가게 5: 빵명장 대치점 (7개) ── */
+INSERT INTO bread (store_id, name, original_price, sale_price, remaining_quantity, description) VALUES
+    (@s5, '앙버터 바게트',       5800, 4300,  6, '달콤한 팥과 버터의 환상 조합입니다.'),
+    (@s5, '마카다미아 쿠키빵',   4200, 3000, 10, '마카다미아가 듬뿍 들어간 쿠키빵입니다.'),
+    (@s5, '녹차 크루아상',       4500, 3200,  3, '녹차 크림이 들어간 크루아상입니다.'),
+    (@s5, '모카빵',              3500, 2500, 15, '커피 향이 진한 모카 크림빵입니다.'),
+    (@s5, '치즈 스틱',           3000, 2100,  0, '쭉 늘어나는 모짜렐라 치즈 스틱입니다.'),
+    (@s5, '딸기 크림빵',         4000, 2800,  8, '신선한 딸기 크림이 가득한 빵입니다.'),
+    (@s5, '소금빵',              3500, 2500, 12, '겉은 바삭하고 속은 촉촉한 소금빵입니다.');
 
-/* 역삼점: 08:00~22:00 */
-INSERT INTO store_business_hours (store_id, day_of_week, is_closed, start_time, end_time, last_order_time) VALUES
-    (@demo_store_yeoksam_id, 1, FALSE, '08:00:00', '22:00:00', '21:30:00'),
-    (@demo_store_yeoksam_id, 2, FALSE, '08:00:00', '22:00:00', '21:30:00'),
-    (@demo_store_yeoksam_id, 3, FALSE, '08:00:00', '22:00:00', '21:30:00'),
-    (@demo_store_yeoksam_id, 4, FALSE, '08:00:00', '22:00:00', '21:30:00'),
-    (@demo_store_yeoksam_id, 5, FALSE, '08:00:00', '22:00:00', '21:30:00'),
-    (@demo_store_yeoksam_id, 6, FALSE, '08:00:00', '22:00:00', '21:30:00'),
-    (@demo_store_yeoksam_id, 7, TRUE,  NULL,       NULL,       NULL);
+/* ── 가게 6: 쿠헨 논현점 (7개) ── */
+INSERT INTO bread (store_id, name, original_price, sale_price, remaining_quantity, description) VALUES
+    (@s6, '프레첼',              3800, 2800, 11, '독일식 정통 프레첼입니다.'),
+    (@s6, '라우겐 롤',           4200, 3000,  7, '라우겐 반죽으로 만든 쫄깃한 롤빵입니다.'),
+    (@s6, '호밀 사워도우',       7000, 5200,  4, '독일식 호밀 사워도우입니다.'),
+    (@s6, '버터 쿠헨',           5500, 4000,  9, '버터가 듬뿍 들어간 독일식 케이크빵입니다.'),
+    (@s6, '슈톨렌',              9000, 6500,  1, '과일과 견과류가 가득한 독일 전통빵입니다.'),
+    (@s6, '카이저 롤',           3500, 2500, 13, '바삭한 겉면의 오스트리아식 롤빵입니다.'),
+    (@s6, '흑맥주빵',            6000, 4200,  0, '흑맥주로 반죽한 풍미 깊은 빵입니다.');
 
-/* 삼성점: 06:30~20:00 */
-INSERT INTO store_business_hours (store_id, day_of_week, is_closed, start_time, end_time, last_order_time) VALUES
-    (@demo_store_samsung_id, 1, FALSE, '06:30:00', '20:00:00', '19:30:00'),
-    (@demo_store_samsung_id, 2, FALSE, '06:30:00', '20:00:00', '19:30:00'),
-    (@demo_store_samsung_id, 3, FALSE, '06:30:00', '20:00:00', '19:30:00'),
-    (@demo_store_samsung_id, 4, FALSE, '06:30:00', '20:00:00', '19:30:00'),
-    (@demo_store_samsung_id, 5, FALSE, '06:30:00', '20:00:00', '19:30:00'),
-    (@demo_store_samsung_id, 6, FALSE, '06:30:00', '20:00:00', '19:30:00'),
-    (@demo_store_samsung_id, 7, TRUE,  NULL,       NULL,       NULL);
+/* ── 가게 7: 아티장베이커리 청담점 (7개) ── */
+INSERT INTO bread (store_id, name, original_price, sale_price, remaining_quantity, description) VALUES
+    (@s7, '트러플 포카치아',     8000, 6000,  3, '트러플 오일을 넣은 프리미엄 포카치아입니다.'),
+    (@s7, '얼그레이 스콘',       4500, 3200,  8, '얼그레이 향이 은은한 영국식 스콘입니다.'),
+    (@s7, '크로플',              4500, 3200, 10, '크루아상 반죽으로 구운 바삭한 와플입니다.'),
+    (@s7, '유자 파운드케이크',   5500, 4000,  5, '상큼한 유자가 들어간 파운드케이크입니다.'),
+    (@s7, '피스타치오 크루아상', 5800, 4200,  0, '피스타치오 크림이 가득한 크루아상입니다.'),
+    (@s7, '바닐라 브리오슈',     4200, 3000, 14, '바닐라빈이 들어간 부드러운 브리오슈입니다.'),
+    (@s7, '잣 타르트',           6000, 4500,  2, '고소한 잣이 올라간 미니 타르트입니다.');
 
-/* 대치점: 10:00~22:30 */
-INSERT INTO store_business_hours (store_id, day_of_week, is_closed, start_time, end_time, last_order_time) VALUES
-    (@demo_store_daechi_id, 1, FALSE, '10:00:00', '22:30:00', '22:00:00'),
-    (@demo_store_daechi_id, 2, FALSE, '10:00:00', '22:30:00', '22:00:00'),
-    (@demo_store_daechi_id, 3, FALSE, '10:00:00', '22:30:00', '22:00:00'),
-    (@demo_store_daechi_id, 4, FALSE, '10:00:00', '22:30:00', '22:00:00'),
-    (@demo_store_daechi_id, 5, FALSE, '10:00:00', '22:30:00', '22:00:00'),
-    (@demo_store_daechi_id, 6, FALSE, '10:00:00', '22:30:00', '22:00:00'),
-    (@demo_store_daechi_id, 7, TRUE,  NULL,       NULL,       NULL);
+/* ── 가게 8: 브레드랩 서초점 (7개) ── */
+INSERT INTO bread (store_id, name, original_price, sale_price, remaining_quantity, description) VALUES
+    (@s8, '비건 통밀빵',         5000, 3500,  7, '동물성 재료 없이 만든 건강한 통밀빵입니다.'),
+    (@s8, '글루텐프리 머핀',     4500, 3200,  4, '쌀가루로 만든 글루텐프리 블루베리 머핀입니다.'),
+    (@s8, '흑임자 식빵',         5500, 4000, 11, '고소한 흑임자가 들어간 식빵입니다.'),
+    (@s8, '당근 케이크빵',       4800, 3500,  6, '당근과 호두가 들어간 건강한 케이크빵입니다.'),
+    (@s8, '귀리 쿠키',           3200, 2300, 15, '귀리와 건포도가 들어간 건강 쿠키입니다.'),
+    (@s8, '고구마 크루아상',     5500, 3800,  0, '달콤한 고구마 무스가 들어간 크루아상입니다.'),
+    (@s8, '두부 도넛',           3000, 2100,  9, '두부로 만든 담백한 도넛입니다.');
+
+/* ── 가게 9: 밀밭제과 잠실점 (7개) ── */
+INSERT INTO bread (store_id, name, original_price, sale_price, remaining_quantity, description) VALUES
+    (@s9, '단팥빵',              3000, 2100, 13, '달콤한 팥소가 가득한 전통 단팥빵입니다.'),
+    (@s9, '고로케',              3500, 2500,  8, '바삭한 튀김옷 속 크림 고로케입니다.'),
+    (@s9, '메론빵',              3800, 2700, 10, '메론 모양의 달콤한 빵입니다.'),
+    (@s9, '찹쌀 도넛',           2800, 2000,  5, '쫄깃한 찹쌀 반죽의 도넛입니다.'),
+    (@s9, '마늘 크림치즈빵',     4200, 3000, 14, '마늘과 크림치즈가 조화로운 빵입니다.'),
+    (@s9, '팥앙금빵',            3500, 2500,  0, '직접 만든 팥앙금이 들어간 부드러운 빵입니다.'),
+    (@s9, '옥수수빵',            3200, 2300,  7, '달콤한 옥수수 크림이 들어간 빵입니다.');
+
+/* ── 가게 10: 뚜레쥬르 양재점 (7개) ── */
+INSERT INTO bread (store_id, name, original_price, sale_price, remaining_quantity, description) VALUES
+    (@s10, '허니 브레드',        5000, 3500, 11, '꿀이 듬뿍 발린 달콤한 식빵입니다.'),
+    (@s10, '크로크무슈',         5500, 4000,  6, '햄과 치즈가 올라간 프랑스식 토스트입니다.'),
+    (@s10, '티라미수 크림빵',    4500, 3200,  3, '티라미수 크림이 가득한 빵입니다.'),
+    (@s10, '플레인 베이글',      3500, 2400, 15, '쫄깃한 식감의 기본 베이글입니다.'),
+    (@s10, '초코 머핀',          3800, 2700,  0, '진한 초콜릿 머핀입니다.'),
+    (@s10, '마늘 바게트',        5000, 3500,  9, '마늘 버터가 듬뿍 발린 바게트입니다.'),
+    (@s10, '호두파이',           6000, 4200,  4, '고소한 호두가 가득한 미니 파이입니다.');
 
 
 /* ============================================================
-   빵 삽입 (각 가게 5개씩, 총 25개)
-   original_price: 3000~10000
-   sale_price: original_price의 60~80%
-   remaining_quantity: 0~20 (일부 품절)
+   빵 이미지 — 10장(seed_bread_01~10)을 돌려서 사용
+   bread_image.bread_id 는 UNIQUE 이므로 빵 1개당 이미지 1개
    ============================================================ */
 
-/* ── 강남점 빵 5개 (기존 3 + 신규 2) ── */
-INSERT INTO bread (store_id, name, original_price, sale_price, remaining_quantity, description) VALUES
-    (@demo_store_gangnam_id, '시그니처 소금빵',  3500, 2500, 14, '겉은 바삭하고 속은 촉촉한 대표 메뉴입니다.'),
-    (@demo_store_gangnam_id, '바질 치아바타',    5200, 3900,  8, '점심용으로 바로 먹기 좋은 바질 치아바타입니다.'),
-    (@demo_store_gangnam_id, '밤식빵',          6800, 5000,  0, '오늘은 품절 상태를 확인할 수 있도록 재고를 0으로 넣어둔 메뉴입니다.'),
-    (@demo_store_gangnam_id, '크림치즈 베이글',  4000, 2800, 10, '부드러운 크림치즈가 듬뿍 들어간 베이글입니다.'),
-    (@demo_store_gangnam_id, '초코 크루아상',    4500, 3200,  6, '진한 초콜릿이 겹겹이 들어간 크루아상입니다.');
-
-/* ── 선릉점 빵 5개 (기존 3 + 신규 2) ── */
-INSERT INTO bread (store_id, name, original_price, sale_price, remaining_quantity, description) VALUES
-    (@demo_store_seolleung_id, '버터 크루아상',   4200, 3200, 12, '겹이 살아 있는 기본 크루아상입니다.'),
-    (@demo_store_seolleung_id, '앙버터 바게트',   5800, 4300,  5, '달콤한 팥과 버터 조합을 확인하기 좋은 메뉴입니다.'),
-    (@demo_store_seolleung_id, '사워도우 하프',   9000, 7000,  3, '프론트 리스트와 상세 화면에서 가격 비교가 잘 보이는 메뉴입니다.'),
-    (@demo_store_seolleung_id, '얼그레이 스콘',   3800, 2600,  9, '얼그레이 향이 은은한 영국식 스콘입니다.'),
-    (@demo_store_seolleung_id, '호밀 식빵',      5500, 3800,  0, '건강한 호밀 100% 식빵입니다. 품절 테스트용.');
-
-/* ── 역삼점 빵 5개 ── */
-INSERT INTO bread (store_id, name, original_price, sale_price, remaining_quantity, description) VALUES
-    (@demo_store_yeoksam_id, '플레인 베이글',    3500, 2400, 15, '쫄깃한 식감의 기본 베이글입니다.'),
-    (@demo_store_yeoksam_id, '블루베리 머핀',    4000, 2800,  7, '블루베리가 톡톡 터지는 촉촉한 머핀입니다.'),
-    (@demo_store_yeoksam_id, '단팥빵',          3000, 2100, 20, '달콤한 팥소가 가득한 전통 단팥빵입니다.'),
-    (@demo_store_yeoksam_id, '카레빵',          3800, 2700,  0, '바삭한 튀김옷 속 매콤한 카레가 들어간 빵입니다. 품절.'),
-    (@demo_store_yeoksam_id, '마늘바게트',       5000, 3500, 11, '마늘 버터가 듬뿍 발린 바삭한 바게트입니다.');
-
-/* ── 삼성점 빵 5개 ── */
-INSERT INTO bread (store_id, name, original_price, sale_price, remaining_quantity, description) VALUES
-    (@demo_store_samsung_id, '우유식빵',         4500, 3200, 18, '부드럽고 달콤한 우유식빵입니다.'),
-    (@demo_store_samsung_id, '모카빵',           3500, 2500,  5, '커피 향이 진한 모카 크림빵입니다.'),
-    (@demo_store_samsung_id, '피자빵',           4000, 2800, 13, '토마토소스와 치즈가 올라간 피자빵입니다.'),
-    (@demo_store_samsung_id, '고구마 크루아상',   5500, 3800,  0, '달콤한 고구마 무스가 들어간 크루아상입니다. 품절.'),
-    (@demo_store_samsung_id, '치즈 스틱',        3000, 2100,  9, '쭉 늘어나는 모짜렐라 치즈 스틱입니다.');
-
-/* ── 대치점 빵 5개 ── */
-INSERT INTO bread (store_id, name, original_price, sale_price, remaining_quantity, description) VALUES
-    (@demo_store_daechi_id, '통밀빵',            5000, 3500, 10, '100% 통밀로 만든 건강한 식사빵입니다.'),
-    (@demo_store_daechi_id, '호두파이',          6000, 4200,  4, '고소한 호두가 가득한 미니 파이입니다.'),
-    (@demo_store_daechi_id, '팥앙금빵',          3500, 2500, 16, '직접 만든 팥앙금이 들어간 부드러운 빵입니다.'),
-    (@demo_store_daechi_id, '크로플',            4500, 3200,  0, '크루아상 반죽으로 구운 바삭한 와플입니다. 품절.'),
-    (@demo_store_daechi_id, '에그타르트',         3800, 2600,  8, '바삭한 페이스트리에 부드러운 커스터드가 들어간 타르트입니다.');
+INSERT INTO bread_image (bread_id, original_filename, stored_filename)
+SELECT b.id,
+       CONCAT('seed-bread-', LPAD(((ROW_NUMBER() OVER (ORDER BY b.id) - 1) % 10) + 1, 2, '0'), '.svg'),
+       CONCAT('seed_bread_', LPAD(((ROW_NUMBER() OVER (ORDER BY b.id) - 1) % 10) + 1, 2, '0'), '_', b.id, '.svg')
+FROM bread b
+WHERE b.store_id IN (@s1,@s2,@s3,@s4,@s5,@s6,@s7,@s8,@s9,@s10);
 
 /* ============================================================
    즐겨찾기
    ============================================================ */
 
 INSERT INTO favourite_store (user_id, store_id) VALUES
-    (@demo_user_id, @demo_store_gangnam_id),
-    (@demo_user_id, @demo_store_seolleung_id);
-
-
-/* ============================================================
-   주문 / 매출 테스트 데이터
-   - 3월: 각 가게별 8~12건 (3/1~3/31)
-   - 4월: 각 가게별 10~15건 (4/1~4/30)
-   - 상태: 대부분 PICKED_UP, 일부 CONFIRMED, 일부 CANCELLED
-   - 각 가게별 오늘 날짜 CONFIRMED 주문 1~2건 (픽업 대기 테스트용)
-   ============================================================ */
-
-/* ── 빵 ID 조회 ── */
-
-/* 강남점 */
-SET @bread_salt = (
-    SELECT id FROM bread WHERE store_id = @demo_store_gangnam_id AND name = '시그니처 소금빵'
-);
-SET @bread_ciabatta = (
-    SELECT id FROM bread WHERE store_id = @demo_store_gangnam_id AND name = '바질 치아바타'
-);
-SET @bread_chestnut = (
-    SELECT id FROM bread WHERE store_id = @demo_store_gangnam_id AND name = '밤식빵'
-);
-SET @bread_cream_bagel = (
-    SELECT id FROM bread WHERE store_id = @demo_store_gangnam_id AND name = '크림치즈 베이글'
-);
-SET @bread_choco_croissant = (
-    SELECT id FROM bread WHERE store_id = @demo_store_gangnam_id AND name = '초코 크루아상'
-);
-
-/* 선릉점 */
-SET @bread_croissant = (
-    SELECT id FROM bread WHERE store_id = @demo_store_seolleung_id AND name = '버터 크루아상'
-);
-SET @bread_baguette = (
-    SELECT id FROM bread WHERE store_id = @demo_store_seolleung_id AND name = '앙버터 바게트'
-);
-SET @bread_sourdough = (
-    SELECT id FROM bread WHERE store_id = @demo_store_seolleung_id AND name = '사워도우 하프'
-);
-SET @bread_earl_grey = (
-    SELECT id FROM bread WHERE store_id = @demo_store_seolleung_id AND name = '얼그레이 스콘'
-);
-SET @bread_rye = (
-    SELECT id FROM bread WHERE store_id = @demo_store_seolleung_id AND name = '호밀 식빵'
-);
-
-/* 역삼점 */
-SET @bread_plain_bagel = (
-    SELECT id FROM bread WHERE store_id = @demo_store_yeoksam_id AND name = '플레인 베이글'
-);
-SET @bread_blueberry = (
-    SELECT id FROM bread WHERE store_id = @demo_store_yeoksam_id AND name = '블루베리 머핀'
-);
-SET @bread_redbean = (
-    SELECT id FROM bread WHERE store_id = @demo_store_yeoksam_id AND name = '단팥빵'
-);
-SET @bread_curry = (
-    SELECT id FROM bread WHERE store_id = @demo_store_yeoksam_id AND name = '카레빵'
-);
-SET @bread_garlic = (
-    SELECT id FROM bread WHERE store_id = @demo_store_yeoksam_id AND name = '마늘바게트'
-);
-
-/* 삼성점 */
-SET @bread_milk = (
-    SELECT id FROM bread WHERE store_id = @demo_store_samsung_id AND name = '우유식빵'
-);
-SET @bread_mocha = (
-    SELECT id FROM bread WHERE store_id = @demo_store_samsung_id AND name = '모카빵'
-);
-SET @bread_pizza = (
-    SELECT id FROM bread WHERE store_id = @demo_store_samsung_id AND name = '피자빵'
-);
-SET @bread_sweetpotato = (
-    SELECT id FROM bread WHERE store_id = @demo_store_samsung_id AND name = '고구마 크루아상'
-);
-SET @bread_cheese_stick = (
-    SELECT id FROM bread WHERE store_id = @demo_store_samsung_id AND name = '치즈 스틱'
-);
-
-/* 대치점 */
-SET @bread_whole_wheat = (
-    SELECT id FROM bread WHERE store_id = @demo_store_daechi_id AND name = '통밀빵'
-);
-SET @bread_walnut_pie = (
-    SELECT id FROM bread WHERE store_id = @demo_store_daechi_id AND name = '호두파이'
-);
-SET @bread_red_angeum = (
-    SELECT id FROM bread WHERE store_id = @demo_store_daechi_id AND name = '팥앙금빵'
-);
-SET @bread_croffle = (
-    SELECT id FROM bread WHERE store_id = @demo_store_daechi_id AND name = '크로플'
-);
-SET @bread_egg_tart = (
-    SELECT id FROM bread WHERE store_id = @demo_store_daechi_id AND name = '에그타르트'
-);
-
+    (@uid, @s1),
+    (@uid, @s3),
+    (@uid, @s7);
 
 /* ============================================================
-   강남점 주문 — 3월 (10건)
+   장바구니 샘플
    ============================================================ */
 
-/* 3/2 - 소금빵 2개, 크림치즈 베이글 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_gangnam_id, 'PICKED_UP', 7800, 'A1B2', '2026-03-02', '2026-03-02 18:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_salt, '시그니처 소금빵', 2500, 2),
-    (@ord_id, @bread_cream_bagel, '크림치즈 베이글', 2800, 1);
+INSERT INTO cart (user_id, store_id) VALUES (@uid, @s1);
+SET @cart_id = LAST_INSERT_ID();
 
-/* 3/4 - 초코 크루아상 3개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_gangnam_id, 'PICKED_UP', 9600, 'C3D4', '2026-03-04', '2026-03-04 19:15:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_choco_croissant, '초코 크루아상', 3200, 3);
-
-/* 3/7 - 바질 치아바타 2개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_gangnam_id, 'PICKED_UP', 7800, 'E5F6', '2026-03-07', '2026-03-07 17:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_ciabatta, '바질 치아바타', 3900, 2);
-
-/* 3/10 - 소금빵 1개, 밤식빵 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_gangnam_id, 'PICKED_UP', 7500, 'G7H8', '2026-03-10', '2026-03-10 20:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_salt, '시그니처 소금빵', 2500, 1),
-    (@ord_id, @bread_chestnut, '밤식빵', 5000, 1);
-
-/* 3/12 - 크림치즈 베이글 2개, 초코 크루아상 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_gangnam_id, 'PICKED_UP', 8800, 'J9K1', '2026-03-12', '2026-03-12 18:45:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_cream_bagel, '크림치즈 베이글', 2800, 2),
-    (@ord_id, @bread_choco_croissant, '초코 크루아상', 3200, 1);
-
-/* 3/15 - 소금빵 4개 (주말 대량) */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_gangnam_id, 'PICKED_UP', 10000, 'L2M3', '2026-03-15', '2026-03-15 16:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_salt, '시그니처 소금빵', 2500, 4);
-
-/* 3/18 - 치아바타 1개, 크림치즈 베이글 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_gangnam_id, 'PICKED_UP', 6700, 'N4P5', '2026-03-18', '2026-03-18 19:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_ciabatta, '바질 치아바타', 3900, 1),
-    (@ord_id, @bread_cream_bagel, '크림치즈 베이글', 2800, 1);
-
-/* 3/22 - 초코 크루아상 2개, 소금빵 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_gangnam_id, 'PICKED_UP', 8900, 'Q6R7', '2026-03-22', '2026-03-22 17:45:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_choco_croissant, '초코 크루아상', 3200, 2),
-    (@ord_id, @bread_salt, '시그니처 소금빵', 2500, 1);
-
-/* 3/25 - 취소 주문 (매출 제외 확인용) */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_gangnam_id, 'CANCELLED', 5000, 'S8T9', '2026-03-25', '2026-03-25 18:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_salt, '시그니처 소금빵', 2500, 2);
-
-/* 3/28 - 밤식빵 1개, 치아바타 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_gangnam_id, 'PICKED_UP', 8900, 'U1V2', '2026-03-28', '2026-03-28 20:15:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_chestnut, '밤식빵', 5000, 1),
-    (@ord_id, @bread_ciabatta, '바질 치아바타', 3900, 1);
+INSERT INTO cart_item (cart_id, bread_id, quantity)
+SELECT @cart_id, b.id, 2
+FROM bread b WHERE b.store_id = @s1 ORDER BY b.id LIMIT 2;
 
 /* ============================================================
-   강남점 주문 — 4월 (12건 + 픽업대기 2건 + 취소 1건)
+   주문 / 매출 데이터 (2026-01-01 ~ 현재)
+   각 가게별 월 6~10건, 상태 혼합 (PICKED_UP / CONFIRMED / CANCELLED)
    ============================================================ */
 
-/* 4/1 - 소금빵 3개, 치아바타 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_gangnam_id, 'PICKED_UP', 11400, 'A2B3', '2026-04-01', '2026-04-01 18:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_salt, '시그니처 소금빵', 2500, 3),
-    (@ord_id, @bread_ciabatta, '바질 치아바타', 3900, 1);
+/* 주문 생성 프로시저 — 반복 INSERT를 줄이기 위한 헬퍼 */
 
-/* 4/2 - 소금빵 2개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_gangnam_id, 'PICKED_UP', 5000, 'C4D5', '2026-04-02', '2026-04-02 19:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_salt, '시그니처 소금빵', 2500, 2);
+DROP PROCEDURE IF EXISTS seed_orders;
 
-/* 4/3 - 치아바타 2개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_gangnam_id, 'PICKED_UP', 7800, 'E6F7', '2026-04-03', '2026-04-03 17:45:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_ciabatta, '바질 치아바타', 3900, 2);
+DELIMITER //
+CREATE PROCEDURE seed_orders()
+BEGIN
+    DECLARE v_store_id BIGINT;
+    DECLARE v_store_idx INT DEFAULT 0;
+    DECLARE v_month_start DATE;
+    DECLARE v_month_end DATE;
+    DECLARE v_order_date DATE;
+    DECLARE v_order_count INT;
+    DECLARE v_i INT;
+    DECLARE v_status VARCHAR(20);
+    DECLARE v_bread_id BIGINT;
+    DECLARE v_bread_name VARCHAR(100);
+    DECLARE v_bread_price INT;
+    DECLARE v_qty INT;
+    DECLARE v_total INT;
+    DECLARE v_order_id BIGINT;
+    DECLARE v_order_num VARCHAR(4);
+    DECLARE v_rand DOUBLE;
+    DECLARE v_bread_count INT;
+    DECLARE v_bread_offset INT;
+    DECLARE v_items_per_order INT;
+    DECLARE v_j INT;
+    DECLARE v_cur_month DATE;
 
-/* 4/4 - 취소 주문 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_gangnam_id, 'CANCELLED', 5000, 'HH89', '2026-04-04', '2026-04-04 18:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_salt, '시그니처 소금빵', 2500, 2);
+    /* 10개 가게 ID를 임시 테이블에 */
+    DROP TEMPORARY TABLE IF EXISTS tmp_stores;
+    CREATE TEMPORARY TABLE tmp_stores (idx INT AUTO_INCREMENT PRIMARY KEY, store_id BIGINT);
+    INSERT INTO tmp_stores (store_id) VALUES
+        (@s1),(@s2),(@s3),(@s4),(@s5),(@s6),(@s7),(@s8),(@s9),(@s10);
 
-/* 4/5 - 소금빵 5개, 치아바타 2개 (주말 대량) */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_gangnam_id, 'PICKED_UP', 20300, 'G8H9', '2026-04-05', '2026-04-05 16:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_salt, '시그니처 소금빵', 2500, 5),
-    (@ord_id, @bread_ciabatta, '바질 치아바타', 3900, 2);
+    SET v_store_idx = 1;
 
-/* 4/7 - 소금빵 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_gangnam_id, 'PICKED_UP', 2500, 'J2K3', '2026-04-07', '2026-04-07 20:15:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_salt, '시그니처 소금빵', 2500, 1);
+    WHILE v_store_idx <= 10 DO
+        SELECT store_id INTO v_store_id FROM tmp_stores WHERE idx = v_store_idx;
 
-/* 4/8 - 소금빵 2개, 치아바타 3개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_gangnam_id, 'PICKED_UP', 16700, 'L4M5', '2026-04-08', '2026-04-08 18:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_salt, '시그니처 소금빵', 2500, 2),
-    (@ord_id, @bread_ciabatta, '바질 치아바타', 3900, 3);
+        /* 해당 가게의 빵 개수 */
+        SELECT COUNT(*) INTO v_bread_count FROM bread WHERE store_id = v_store_id;
 
-/* 4/10 - 치아바타 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_gangnam_id, 'PICKED_UP', 3900, 'N6P7', '2026-04-10', '2026-04-10 19:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_ciabatta, '바질 치아바타', 3900, 1);
+        /* 2026-01 부터 현재 월까지 반복 */
+        SET v_cur_month = '2026-01-01';
 
-/* 4/12 - 소금빵 4개 (주말) */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_gangnam_id, 'PICKED_UP', 10000, 'Q8R9', '2026-04-12', '2026-04-12 15:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_salt, '시그니처 소금빵', 2500, 4);
+        WHILE v_cur_month <= CURDATE() DO
+            SET v_month_start = v_cur_month;
+            SET v_month_end = LAST_DAY(v_cur_month);
+            IF v_month_end > CURDATE() THEN
+                SET v_month_end = CURDATE();
+            END IF;
 
-/* 4/14 - 소금빵 1개, 치아바타 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_gangnam_id, 'PICKED_UP', 6400, 'S2T3', '2026-04-14', '2026-04-14 21:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_salt, '시그니처 소금빵', 2500, 1),
-    (@ord_id, @bread_ciabatta, '바질 치아바타', 3900, 1);
+            /* 월별 주문 수: 6~10건 */
+            SET v_order_count = 6 + FLOOR(RAND() * 5);
+            SET v_i = 0;
 
-/* 4/15 - 소금빵 3개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_gangnam_id, 'PICKED_UP', 7500, 'U4V5', '2026-04-15', '2026-04-15 17:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_salt, '시그니처 소금빵', 2500, 3);
+            WHILE v_i < v_order_count DO
+                /* 랜덤 날짜 */
+                SET v_order_date = DATE_ADD(v_month_start,
+                    INTERVAL FLOOR(RAND() * (DATEDIFF(v_month_end, v_month_start) + 1)) DAY);
 
-/* 4/20 - 크림치즈 베이글 2개, 초코 크루아상 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_gangnam_id, 'PICKED_UP', 8800, 'W3X4', '2026-04-20', '2026-04-20 16:45:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_cream_bagel, '크림치즈 베이글', 2800, 2),
-    (@ord_id, @bread_choco_croissant, '초코 크루아상', 3200, 1);
+                /* 상태: 80% PICKED_UP, 10% CONFIRMED, 10% CANCELLED */
+                SET v_rand = RAND();
+                IF v_rand < 0.10 THEN
+                    SET v_status = 'CANCELLED';
+                ELSEIF v_rand < 0.20 THEN
+                    SET v_status = 'CONFIRMED';
+                ELSE
+                    SET v_status = 'PICKED_UP';
+                END IF;
 
-/* 강남점 픽업 대기 주문 (CONFIRMED, 오늘 날짜) */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_gangnam_id, 'CONFIRMED', 7500, 'W6X7', CURDATE(), NOW());
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_salt, '시그니처 소금빵', 2500, 3);
+                /* 주문번호 4자리 영숫자 */
+                SET v_order_num = UPPER(SUBSTR(MD5(CONCAT(v_store_id, v_order_date, v_i, RAND())), 1, 4));
 
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_gangnam_id, 'CONFIRMED', 3900, 'Y8Z9', CURDATE(), NOW());
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_ciabatta, '바질 치아바타', 3900, 1);
+                /* 주문 항목 수: 1~3개 */
+                SET v_items_per_order = 1 + FLOOR(RAND() * 3);
+                SET v_total = 0;
 
+                /* 주문 먼저 삽입 (total_amount는 나중에 업데이트) */
+                INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
+                VALUES (@uid, v_store_id, v_status, 1, v_order_num, v_order_date,
+                        TIMESTAMP(v_order_date, MAKETIME(15 + FLOOR(RAND()*7), FLOOR(RAND()*60), 0)));
+                SET v_order_id = LAST_INSERT_ID();
+
+                SET v_j = 0;
+                WHILE v_j < v_items_per_order DO
+                    /* 랜덤 빵 선택 */
+                    SET v_bread_offset = FLOOR(RAND() * v_bread_count);
+                    SELECT id, name, sale_price INTO v_bread_id, v_bread_name, v_bread_price
+                    FROM bread WHERE store_id = v_store_id
+                    ORDER BY id LIMIT 1 OFFSET v_bread_offset;
+
+                    IF v_bread_id IS NOT NULL THEN
+                        SET v_qty = 1 + FLOOR(RAND() * 4);
+                        SET v_total = v_total + (v_bread_price * v_qty);
+
+                        INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity)
+                        VALUES (v_order_id, v_bread_id, v_bread_name, v_bread_price, v_qty);
+                    END IF;
+
+                    SET v_j = v_j + 1;
+                END WHILE;
+
+                /* total_amount 업데이트 */
+                UPDATE orders SET total_amount = v_total WHERE id = v_order_id;
+
+                SET v_i = v_i + 1;
+            END WHILE;
+
+            SET v_cur_month = DATE_ADD(v_cur_month, INTERVAL 1 MONTH);
+        END WHILE;
+
+        SET v_store_idx = v_store_idx + 1;
+    END WHILE;
+
+    DROP TEMPORARY TABLE IF EXISTS tmp_stores;
+END //
+DELIMITER ;
+
+CALL seed_orders();
+DROP PROCEDURE IF EXISTS seed_orders;
 
 /* ============================================================
-   선릉점 주문 — 3월 (9건)
+   각 가게별 오늘 날짜 CONFIRMED 주문 2건 (픽업 대기 테스트용)
    ============================================================ */
 
-/* 3/1 - 크루아상 2개, 얼그레이 스콘 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_seolleung_id, 'PICKED_UP', 9000, 'SA12', '2026-03-01', '2026-03-01 17:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_croissant, '버터 크루아상', 3200, 2),
-    (@ord_id, @bread_earl_grey, '얼그레이 스콘', 2600, 1);
+DROP PROCEDURE IF EXISTS seed_today_orders;
 
-/* 3/5 - 사워도우 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_seolleung_id, 'PICKED_UP', 7000, 'SB34', '2026-03-05', '2026-03-05 18:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_sourdough, '사워도우 하프', 7000, 1);
+DELIMITER //
+CREATE PROCEDURE seed_today_orders()
+BEGIN
+    DECLARE v_store_id BIGINT;
+    DECLARE v_idx INT DEFAULT 1;
+    DECLARE v_bread_id BIGINT;
+    DECLARE v_bread_name VARCHAR(100);
+    DECLARE v_bread_price INT;
+    DECLARE v_qty INT;
+    DECLARE v_order_id BIGINT;
+    DECLARE v_order_num VARCHAR(4);
 
-/* 3/8 - 바게트 2개, 크루아상 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_seolleung_id, 'PICKED_UP', 11800, 'SC56', '2026-03-08', '2026-03-08 16:45:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_baguette, '앙버터 바게트', 4300, 2),
-    (@ord_id, @bread_croissant, '버터 크루아상', 3200, 1);
+    DROP TEMPORARY TABLE IF EXISTS tmp_stores2;
+    CREATE TEMPORARY TABLE tmp_stores2 (idx INT AUTO_INCREMENT PRIMARY KEY, store_id BIGINT);
+    INSERT INTO tmp_stores2 (store_id) VALUES
+        (@s1),(@s2),(@s3),(@s4),(@s5),(@s6),(@s7),(@s8),(@s9),(@s10);
 
-/* 3/11 - 얼그레이 스콘 3개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_seolleung_id, 'PICKED_UP', 7800, 'SD78', '2026-03-11', '2026-03-11 19:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_earl_grey, '얼그레이 스콘', 2600, 3);
+    WHILE v_idx <= 10 DO
+        SELECT store_id INTO v_store_id FROM tmp_stores2 WHERE idx = v_idx;
 
-/* 3/14 - 크루아상 1개, 사워도우 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_seolleung_id, 'PICKED_UP', 10200, 'SE91', '2026-03-14', '2026-03-14 20:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_croissant, '버터 크루아상', 3200, 1),
-    (@ord_id, @bread_sourdough, '사워도우 하프', 7000, 1);
+        /* 첫 번째 픽업 대기 주문 */
+        SELECT id, name, sale_price INTO v_bread_id, v_bread_name, v_bread_price
+        FROM bread WHERE store_id = v_store_id ORDER BY id LIMIT 1;
 
-/* 3/18 - 바게트 1개, 얼그레이 스콘 2개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_seolleung_id, 'PICKED_UP', 9500, 'SF23', '2026-03-18', '2026-03-18 17:15:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_baguette, '앙버터 바게트', 4300, 1),
-    (@ord_id, @bread_earl_grey, '얼그레이 스콘', 2600, 2);
+        SET v_qty = 1 + FLOOR(RAND() * 3);
+        SET v_order_num = UPPER(SUBSTR(MD5(CONCAT('today1', v_store_id, RAND())), 1, 4));
 
-/* 3/22 - 취소 주문 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_seolleung_id, 'CANCELLED', 6400, 'SG45', '2026-03-22', '2026-03-22 18:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_croissant, '버터 크루아상', 3200, 2);
+        INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
+        VALUES (@uid, v_store_id, 'CONFIRMED', v_bread_price * v_qty, v_order_num, CURDATE(), NOW());
+        SET v_order_id = LAST_INSERT_ID();
+        INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity)
+        VALUES (v_order_id, v_bread_id, v_bread_name, v_bread_price, v_qty);
 
-/* 3/25 - 사워도우 2개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_seolleung_id, 'PICKED_UP', 14000, 'SH67', '2026-03-25', '2026-03-25 19:45:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_sourdough, '사워도우 하프', 7000, 2);
+        /* 두 번째 픽업 대기 주문 */
+        SELECT id, name, sale_price INTO v_bread_id, v_bread_name, v_bread_price
+        FROM bread WHERE store_id = v_store_id ORDER BY id LIMIT 1 OFFSET 1;
 
-/* 3/30 - 크루아상 3개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_seolleung_id, 'PICKED_UP', 9600, 'SJ89', '2026-03-30', '2026-03-30 16:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_croissant, '버터 크루아상', 3200, 3);
+        SET v_qty = 1 + FLOOR(RAND() * 2);
+        SET v_order_num = UPPER(SUBSTR(MD5(CONCAT('today2', v_store_id, RAND())), 1, 4));
+
+        INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
+        VALUES (@uid, v_store_id, 'CONFIRMED', v_bread_price * v_qty, v_order_num, CURDATE(), NOW());
+        SET v_order_id = LAST_INSERT_ID();
+        INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity)
+        VALUES (v_order_id, v_bread_id, v_bread_name, v_bread_price, v_qty);
+
+        SET v_idx = v_idx + 1;
+    END WHILE;
+
+    DROP TEMPORARY TABLE IF EXISTS tmp_stores2;
+END //
+DELIMITER ;
+
+CALL seed_today_orders();
+DROP PROCEDURE IF EXISTS seed_today_orders;
 
 /* ============================================================
-   선릉점 주문 — 4월 (10건 + 픽업대기 1건)
+   결제 데이터 — CONFIRMED/PICKED_UP 주문에 결제 레코드 매칭
    ============================================================ */
 
-/* 4/1 - 크루아상 2개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_seolleung_id, 'PICKED_UP', 6400, 'AA23', '2026-04-01', '2026-04-01 17:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_croissant, '버터 크루아상', 3200, 2);
-
-/* 4/3 - 바게트 1개, 사워도우 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_seolleung_id, 'PICKED_UP', 11300, 'BB45', '2026-04-03', '2026-04-03 18:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_baguette, '앙버터 바게트', 4300, 1),
-    (@ord_id, @bread_sourdough, '사워도우 하프', 7000, 1);
-
-/* 4/5 - 크루아상 3개, 바게트 2개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_seolleung_id, 'PICKED_UP', 18200, 'CC67', '2026-04-05', '2026-04-05 16:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_croissant, '버터 크루아상', 3200, 3),
-    (@ord_id, @bread_baguette, '앙버터 바게트', 4300, 2);
-
-/* 4/7 - 사워도우 2개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_seolleung_id, 'PICKED_UP', 14000, 'DD89', '2026-04-07', '2026-04-07 19:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_sourdough, '사워도우 하프', 7000, 2);
-
-/* 4/8 - 크루아상 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_seolleung_id, 'PICKED_UP', 3200, 'EE23', '2026-04-08', '2026-04-08 20:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_croissant, '버터 크루아상', 3200, 1);
-
-/* 4/10 - 바게트 3개, 크루아상 2개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_seolleung_id, 'PICKED_UP', 19300, 'FF45', '2026-04-10', '2026-04-10 17:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_baguette, '앙버터 바게트', 4300, 3),
-    (@ord_id, @bread_croissant, '버터 크루아상', 3200, 2);
-
-/* 4/13 - 얼그레이 스콘 2개, 크루아상 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_seolleung_id, 'PICKED_UP', 8400, 'FK12', '2026-04-13', '2026-04-13 18:15:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_earl_grey, '얼그레이 스콘', 2600, 2),
-    (@ord_id, @bread_croissant, '버터 크루아상', 3200, 1);
-
-/* 4/17 - 사워도우 1개, 바게트 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_seolleung_id, 'PICKED_UP', 11300, 'FL34', '2026-04-17', '2026-04-17 19:45:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_sourdough, '사워도우 하프', 7000, 1),
-    (@ord_id, @bread_baguette, '앙버터 바게트', 4300, 1);
-
-/* 4/22 - 크루아상 4개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_seolleung_id, 'PICKED_UP', 12800, 'FM56', '2026-04-22', '2026-04-22 16:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_croissant, '버터 크루아상', 3200, 4);
-
-/* 4/28 - 얼그레이 스콘 1개, 사워도우 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_seolleung_id, 'PICKED_UP', 9600, 'FN78', '2026-04-28', '2026-04-28 20:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_earl_grey, '얼그레이 스콘', 2600, 1),
-    (@ord_id, @bread_sourdough, '사워도우 하프', 7000, 1);
-
-/* 선릉점 픽업 대기 주문 (CONFIRMED, 오늘 날짜) */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_seolleung_id, 'CONFIRMED', 10500, 'GG67', CURDATE(), NOW());
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_sourdough, '사워도우 하프', 7000, 1),
-    (@ord_id, @bread_croissant, '버터 크루아상', 3200, 1);
-
-
-/* ============================================================
-   역삼점 주문 — 3월 (9건)
-   ============================================================ */
-
-/* 3/3 - 플레인 베이글 3개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_yeoksam_id, 'PICKED_UP', 7200, 'YA12', '2026-03-03', '2026-03-03 17:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_plain_bagel, '플레인 베이글', 2400, 3);
-
-/* 3/5 - 블루베리 머핀 2개, 단팥빵 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_yeoksam_id, 'PICKED_UP', 7700, 'YB34', '2026-03-05', '2026-03-05 18:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_blueberry, '블루베리 머핀', 2800, 2),
-    (@ord_id, @bread_redbean, '단팥빵', 2100, 1);
-
-/* 3/9 - 마늘바게트 2개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_yeoksam_id, 'PICKED_UP', 7000, 'YC56', '2026-03-09', '2026-03-09 19:15:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_garlic, '마늘바게트', 3500, 2);
-
-/* 3/12 - 단팥빵 4개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_yeoksam_id, 'PICKED_UP', 8400, 'YD78', '2026-03-12', '2026-03-12 16:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_redbean, '단팥빵', 2100, 4);
-
-/* 3/15 - 카레빵 2개, 베이글 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_yeoksam_id, 'PICKED_UP', 7800, 'YE91', '2026-03-15', '2026-03-15 17:45:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_curry, '카레빵', 2700, 2),
-    (@ord_id, @bread_plain_bagel, '플레인 베이글', 2400, 1);
-
-/* 3/19 - 취소 주문 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_yeoksam_id, 'CANCELLED', 5600, 'YF23', '2026-03-19', '2026-03-19 18:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_blueberry, '블루베리 머핀', 2800, 2);
-
-/* 3/21 - 마늘바게트 1개, 블루베리 머핀 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_yeoksam_id, 'PICKED_UP', 6300, 'YG45', '2026-03-21', '2026-03-21 20:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_garlic, '마늘바게트', 3500, 1),
-    (@ord_id, @bread_blueberry, '블루베리 머핀', 2800, 1);
-
-/* 3/26 - 베이글 2개, 단팥빵 2개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_yeoksam_id, 'PICKED_UP', 9000, 'YH67', '2026-03-26', '2026-03-26 17:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_plain_bagel, '플레인 베이글', 2400, 2),
-    (@ord_id, @bread_redbean, '단팥빵', 2100, 2);
-
-/* 3/30 - 카레빵 1개, 마늘바게트 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_yeoksam_id, 'PICKED_UP', 6200, 'YJ89', '2026-03-30', '2026-03-30 19:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_curry, '카레빵', 2700, 1),
-    (@ord_id, @bread_garlic, '마늘바게트', 3500, 1);
-
-/* ============================================================
-   역삼점 주문 — 4월 (11건 + 픽업대기 2건)
-   ============================================================ */
-
-/* 4/1 - 베이글 2개, 머핀 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_yeoksam_id, 'PICKED_UP', 7600, 'YK12', '2026-04-01', '2026-04-01 17:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_plain_bagel, '플레인 베이글', 2400, 2),
-    (@ord_id, @bread_blueberry, '블루베리 머핀', 2800, 1);
-
-/* 4/3 - 단팥빵 3개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_yeoksam_id, 'PICKED_UP', 6300, 'YL34', '2026-04-03', '2026-04-03 18:45:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_redbean, '단팥빵', 2100, 3);
-
-/* 4/5 - 마늘바게트 3개 (주말) */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_yeoksam_id, 'PICKED_UP', 10500, 'YM56', '2026-04-05', '2026-04-05 16:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_garlic, '마늘바게트', 3500, 3);
-
-/* 4/7 - 카레빵 2개, 베이글 2개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_yeoksam_id, 'PICKED_UP', 10200, 'YN78', '2026-04-07', '2026-04-07 19:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_curry, '카레빵', 2700, 2),
-    (@ord_id, @bread_plain_bagel, '플레인 베이글', 2400, 2);
-
-/* 4/9 - 블루베리 머핀 3개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_yeoksam_id, 'PICKED_UP', 8400, 'YP91', '2026-04-09', '2026-04-09 20:15:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_blueberry, '블루베리 머핀', 2800, 3);
-
-/* 4/12 - 단팥빵 2개, 마늘바게트 1개 (주말) */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_yeoksam_id, 'PICKED_UP', 7700, 'YQ23', '2026-04-12', '2026-04-12 15:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_redbean, '단팥빵', 2100, 2),
-    (@ord_id, @bread_garlic, '마늘바게트', 3500, 1);
-
-/* 4/15 - 베이글 4개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_yeoksam_id, 'PICKED_UP', 9600, 'YR45', '2026-04-15', '2026-04-15 17:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_plain_bagel, '플레인 베이글', 2400, 4);
-
-/* 4/18 - 취소 주문 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_yeoksam_id, 'CANCELLED', 5400, 'YS67', '2026-04-18', '2026-04-18 18:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_curry, '카레빵', 2700, 2);
-
-/* 4/21 - 머핀 1개, 단팥빵 2개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_yeoksam_id, 'PICKED_UP', 7000, 'YT89', '2026-04-21', '2026-04-21 19:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_blueberry, '블루베리 머핀', 2800, 1),
-    (@ord_id, @bread_redbean, '단팥빵', 2100, 2);
-
-/* 4/24 - 마늘바게트 2개, 카레빵 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_yeoksam_id, 'PICKED_UP', 9700, 'YU12', '2026-04-24', '2026-04-24 16:45:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_garlic, '마늘바게트', 3500, 2),
-    (@ord_id, @bread_curry, '카레빵', 2700, 1);
-
-/* 4/28 - 베이글 1개, 머핀 2개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_yeoksam_id, 'PICKED_UP', 8000, 'YV34', '2026-04-28', '2026-04-28 20:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_plain_bagel, '플레인 베이글', 2400, 1),
-    (@ord_id, @bread_blueberry, '블루베리 머핀', 2800, 2);
-
-/* 역삼점 픽업 대기 주문 (CONFIRMED, 오늘 날짜) */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_yeoksam_id, 'CONFIRMED', 4800, 'YW56', CURDATE(), NOW());
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_plain_bagel, '플레인 베이글', 2400, 2);
-
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_yeoksam_id, 'CONFIRMED', 7000, 'YX78', CURDATE(), NOW());
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_garlic, '마늘바게트', 3500, 2);
-
-
-/* ============================================================
-   삼성점 주문 — 3월 (8건)
-   ============================================================ */
-
-/* 3/2 - 우유식빵 1개, 모카빵 2개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_samsung_id, 'PICKED_UP', 8200, 'MA12', '2026-03-02', '2026-03-02 17:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_milk, '우유식빵', 3200, 1),
-    (@ord_id, @bread_mocha, '모카빵', 2500, 2);
-
-/* 3/6 - 피자빵 3개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_samsung_id, 'PICKED_UP', 8400, 'MB34', '2026-03-06', '2026-03-06 18:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_pizza, '피자빵', 2800, 3);
-
-/* 3/10 - 치즈 스틱 4개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_samsung_id, 'PICKED_UP', 8400, 'MC56', '2026-03-10', '2026-03-10 19:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_cheese_stick, '치즈 스틱', 2100, 4);
-
-/* 3/13 - 우유식빵 2개, 피자빵 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_samsung_id, 'PICKED_UP', 9200, 'MD78', '2026-03-13', '2026-03-13 16:45:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_milk, '우유식빵', 3200, 2),
-    (@ord_id, @bread_pizza, '피자빵', 2800, 1);
-
-/* 3/17 - 모카빵 3개, 치즈 스틱 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_samsung_id, 'PICKED_UP', 9600, 'ME91', '2026-03-17', '2026-03-17 20:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_mocha, '모카빵', 2500, 3),
-    (@ord_id, @bread_cheese_stick, '치즈 스틱', 2100, 1);
-
-/* 3/20 - 취소 주문 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_samsung_id, 'CANCELLED', 6400, 'MF23', '2026-03-20', '2026-03-20 18:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_milk, '우유식빵', 3200, 2);
-
-/* 3/24 - 피자빵 2개, 모카빵 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_samsung_id, 'PICKED_UP', 8100, 'MG45', '2026-03-24', '2026-03-24 17:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_pizza, '피자빵', 2800, 2),
-    (@ord_id, @bread_mocha, '모카빵', 2500, 1);
-
-/* 3/29 - 치즈 스틱 3개, 우유식빵 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_samsung_id, 'PICKED_UP', 9500, 'MH67', '2026-03-29', '2026-03-29 19:15:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_cheese_stick, '치즈 스틱', 2100, 3),
-    (@ord_id, @bread_milk, '우유식빵', 3200, 1);
-
-/* ============================================================
-   삼성점 주문 — 4월 (12건 + 픽업대기 1건)
-   ============================================================ */
-
-/* 4/1 - 우유식빵 2개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_samsung_id, 'PICKED_UP', 6400, 'MJ12', '2026-04-01', '2026-04-01 17:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_milk, '우유식빵', 3200, 2);
-
-/* 4/3 - 모카빵 2개, 피자빵 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_samsung_id, 'PICKED_UP', 7800, 'MK34', '2026-04-03', '2026-04-03 18:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_mocha, '모카빵', 2500, 2),
-    (@ord_id, @bread_pizza, '피자빵', 2800, 1);
-
-/* 4/5 - 치즈 스틱 5개 (주말 대량) */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_samsung_id, 'PICKED_UP', 10500, 'ML56', '2026-04-05', '2026-04-05 16:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_cheese_stick, '치즈 스틱', 2100, 5);
-
-/* 4/7 - 피자빵 2개, 우유식빵 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_samsung_id, 'PICKED_UP', 8800, 'MM78', '2026-04-07', '2026-04-07 19:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_pizza, '피자빵', 2800, 2),
-    (@ord_id, @bread_milk, '우유식빵', 3200, 1);
-
-/* 4/9 - 모카빵 4개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_samsung_id, 'PICKED_UP', 10000, 'MN91', '2026-04-09', '2026-04-09 20:15:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_mocha, '모카빵', 2500, 4);
-
-/* 4/11 - 우유식빵 1개, 치즈 스틱 2개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_samsung_id, 'PICKED_UP', 7400, 'MP23', '2026-04-11', '2026-04-11 17:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_milk, '우유식빵', 3200, 1),
-    (@ord_id, @bread_cheese_stick, '치즈 스틱', 2100, 2);
-
-/* 4/14 - 피자빵 3개, 모카빵 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_samsung_id, 'PICKED_UP', 10900, 'MQ45', '2026-04-14', '2026-04-14 18:45:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_pizza, '피자빵', 2800, 3),
-    (@ord_id, @bread_mocha, '모카빵', 2500, 1);
-
-/* 4/17 - 치즈 스틱 3개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_samsung_id, 'PICKED_UP', 6300, 'MR67', '2026-04-17', '2026-04-17 19:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_cheese_stick, '치즈 스틱', 2100, 3);
-
-/* 4/20 - 우유식빵 3개 (주말) */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_samsung_id, 'PICKED_UP', 9600, 'MS89', '2026-04-20', '2026-04-20 15:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_milk, '우유식빵', 3200, 3);
-
-/* 4/23 - 취소 주문 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_samsung_id, 'CANCELLED', 5000, 'MT12', '2026-04-23', '2026-04-23 18:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_mocha, '모카빵', 2500, 2);
-
-/* 4/25 - 모카빵 1개, 피자빵 2개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_samsung_id, 'PICKED_UP', 8100, 'MU34', '2026-04-25', '2026-04-25 17:15:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_mocha, '모카빵', 2500, 1),
-    (@ord_id, @bread_pizza, '피자빵', 2800, 2);
-
-/* 4/29 - 치즈 스틱 2개, 우유식빵 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_samsung_id, 'PICKED_UP', 7400, 'MV56', '2026-04-29', '2026-04-29 20:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_cheese_stick, '치즈 스틱', 2100, 2),
-    (@ord_id, @bread_milk, '우유식빵', 3200, 1);
-
-/* 삼성점 픽업 대기 주문 (CONFIRMED, 오늘 날짜) */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_samsung_id, 'CONFIRMED', 5600, 'MW78', CURDATE(), NOW());
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_pizza, '피자빵', 2800, 2);
-
-
-/* ============================================================
-   대치점 주문 — 3월 (9건)
-   ============================================================ */
-
-/* 3/1 - 통밀빵 2개, 에그타르트 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_daechi_id, 'PICKED_UP', 9600, 'DA12', '2026-03-01', '2026-03-01 18:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_whole_wheat, '통밀빵', 3500, 2),
-    (@ord_id, @bread_egg_tart, '에그타르트', 2600, 1);
-
-/* 3/4 - 호두파이 2개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_daechi_id, 'PICKED_UP', 8400, 'DB34', '2026-03-04', '2026-03-04 19:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_walnut_pie, '호두파이', 4200, 2);
-
-/* 3/8 - 팥앙금빵 3개, 크로플 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_daechi_id, 'PICKED_UP', 10700, 'DC56', '2026-03-08', '2026-03-08 17:15:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_red_angeum, '팥앙금빵', 2500, 3),
-    (@ord_id, @bread_croffle, '크로플', 3200, 1);
-
-/* 3/11 - 에그타르트 4개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_daechi_id, 'PICKED_UP', 10400, 'DD12', '2026-03-11', '2026-03-11 20:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_egg_tart, '에그타르트', 2600, 4);
-
-/* 3/14 - 통밀빵 1개, 호두파이 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_daechi_id, 'PICKED_UP', 7700, 'DE34', '2026-03-14', '2026-03-14 18:45:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_whole_wheat, '통밀빵', 3500, 1),
-    (@ord_id, @bread_walnut_pie, '호두파이', 4200, 1);
-
-/* 3/18 - 크로플 2개, 팥앙금빵 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_daechi_id, 'PICKED_UP', 8900, 'DF56', '2026-03-18', '2026-03-18 16:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_croffle, '크로플', 3200, 2),
-    (@ord_id, @bread_red_angeum, '팥앙금빵', 2500, 1);
-
-/* 3/21 - 취소 주문 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_daechi_id, 'CANCELLED', 7000, 'DG78', '2026-03-21', '2026-03-21 18:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_whole_wheat, '통밀빵', 3500, 2);
-
-/* 3/25 - 호두파이 1개, 에그타르트 2개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_daechi_id, 'PICKED_UP', 9400, 'DH91', '2026-03-25', '2026-03-25 19:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_walnut_pie, '호두파이', 4200, 1),
-    (@ord_id, @bread_egg_tart, '에그타르트', 2600, 2);
-
-/* 3/29 - 팥앙금빵 2개, 통밀빵 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_daechi_id, 'PICKED_UP', 8500, 'DJ23', '2026-03-29', '2026-03-29 17:45:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_red_angeum, '팥앙금빵', 2500, 2),
-    (@ord_id, @bread_whole_wheat, '통밀빵', 3500, 1);
-
-/* ============================================================
-   대치점 주문 — 4월 (10건 + 픽업대기 2건)
-   ============================================================ */
-
-/* 4/1 - 통밀빵 2개, 팥앙금빵 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_daechi_id, 'PICKED_UP', 9500, 'DK12', '2026-04-01', '2026-04-01 17:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_whole_wheat, '통밀빵', 3500, 2),
-    (@ord_id, @bread_red_angeum, '팥앙금빵', 2500, 1);
-
-/* 4/3 - 에그타르트 3개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_daechi_id, 'PICKED_UP', 7800, 'DL34', '2026-04-03', '2026-04-03 18:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_egg_tart, '에그타르트', 2600, 3);
-
-/* 4/5 - 호두파이 3개 (주말) */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_daechi_id, 'PICKED_UP', 12600, 'DM56', '2026-04-05', '2026-04-05 16:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_walnut_pie, '호두파이', 4200, 3);
-
-/* 4/8 - 크로플 2개, 에그타르트 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_daechi_id, 'PICKED_UP', 9000, 'DN78', '2026-04-08', '2026-04-08 19:15:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_croffle, '크로플', 3200, 2),
-    (@ord_id, @bread_egg_tart, '에그타르트', 2600, 1);
-
-/* 4/10 - 팥앙금빵 4개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_daechi_id, 'PICKED_UP', 10000, 'DP91', '2026-04-10', '2026-04-10 20:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_red_angeum, '팥앙금빵', 2500, 4);
-
-/* 4/13 - 통밀빵 1개, 호두파이 2개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_daechi_id, 'PICKED_UP', 11900, 'DQ23', '2026-04-13', '2026-04-13 17:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_whole_wheat, '통밀빵', 3500, 1),
-    (@ord_id, @bread_walnut_pie, '호두파이', 4200, 2);
-
-/* 4/16 - 에그타르트 2개, 크로플 1개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_daechi_id, 'PICKED_UP', 8400, 'DR45', '2026-04-16', '2026-04-16 18:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_egg_tart, '에그타르트', 2600, 2),
-    (@ord_id, @bread_croffle, '크로플', 3200, 1);
-
-/* 4/20 - 취소 주문 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_daechi_id, 'CANCELLED', 8400, 'DS67', '2026-04-20', '2026-04-20 18:00:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_walnut_pie, '호두파이', 4200, 2);
-
-/* 4/23 - 팥앙금빵 2개, 통밀빵 2개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_daechi_id, 'PICKED_UP', 12000, 'DT89', '2026-04-23', '2026-04-23 19:30:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_red_angeum, '팥앙금빵', 2500, 2),
-    (@ord_id, @bread_whole_wheat, '통밀빵', 3500, 2);
-
-/* 4/27 - 호두파이 1개, 에그타르트 3개 */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_daechi_id, 'PICKED_UP', 12000, 'DU12', '2026-04-27', '2026-04-27 16:45:00');
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_walnut_pie, '호두파이', 4200, 1),
-    (@ord_id, @bread_egg_tart, '에그타르트', 2600, 3);
-
-/* 대치점 픽업 대기 주문 (CONFIRMED, 오늘 날짜) */
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_daechi_id, 'CONFIRMED', 7000, 'DV34', CURDATE(), NOW());
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_whole_wheat, '통밀빵', 3500, 2);
-
-INSERT INTO orders (user_id, store_id, status, total_amount, order_number, order_date, created_at)
-VALUES (@demo_user_id, @demo_store_daechi_id, 'CONFIRMED', 5200, 'DW56', CURDATE(), NOW());
-SET @ord_id = LAST_INSERT_ID();
-INSERT INTO order_item (order_id, bread_id, bread_name, bread_price, quantity) VALUES
-    (@ord_id, @bread_egg_tart, '에그타르트', 2600, 2);
+INSERT INTO payment (order_id, amount, status, paid_at, idempotency_key, payment_key, method)
+SELECT
+    o.id,
+    o.total_amount,
+    CASE o.status
+        WHEN 'CANCELLED' THEN 'CANCELLED'
+        ELSE 'APPROVED'
+    END,
+    o.created_at,
+    CONCAT('seed-pay-', o.id),
+    CONCAT('seed_pay_', o.id),
+    'STUB'
+FROM orders o
+JOIN store s ON o.store_id = s.id
+WHERE s.id IN (@s1,@s2,@s3,@s4,@s5,@s6,@s7,@s8,@s9,@s10)
+  AND o.status IN ('CONFIRMED', 'PICKED_UP')
+  AND NOT EXISTS (SELECT 1 FROM payment p WHERE p.order_id = o.id);
+
+/* CANCELLED 주문에도 취소 결제 레코드 */
+INSERT INTO payment (order_id, amount, status, paid_at, idempotency_key, payment_key, method, cancel_reason, cancelled_at)
+SELECT
+    o.id,
+    o.total_amount,
+    'CANCELLED',
+    o.created_at,
+    CONCAT('seed-pay-', o.id),
+    CONCAT('seed_pay_', o.id),
+    'STUB',
+    '테스트 취소',
+    DATE_ADD(o.created_at, INTERVAL 30 MINUTE)
+FROM orders o
+JOIN store s ON o.store_id = s.id
+WHERE s.id IN (@s1,@s2,@s3,@s4,@s5,@s6,@s7,@s8,@s9,@s10)
+  AND o.status = 'CANCELLED'
+  AND NOT EXISTS (SELECT 1 FROM payment p WHERE p.order_id = o.id);
 
 COMMIT;

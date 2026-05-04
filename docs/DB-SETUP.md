@@ -556,15 +556,14 @@ SELECT * FROM flyway_schema_history;  -- Flyway 마이그레이션 이력 확인
 
 삽입되는 샘플 계정:
 
-- `demo-user@todaybread.local` / `todaybread123`
-- `demo-boss-gangnam@todaybread.local` / `todaybread123`
-- `demo-boss-seolleung@todaybread.local` / `todaybread123`
+- `demo-user@todaybread.com` / `todaybread123`
+- `demo-boss1@todaybread.com` ~ `demo-boss10@todaybread.com` / `todaybread123`
 
 추천 근처 조회 좌표:
 
 - `lat=37.4980950`
 - `lng=127.0276100`
-- `radius=3`
+- `radius=5`
 
 > 이 스크립트는 Docker 볼륨 안의 현재 DB에 데이터를 추가합니다.
 > 컨테이너를 다시 띄워도 볼륨을 지우지 않으면 데이터는 유지됩니다.

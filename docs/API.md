@@ -14,14 +14,10 @@
 
 샘플 계정:
 
-- `demo-user@todaybread.local` / `todaybread123`
-- `demo-boss-gangnam@todaybread.local` / `todaybread123`
-- `demo-boss-seolleung@todaybread.local` / `todaybread123`
-- `demo-boss-yeoksam@todaybread.local` / `todaybread123`
-- `demo-boss-samsung@todaybread.local` / `todaybread123`
-- `demo-boss-daechi@todaybread.local` / `todaybread123`
+- `demo-user@todaybread.com` / `todaybread123`
+- `demo-boss1@todaybread.com` ~ `demo-boss10@todaybread.com` / `todaybread123`
 
-근처 매장/빵 조회 추천 좌표: `lat=37.4980950`, `lng=127.0276100`, `radius=3`
+근처 매장/빵 조회 추천 좌표: `lat=37.4980950`, `lng=127.0276100`, `radius=5`
 
 ---
 
@@ -86,7 +82,7 @@
 
 ```json
 {
-  "email": "user@todaybread.local",
+  "email": "user@todaybread.com",
   "nickname": "빵순이",
   "name": "김빵순",
   "password": "todaybread123",
@@ -117,7 +113,7 @@
 
 ```json
 {
-  "email": "demo-user@todaybread.local",
+  "email": "demo-user@todaybread.com",
   "password": "todaybread123"
 }
 ```
@@ -267,7 +263,7 @@ false
 
 ```json
 {
-  "maskedEmail": "de****@todaybread.local"
+  "maskedEmail": "de****@todaybread.com"
 }
 ```
 
@@ -288,7 +284,7 @@ false
 ```json
 {
   "verified": true,
-  "email": "demo-user@todaybread.local"
+  "email": "demo-user@todaybread.com"
 }
 ```
 
@@ -306,7 +302,7 @@ false
 
 ```json
 {
-  "email": "demo-user@todaybread.local",
+  "email": "demo-user@todaybread.com",
   "newPassword": "newpassword123"
 }
 ```
@@ -1552,11 +1548,67 @@ false
 
 ### 15. 결제 (Payment)
 
-> 결제 API(`POST /api/payments`)는 `Idempotency-Key` 헤더가 필수입니다.
-> 같은 key로 재요청하면 PG를 중복 호출하지 않고 기존 결제 결과를 반환합니다.
-> 결제 실패 후 재시도할 때는 새로운 key를 사용하세요.
+> 결제 승인 확정 API(`POST /api/payments/confirm`)는 `Idempotency-Key` 헤더가 필수입니다.
+> 같은 key로 재요청하면 토스 Confirm API를 중복 호출하지 않고 기존 결제 결과를 반환합니다.
+> 결제 실패 후 재시도할 때는 새로운 key를 사용하세요. (UUID v4 권장)
 
-#### `POST /api/payments` — 결제 요청
+#### `POST /api/payments/confirm` — 결제 승인 확정
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+| 필수 헤더 | `Idempotency-Key` |
+
+**요청 바디:**
+
+```json
+{
+  "paymentKey": "tgen_20250101010101ABCDE",
+  "orderId": 42,
+  "amount": 7500
+}
+```
+
+**응답 형식:**
+
+```json
+{
+  "paymentId": 1,
+  "orderId": 42,
+  "amount": 7500,
+  "status": "APPROVED",
+  "paidAt": "2026-04-15T18:31:00",
+  "method": "카드"
+}
+```
+
+> 결제 상태: `PENDING`, `APPROVED`, `FAILED`, `CANCELLED`
+
+**에러 응답:** `PAYMENT_001`, `PAYMENT_003`, `PAYMENT_004`, `PAYMENT_005`, `PAYMENT_008`, `ORDER_001`
+
+---
+
+#### `GET /api/payments/client-key` — 토스 Client Key 조회
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | X |
+
+**응답 형식:**
+
+```json
+{
+  "clientKey": "test_ck_..."
+}
+```
+
+> 프론트엔드에서 토스 결제 위젯을 초기화할 때 사용합니다. Client Key는 공개 키이므로 인증 없이 접근 가능합니다.
+
+---
+
+#### ~~`POST /api/payments` — 결제 요청~~ (Deprecated)
+
+> **⚠️ Deprecated:** 이 엔드포인트는 `POST /api/payments/confirm`으로 대체되었습니다. 토스 페이먼츠 연동에 따라 새 엔드포인트를 사용하세요.
 
 | 항목 | 값 |
 |------|-----|
@@ -1583,10 +1635,6 @@ false
   "paidAt": "2026-04-15T18:31:00"
 }
 ```
-
-> 결제 상태: `PENDING`, `APPROVED`, `FAILED`
->
-> 현재 Stub PG를 사용하며, 추후 토스 결제로 교체 예정입니다.
 
 **에러 응답:** `PAYMENT_001`, `PAYMENT_002`, `PAYMENT_003`, `ORDER_001`, `COMMON_008`
 
@@ -1621,6 +1669,7 @@ false
   - `/api/user/find-email` — 이메일 찾기
   - `/api/user/verify-identity` — 본인 확인
   - `/api/user/reset-password` — 비밀번호 재설정
+  - `/api/payments/client-key` — 토스 Client Key 조회
   - `/api/system/health` — 헬스체크
   - `/swagger-ui/**` — Swagger UI
   - `/v3/api-docs/**` — OpenAPI 스펙
@@ -1747,3 +1796,8 @@ false
 | `PAYMENT_001` | 400 | 결제 금액이 주문 금액과 일치하지 않습니다. |
 | `PAYMENT_002` | 400 | 결제 금액은 0보다 커야 합니다. |
 | `PAYMENT_003` | 409 | 결제할 수 없는 주문 상태입니다. |
+| `PAYMENT_004` | 502 | 결제 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요. |
+| `PAYMENT_005` | 400 | 결제 승인에 실패했습니다. |
+| `PAYMENT_006` | 409 | 이미 처리된 결제입니다. |
+| `PAYMENT_007` | 502 | 결제 취소 처리 중 오류가 발생했습니다. |
+| `PAYMENT_008` | 400 | Idempotency-Key 헤더가 필요합니다. |

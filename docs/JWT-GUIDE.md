@@ -26,6 +26,7 @@
 /api/user/verify-identity
 /api/user/reset-password
 /api/system/health
+/api/payments/client-key
 /swagger-ui/**
 /v3/api-docs/**
 /images/**
@@ -117,7 +118,7 @@ public UserLoginResponse login(@RequestBody @Valid UserLoginRequest request) {
 프론트:
 ```dart
 final response = await dio.post('/api/user/login',
-    data: {'email': 'demo-user@todaybread.local', 'password': 'todaybread123'},
+    data: {'email': 'demo-user@todaybread.com', 'password': 'todaybread123'},
 );
 // 응답에서 accessToken, refreshToken 저장
 ```
