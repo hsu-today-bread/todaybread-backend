@@ -4,10 +4,12 @@ import com.todaybread.server.domain.order.entity.OrderEntity;
 import com.todaybread.server.domain.order.entity.OrderStatus;
 import com.todaybread.server.domain.order.repository.OrderRepository;
 import com.todaybread.server.domain.order.service.OrderService;
+import com.todaybread.server.domain.payment.client.TossPaymentException;
 import com.todaybread.server.domain.payment.dto.PaymentRequest;
 import com.todaybread.server.domain.payment.dto.PaymentResponse;
 import com.todaybread.server.domain.payment.entity.PaymentEntity;
 import com.todaybread.server.domain.payment.entity.PaymentStatus;
+import com.todaybread.server.domain.payment.processor.CancelResult;
 import com.todaybread.server.domain.payment.processor.PaymentProcessor;
 import com.todaybread.server.domain.payment.processor.PaymentResult;
 import com.todaybread.server.domain.payment.repository.PaymentRepository;
@@ -117,5 +119,175 @@ public class PaymentService {
         }
 
         return PaymentResponse.of(payment);
+    }
+
+    /**
+     * 토스 결제 승인을 확정합니다.
+     * 프론트엔드에서 받은 paymentKey, orderId, amount를 검증하고 토스 Confirm API를 호출합니다.
+     *
+     * <p>멱등성: 동일 idempotencyKey로 이미 APPROVED 결제가 있으면 기존 결과를 반환합니다.
+     * <p>토스 에러 처리:
+     * <ul>
+     *   <li>ALREADY_PROCESSED_PAYMENT → 기존 결제 결과 조회 후 반환</li>
+     *   <li>PROVIDER_ERROR → PAYMENT_004 에러 반환</li>
+     *   <li>카드 관련 에러 → 토스 에러 메시지 그대로 전달</li>
+     * </ul>
+     *
+     * @param userId         유저 ID
+     * @param paymentKey     토스 페이먼츠 결제 고유 키
+     * @param orderId        주문 ID
+     * @param amount         결제 금액
+     * @param idempotencyKey 멱등성 키
+     * @return 결제 엔티티
+     */
+    @Transactional
+    public PaymentEntity confirmPayment(Long userId, String paymentKey, Long orderId, int amount,
+                                        String idempotencyKey) {
+        // 1. 멱등성 처리: 동일 idempotencyKey로 기존 APPROVED 결제가 있으면 기존 결과 반환
+        Optional<PaymentEntity> existingByKey = paymentRepository.findByIdempotencyKey(idempotencyKey);
+        if (existingByKey.isPresent() && existingByKey.get().getStatus() == PaymentStatus.APPROVED) {
+            return existingByKey.get();
+        }
+
+        // 2. 비관적 락으로 주문 조회
+        OrderEntity order = orderRepository.findByIdWithLock(orderId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
+
+        // 3. 소유자 확인
+        if (!order.getUserId().equals(userId)) {
+            throw new CustomException(ErrorCode.ORDER_ACCESS_DENIED);
+        }
+
+        // 4. PENDING 상태 확인
+        if (order.getStatus() != OrderStatus.PENDING) {
+            throw new CustomException(ErrorCode.PAYMENT_ORDER_STATUS_INVALID);
+        }
+
+        // 5. 금액 일치 확인
+        if (amount != order.getTotalAmount()) {
+            throw new CustomException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
+        }
+
+        // 6. 기존 결제 확인
+        Optional<PaymentEntity> existingPayment = paymentRepository.findByOrderId(orderId);
+
+        // 7. PaymentProcessor.confirm() 호출
+        // 토스 orderId 규격: 6~64자 영문/숫자/-/_ 문자열
+        String tossOrderId = "order_" + orderId;
+        try {
+            PaymentResult result = paymentProcessor.confirm(paymentKey, tossOrderId, amount);
+
+            // 성공 시: Payment 저장 (APPROVED, paymentKey, method), 주문 CONFIRMED 전환
+            PaymentEntity payment;
+            if (existingPayment.isPresent()) {
+                payment = existingPayment.get();
+                payment.approve(LocalDateTime.now(clock), idempotencyKey, result.paymentKey(), result.method());
+            } else {
+                payment = PaymentEntity.builder()
+                        .orderId(orderId)
+                        .amount(amount)
+                        .status(PaymentStatus.APPROVED)
+                        .paidAt(LocalDateTime.now(clock))
+                        .idempotencyKey(idempotencyKey)
+                        .build();
+                payment.approve(LocalDateTime.now(clock), idempotencyKey, result.paymentKey(), result.method());
+                paymentRepository.save(payment);
+            }
+
+            orderService.confirmOrder(orderId);
+            log.info("토스 결제 승인 완료: paymentId={}, orderId={}, amount={}, paymentKey={}",
+                    payment.getId(), orderId, amount, result.paymentKey());
+
+            return payment;
+
+        } catch (TossPaymentException ex) {
+            log.error("토스 결제 에러: code={}, message={}", ex.getErrorCode(), ex.getErrorMessage());
+
+            // ALREADY_PROCESSED_PAYMENT: 기존 결제 결과 조회 후 반환
+            if ("ALREADY_PROCESSED_PAYMENT".equals(ex.getErrorCode())) {
+                Optional<PaymentEntity> alreadyProcessed = paymentRepository.findByOrderId(orderId);
+                if (alreadyProcessed.isPresent()) {
+                    return alreadyProcessed.get();
+                }
+            }
+
+            // PROVIDER_ERROR: PAYMENT_004 에러 반환
+            if ("PROVIDER_ERROR".equals(ex.getErrorCode())) {
+                // 실패 시: Payment 저장 (FAILED), 주문 PENDING 유지
+                saveFailedPayment(orderId, amount, idempotencyKey, existingPayment);
+                throw new CustomException(ErrorCode.PAYMENT_PROVIDER_ERROR);
+            }
+
+            // 카드 관련 에러 및 기타: Payment 저장 (FAILED), 토스 에러 메시지 그대로 전달
+            saveFailedPayment(orderId, amount, idempotencyKey, existingPayment);
+            throw ex;
+        }
+    }
+
+    /**
+     * 결제를 취소합니다.
+     * orderId로 APPROVED 상태의 결제를 조회하고, 토스 Cancel API를 호출하여 결제를 취소합니다.
+     *
+     * <p>취소 성공 시: Payment 상태를 CANCELLED로 변경하고, 취소 사유와 취소 시각을 저장합니다.
+     * <p>취소 실패 시: PAYMENT_007 에러를 반환합니다.
+     * <p>취소 성공 후 주문 취소 처리를 {@link OrderService#cancelOrder(Long, Long)}에 위임합니다.
+     *
+     * @param userId  유저 ID
+     * @param orderId 주문 ID
+     */
+    @Transactional
+    public void cancelPayment(Long userId, Long orderId) {
+        // 1. orderId로 APPROVED 상태 결제 조회
+        PaymentEntity payment = paymentRepository.findByOrderIdAndStatus(orderId, PaymentStatus.APPROVED)
+                .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
+
+        // 2. 소유자 검증: 주문 조회하여 userId 확인
+        OrderEntity order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
+
+        if (!order.getUserId().equals(userId)) {
+            throw new CustomException(ErrorCode.ORDER_ACCESS_DENIED);
+        }
+
+        // 3. PaymentProcessor.cancel() 호출
+        String cancelReason = "고객 요청";
+        try {
+            CancelResult cancelResult = paymentProcessor.cancel(
+                    payment.getPaymentKey(), cancelReason, payment.getAmount());
+
+            // 4. 성공 시: Payment 상태 CANCELLED, cancelReason, cancelledAt 저장
+            LocalDateTime cancelledAt = LocalDateTime.parse(cancelResult.cancelledAt(),
+                    java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+            payment.cancel(cancelReason, cancelledAt);
+
+            log.info("결제 취소 완료: orderId={}, paymentKey={}", orderId, payment.getPaymentKey());
+
+        } catch (TossPaymentException ex) {
+            // 5. 실패 시: PAYMENT_007 에러 반환
+            log.error("결제 취소 실패: orderId={}, code={}, message={}",
+                    orderId, ex.getErrorCode(), ex.getErrorMessage());
+            throw new CustomException(ErrorCode.PAYMENT_CANCEL_FAILED);
+        }
+
+        // 6. 주문 취소 처리 위임
+        orderService.cancelOrder(userId, orderId);
+    }
+
+    /**
+     * 결제 실패 시 Payment를 FAILED 상태로 저장합니다.
+     */
+    private void saveFailedPayment(Long orderId, int amount, String idempotencyKey,
+                                   Optional<PaymentEntity> existingPayment) {
+        if (existingPayment.isPresent()) {
+            existingPayment.get().updateStatus(PaymentStatus.FAILED, idempotencyKey);
+        } else {
+            PaymentEntity failedPayment = PaymentEntity.builder()
+                    .orderId(orderId)
+                    .amount(amount)
+                    .status(PaymentStatus.FAILED)
+                    .idempotencyKey(idempotencyKey)
+                    .build();
+            paymentRepository.save(failedPayment);
+        }
     }
 }

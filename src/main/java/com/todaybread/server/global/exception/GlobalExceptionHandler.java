@@ -1,5 +1,6 @@
 package com.todaybread.server.global.exception;
 
+import com.todaybread.server.domain.payment.client.TossPaymentException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +45,21 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<ErrorResponse> handleCustomException(CustomException ex) {
         return toResponse(ex.getErrorCode());
+    }
+
+    /**
+     * 토스 페이먼츠 API 에러 응답을 처리합니다.
+     * 토스 에러 코드와 메시지를 로그에 기록하고, 토스 에러 메시지를 클라이언트에 반환합니다.
+     *
+     * @param ex 토스 결제 예외
+     * @return 토스 HTTP 상태 코드 + 토스 에러 코드/메시지
+     */
+    @ExceptionHandler(TossPaymentException.class)
+    public ResponseEntity<ErrorResponse> handleTossPaymentException(TossPaymentException ex) {
+        log.error("토스 결제 에러: code={}, message={}", ex.getErrorCode(), ex.getErrorMessage());
+        return ResponseEntity
+                .status(ex.getHttpStatus())
+                .body(new ErrorResponse(ex.getErrorCode(), ex.getErrorMessage()));
     }
 
     /**

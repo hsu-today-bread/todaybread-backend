@@ -6,5 +6,6 @@ package com.todaybread.server.domain.payment.entity;
 public enum PaymentStatus {
     PENDING,
     APPROVED,
-    FAILED
+    FAILED,
+    CANCELLED
 }
