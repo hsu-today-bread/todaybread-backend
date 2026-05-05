@@ -2,6 +2,7 @@ package com.todaybread.server.domain.review.service;
 
 import com.todaybread.server.domain.bread.entity.BreadEntity;
 import com.todaybread.server.domain.bread.repository.BreadRepository;
+import com.todaybread.server.domain.bread.service.BreadImageService;
 import com.todaybread.server.domain.order.dto.PurchaseCountProjection;
 import com.todaybread.server.domain.order.entity.OrderStatus;
 import com.todaybread.server.domain.order.repository.OrderRepository;
@@ -47,6 +48,7 @@ public class ReviewQueryService {
     private final StoreRepository storeRepository;
     private final UserRepository userRepository;
     private final BreadRepository breadRepository;
+    private final BreadImageService breadImageService;
     private final OrderRepository orderRepository;
 
     /**
@@ -95,6 +97,9 @@ public class ReviewQueryService {
         Map<Long, String> breadNameMap = breadRepository.findAllById(breadIds).stream()
                 .collect(Collectors.toMap(BreadEntity::getId, BreadEntity::getName));
 
+        // 빵 대표 이미지 URL 매핑
+        Map<Long, String> breadImageUrlMap = breadImageService.getImageUrls(breadIds);
+
         // 이미지 URL 매핑
         Map<Long, List<String>> imageUrlsMap = reviewImageService.getImageUrlsByReviewIds(reviewIds);
 
@@ -105,6 +110,7 @@ public class ReviewQueryService {
                 review.getRating(),
                 review.getContent(),
                 breadNameMap.getOrDefault(review.getBreadId(), "알 수 없음"),
+                breadImageUrlMap.get(review.getBreadId()),
                 imageUrlsMap.getOrDefault(review.getId(), Collections.emptyList()),
                 review.getCreatedAt()
         ));
@@ -177,6 +183,9 @@ public class ReviewQueryService {
         Map<Long, String> breadNameMap = breadRepository.findAllById(breadIds).stream()
                 .collect(Collectors.toMap(BreadEntity::getId, BreadEntity::getName));
 
+        // 빵 대표 이미지 URL 매핑
+        Map<Long, String> breadImageUrlMap = breadImageService.getImageUrls(breadIds);
+
         // 이미지 URL 매핑
         Map<Long, List<String>> imageUrlsMap = reviewImageService.getImageUrlsByReviewIds(reviewIds);
 
@@ -197,6 +206,7 @@ public class ReviewQueryService {
                 review.getRating(),
                 review.getContent(),
                 breadNameMap.getOrDefault(review.getBreadId(), "알 수 없음"),
+                breadImageUrlMap.get(review.getBreadId()),
                 imageUrlsMap.getOrDefault(review.getId(), Collections.emptyList()),
                 review.getCreatedAt(),
                 purchaseCountMap.getOrDefault(review.getUserId(), 0L).intValue()
@@ -254,6 +264,9 @@ public class ReviewQueryService {
         Map<Long, String> breadNameMap = breadRepository.findAllById(breadIds).stream()
                 .collect(Collectors.toMap(BreadEntity::getId, BreadEntity::getName));
 
+        // 빵 대표 이미지 URL 매핑
+        Map<Long, String> breadImageUrlMap = breadImageService.getImageUrls(breadIds);
+
         // 가게 이름 및 ID 매핑
         Map<Long, StoreEntity> storeMap = storeRepository.findAllById(storeIds).stream()
                 .collect(Collectors.toMap(StoreEntity::getId, store -> store));
@@ -265,6 +278,7 @@ public class ReviewQueryService {
         return reviewPage.map(review -> new MyReviewResponse(
                 review.getId(),
                 breadNameMap.getOrDefault(review.getBreadId(), "알 수 없음"),
+                breadImageUrlMap.get(review.getBreadId()),
                 storeMap.containsKey(review.getStoreId())
                         ? storeMap.get(review.getStoreId()).getName()
                         : "알 수 없음",

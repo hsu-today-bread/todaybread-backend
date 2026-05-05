@@ -11,7 +11,8 @@ import java.util.List;
  * @param rating 평점
  * @param content 리뷰 내용
  * @param breadName 빵 이름
- * @param imageUrls 이미지 URL 목록
+ * @param breadImageUrl 빵 대표 이미지 URL (nullable, 리뷰 첨부 이미지와 별개)
+ * @param imageUrls 리뷰 첨부 이미지 URL 목록
  * @param createdAt 작성일시
  */
 public record StoreReviewResponse(
@@ -20,6 +21,7 @@ public record StoreReviewResponse(
         int rating,
         String content,
         String breadName,
+        String breadImageUrl,
         List<String> imageUrls,
         LocalDateTime createdAt
 ) {}

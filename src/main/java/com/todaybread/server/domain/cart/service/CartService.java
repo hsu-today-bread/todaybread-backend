@@ -57,8 +57,8 @@ public class CartService {
      */
     @Transactional
     public void addToCart(Long userId, CartAddRequest request) {
-        // 1. 빵 존재 확인
-        Optional<BreadEntity> breadOpt = breadRepository.findById(request.breadId());
+        // 1. 빵 존재 확인 (삭제된 빵은 장바구니에 추가할 수 없음)
+        Optional<BreadEntity> breadOpt = breadRepository.findByIdAndIsDeletedFalse(request.breadId());
         if (breadOpt.isEmpty()) {
             throw new CustomException(ErrorCode.BREAD_NOT_FOUND);
         }
@@ -109,11 +109,12 @@ public class CartService {
     /**
      * 장바구니를 조회합니다.
      * Cart_Item 목록과 매장 이름, 오늘 라스트오더 시간을 반환합니다.
+     * 삭제된 빵 항목은 자동으로 정리됩니다.
      *
      * @param userId 유저 ID
      * @return 장바구니 응답
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public CartResponse getCart(Long userId) {
         // 1. Cart 조회
         Optional<CartEntity> cartOpt = cartRepository.findByUserId(userId);
@@ -137,25 +138,44 @@ public class CartService {
         Map<Long, BreadEntity> breadMap = breadRepository.findAllById(breadIds).stream()
                 .collect(java.util.stream.Collectors.toMap(BreadEntity::getId, b -> b));
 
-        // 3. 각 CartItem에 대해 응답 생성
-        List<CartItemResponse> itemResponses = new ArrayList<>();
+        // 3. 삭제된 빵 항목 자동 정리
+        List<CartItemEntity> validItems = new ArrayList<>();
+        List<CartItemEntity> deletedItems = new ArrayList<>();
+
         for (CartItemEntity item : cartItems) {
             BreadEntity bread = breadMap.get(item.getBreadId());
-            if (bread == null) {
-                throw new CustomException(ErrorCode.BREAD_NOT_FOUND);
+            if (bread == null || bread.isDeleted()) {
+                deletedItems.add(item);
+            } else {
+                validItems.add(item);
             }
+        }
+
+        if (!deletedItems.isEmpty()) {
+            cartItemRepository.deleteAll(deletedItems);
+
+            if (validItems.isEmpty()) {
+                cart.updateStoreId(null);
+                return new CartResponse(null, null, List.of());
+            }
+        }
+
+        // 4. 유효한 항목으로 응답 생성
+        List<CartItemResponse> itemResponses = new ArrayList<>();
+        for (CartItemEntity item : validItems) {
+            BreadEntity bread = breadMap.get(item.getBreadId());
             String imageUrl = imageUrlMap.get(bread.getId());
             itemResponses.add(CartItemResponse.of(item, bread, imageUrl));
         }
 
-        // 4. 매장 이름 조회
+        // 5. 매장 이름 조회
         Optional<StoreEntity> storeOpt = storeRepository.findById(cart.getStoreId());
         if (storeOpt.isEmpty()) {
             throw new CustomException(ErrorCode.STORE_NOT_FOUND);
         }
         StoreEntity store = storeOpt.get();
 
-        // 5. 오늘 라스트오더 시간 조회
+        // 6. 오늘 라스트오더 시간 조회
         int todayDow = LocalDate.now(clock).getDayOfWeek().getValue();
         LocalTime lastOrderTime = storeBusinessHoursRepository
                 .findByStoreIdAndDayOfWeek(store.getId(), todayDow)

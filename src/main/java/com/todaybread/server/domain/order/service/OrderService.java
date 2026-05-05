@@ -2,6 +2,7 @@ package com.todaybread.server.domain.order.service;
 
 import com.todaybread.server.domain.bread.entity.BreadEntity;
 import com.todaybread.server.domain.bread.repository.BreadRepository;
+import com.todaybread.server.domain.bread.service.BreadImageService;
 import com.todaybread.server.domain.cart.entity.CartEntity;
 import com.todaybread.server.domain.cart.entity.CartItemEntity;
 import com.todaybread.server.domain.cart.service.CartService;
@@ -50,6 +51,7 @@ public class OrderService {
     private final StoreRepository storeRepository;
     private final InventoryRestorer inventoryRestorer;
     private final OrderNumberGenerator orderNumberGenerator;
+    private final BreadImageService breadImageService;
     private final Clock clock;
 
     /**
@@ -103,7 +105,7 @@ public class OrderService {
         // 3. 모든 빵 존재 확인 및 재고 확인 (차감 전 전체 검증)
         for (CartItemEntity cartItem : cartItems) {
             BreadEntity bread = breadMap.get(cartItem.getBreadId());
-            if (bread == null) {
+            if (bread == null || bread.isDeleted()) {
                 throw new CustomException(ErrorCode.BREAD_NOT_FOUND);
             }
             if (bread.getRemainingQuantity() < cartItem.getQuantity()) {
@@ -163,8 +165,13 @@ public class OrderService {
         }
         StoreEntity store = storeOpt.get();
 
+        // 빵 대표 이미지 URL 조회
+        Map<Long, String> breadImageUrlMap = breadImageService.getImageUrls(breadIds);
+
         return OrderDetailResponse.of(order, store.getName(),
-                orderItems.stream().map(OrderItemResponse::of).toList());
+                orderItems.stream()
+                        .map(item -> OrderItemResponse.of(item, breadImageUrlMap.get(item.getBreadId())))
+                        .toList());
     }
 
     /**
@@ -188,6 +195,11 @@ public class OrderService {
             throw new CustomException(ErrorCode.BREAD_NOT_FOUND);
         }
         BreadEntity bread = breads.get(0);
+
+        // 삭제된 빵 차단
+        if (bread.isDeleted()) {
+            throw new CustomException(ErrorCode.BREAD_NOT_FOUND);
+        }
 
         existingOrder = findExistingOrderDetail(userId, idempotencyKey);
         if (existingOrder.isPresent()) {
@@ -235,7 +247,10 @@ public class OrderService {
         }
         StoreEntity store = storeOpt.get();
 
-        return OrderDetailResponse.of(order, store.getName(), List.of(OrderItemResponse.of(orderItem)));
+        // 빵 대표 이미지 URL 조회
+        String breadImageUrl = breadImageService.getImageUrl(bread.getId());
+
+        return OrderDetailResponse.of(order, store.getName(), List.of(OrderItemResponse.of(orderItem, breadImageUrl)));
     }
 
     /**
@@ -334,8 +349,19 @@ public class OrderService {
         StoreEntity store = storeOpt.get();
 
         List<OrderItemEntity> orderItems = orderItemRepository.findByOrderId(orderId);
-        return OrderDetailResponse.of(order, store.getName(),
-                orderItems.stream().map(OrderItemResponse::of).toList());
+
+        // 빵 대표 이미지 URL 일괄 조회
+        List<Long> breadIds = orderItems.stream()
+                .map(OrderItemEntity::getBreadId)
+                .filter(id -> id != null)
+                .toList();
+        Map<Long, String> breadImageUrlMap = breadImageService.getImageUrls(breadIds);
+
+        List<OrderItemResponse> itemResponses = orderItems.stream()
+                .map(item -> OrderItemResponse.of(item, breadImageUrlMap.get(item.getBreadId())))
+                .toList();
+
+        return OrderDetailResponse.of(order, store.getName(), itemResponses);
     }
 
     /** 기존 주문이 있으면 상세 응답을 반환합니다. */

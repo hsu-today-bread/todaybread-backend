@@ -2,6 +2,7 @@ package com.todaybread.server.domain.review.service;
 
 import com.todaybread.server.domain.bread.entity.BreadEntity;
 import com.todaybread.server.domain.bread.repository.BreadRepository;
+import com.todaybread.server.domain.bread.service.BreadImageService;
 import com.todaybread.server.domain.order.entity.OrderEntity;
 import com.todaybread.server.domain.order.entity.OrderItemEntity;
 import com.todaybread.server.domain.order.entity.OrderStatus;
@@ -74,6 +75,9 @@ class ReviewServiceIntegrationTest {
     @Mock
     private BreadRepository breadRepository;
 
+    @Mock
+    private BreadImageService breadImageService;
+
     private ReviewService reviewService;
     private ReviewQueryService reviewQueryService;
 
@@ -96,7 +100,7 @@ class ReviewServiceIntegrationTest {
         reviewService = new ReviewService(reviewRepository, reviewImageService,
                 orderItemRepository, orderRepository, storeRepository);
         reviewQueryService = new ReviewQueryService(reviewRepository, reviewImageService,
-                storeRepository, userRepository, breadRepository, orderRepository);
+                storeRepository, userRepository, breadRepository, breadImageService, orderRepository);
 
         store = TestFixtures.store(STORE_ID, 999L);
         user = TestFixtures.user(USER_ID, false);
@@ -184,6 +188,7 @@ class ReviewServiceIntegrationTest {
         given(reviewRepository.findByStoreId(eq(STORE_ID), any(PageRequest.class))).willReturn(reviewPage);
         given(userRepository.findAllById(List.of(USER_ID))).willReturn(List.of(user));
         given(breadRepository.findAllById(List.of(BREAD_ID))).willReturn(List.of(bread));
+        given(breadImageService.getImageUrls(List.of(BREAD_ID))).willReturn(Collections.emptyMap());
         given(reviewImageService.getImageUrlsByReviewIds(List.of(1L))).willReturn(Collections.emptyMap());
 
         // Act
@@ -220,6 +225,7 @@ class ReviewServiceIntegrationTest {
 
         given(reviewRepository.findByUserId(eq(USER_ID), any(PageRequest.class))).willReturn(reviewPage);
         given(breadRepository.findAllById(List.of(BREAD_ID))).willReturn(List.of(bread));
+        given(breadImageService.getImageUrls(List.of(BREAD_ID))).willReturn(Collections.emptyMap());
         given(storeRepository.findAllById(List.of(STORE_ID))).willReturn(List.of(store));
         given(reviewImageService.getImageUrlsByReviewIds(List.of(1L))).willReturn(Collections.emptyMap());
 
@@ -266,6 +272,7 @@ class ReviewServiceIntegrationTest {
         given(reviewRepository.findByStoreId(eq(STORE_ID), any(PageRequest.class))).willReturn(reviewPage0);
         given(userRepository.findAllById(anyList())).willReturn(List.of(user));
         given(breadRepository.findAllById(anyList())).willReturn(List.of(bread));
+        given(breadImageService.getImageUrls(anyList())).willReturn(Collections.emptyMap());
         given(reviewImageService.getImageUrlsByReviewIds(anyList())).willReturn(Collections.emptyMap());
 
         // Act

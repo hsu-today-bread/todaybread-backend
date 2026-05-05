@@ -293,9 +293,9 @@ public class StoreService {
                 storeBusinessHoursRepository.findByStoreIdIn(storeIds).stream()
                         .collect(Collectors.groupingBy(StoreBusinessHoursEntity::getStoreId));
 
-        // 6. 빵 재고 일괄 조회 → 가게별 그룹핑
+        // 6. 빵 재고 일괄 조회 → 가게별 그룹핑 (삭제된 빵 제외)
         Map<Long, List<BreadEntity>> breadsByStore =
-                breadRepository.findByStoreIdIn(storeIds).stream()
+                breadRepository.findByStoreIdInAndIsDeletedFalse(storeIds).stream()
                         .collect(Collectors.groupingBy(BreadEntity::getStoreId));
 
         // 7. 대표 이미지 일괄 조회

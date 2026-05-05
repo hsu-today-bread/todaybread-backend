@@ -34,6 +34,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 class BreadServiceTest {
@@ -90,7 +91,7 @@ class BreadServiceTest {
         StoreEntity ownerStore = TestFixtures.store(100L, 1L);
         BreadEntity otherStoreBread = TestFixtures.bread(10L, 200L, 3, 4_000, 2_000);
         given(storeRepository.findByUserIdAndIsActiveTrue(1L)).willReturn(Optional.of(ownerStore));
-        given(breadRepository.findById(10L)).willReturn(Optional.of(otherStoreBread));
+        given(breadRepository.findByIdAndIsDeletedFalse(10L)).willReturn(Optional.of(otherStoreBread));
 
         assertThatThrownBy(() -> breadService.updateBread(
                 1L,
@@ -108,7 +109,7 @@ class BreadServiceTest {
         StoreEntity store = TestFixtures.store(100L, 1L);
         BreadEntity bread = TestFixtures.bread(10L, 100L, 3, 4_000, 2_000);
         given(storeRepository.findByUserIdAndIsActiveTrue(1L)).willReturn(Optional.of(store));
-        given(breadRepository.findById(10L)).willReturn(Optional.of(bread));
+        given(breadRepository.findByIdAndIsDeletedFalse(10L)).willReturn(Optional.of(bread));
 
         BreadSuccessResponse response = breadService.changeQuantity(1L, 10L, new BreadStockUpdateRequest(7));
 
@@ -117,17 +118,17 @@ class BreadServiceTest {
     }
 
     @Test
-    void deleteBread_deletesBreadAndImage() {
+    void deleteBread_softDeletesBread() {
         StoreEntity store = TestFixtures.store(100L, 1L);
         BreadEntity bread = TestFixtures.bread(10L, 100L, 3, 4_000, 2_000);
         given(storeRepository.findByUserIdAndIsActiveTrue(1L)).willReturn(Optional.of(store));
-        given(breadRepository.findById(10L)).willReturn(Optional.of(bread));
+        given(breadRepository.findByIdAndIsDeletedFalse(10L)).willReturn(Optional.of(bread));
 
         BreadSuccessResponse response = breadService.deleteBread(1L, 10L);
 
         assertThat(response.success()).isTrue();
-        verify(breadImageService).deleteImage(10L);
-        verify(breadRepository).delete(bread);
+        assertThat(bread.isDeleted()).isTrue();
+        assertThat(bread.getDeletedAt()).isNotNull();
     }
 
     @Test
@@ -147,7 +148,7 @@ class BreadServiceTest {
         StoreBusinessHoursEntity hours = TestFixtures.businessHours(
                 100L, 7, false, LocalTime.of(9, 0), LocalTime.of(20, 0), LocalTime.of(19, 0)
         );
-        given(breadRepository.findById(10L)).willReturn(Optional.of(bread));
+        given(breadRepository.findByIdAndIsDeletedFalse(10L)).willReturn(Optional.of(bread));
         given(storeRepository.findByIdAndIsActiveTrue(100L)).willReturn(Optional.of(store));
         given(breadImageService.getImageUrl(10L)).willReturn("https://cdn/bread.jpg");
         given(storeBusinessHoursRepository.findByStoreIdAndDayOfWeek(100L, 7)).willReturn(Optional.of(hours));
@@ -190,7 +191,7 @@ class BreadServiceTest {
                 .willReturn(List.of(store1, store2, store3));
         given(storeBusinessHoursRepository.findByStoreIdIn(List.of(100L, 200L, 300L)))
                 .willReturn(List.of(open1, open2, closed3));
-        given(breadRepository.findByStoreIdIn(List.of(100L, 200L, 300L)))
+        given(breadRepository.findByStoreIdInAndIsDeletedFalse(List.of(100L, 200L, 300L)))
                 .willReturn(List.of(bread1, bread2, bread3));
         given(breadImageService.getImageUrls(List.of(10L, 20L)))
                 .willReturn(Map.of(10L, "https://cdn/bread1.jpg", 20L, "https://cdn/bread2.jpg"));
@@ -199,5 +200,85 @@ class BreadServiceTest {
 
         assertThat(responses).extracting(NearbyBreadResponse::id).containsExactly(20L, 10L);
         assertThat(responses).extracting(NearbyBreadResponse::storeId).doesNotContain(300L);
+    }
+
+    // === Task 2.5: Soft Delete 단위 테스트 ===
+
+    @Test
+    void deleteBread_성공시_softDelete호출_물리삭제미호출() {
+        StoreEntity store = TestFixtures.store(100L, 1L);
+        BreadEntity bread = TestFixtures.bread(10L, 100L, 3, 4_000, 2_000);
+        given(storeRepository.findByUserIdAndIsActiveTrue(1L)).willReturn(Optional.of(store));
+        given(breadRepository.findByIdAndIsDeletedFalse(10L)).willReturn(Optional.of(bread));
+
+        BreadSuccessResponse response = breadService.deleteBread(1L, 10L);
+
+        assertThat(response.success()).isTrue();
+        assertThat(bread.isDeleted()).isTrue();
+        assertThat(bread.getDeletedAt()).isNotNull();
+        verify(breadRepository, never()).delete(any(BreadEntity.class));
+    }
+
+    @Test
+    void deleteBread_성공시_이미지삭제미호출() {
+        StoreEntity store = TestFixtures.store(100L, 1L);
+        BreadEntity bread = TestFixtures.bread(10L, 100L, 3, 4_000, 2_000);
+        given(storeRepository.findByUserIdAndIsActiveTrue(1L)).willReturn(Optional.of(store));
+        given(breadRepository.findByIdAndIsDeletedFalse(10L)).willReturn(Optional.of(bread));
+
+        breadService.deleteBread(1L, 10L);
+
+        verify(breadImageService, never()).deleteImage(any());
+    }
+
+    @Test
+    void deleteBread_이미삭제된빵_BREAD_NOT_FOUND() {
+        StoreEntity store = TestFixtures.store(100L, 1L);
+        given(storeRepository.findByUserIdAndIsActiveTrue(1L)).willReturn(Optional.of(store));
+        given(breadRepository.findByIdAndIsDeletedFalse(10L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> breadService.deleteBread(1L, 10L))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.BREAD_NOT_FOUND);
+    }
+
+    @Test
+    void getBreadDetail_삭제된빵_BREAD_NOT_FOUND() {
+        given(breadRepository.findByIdAndIsDeletedFalse(10L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> breadService.getBreadDetail(10L))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.BREAD_NOT_FOUND);
+    }
+
+    @Test
+    void updateBread_삭제된빵_BREAD_NOT_FOUND() {
+        StoreEntity store = TestFixtures.store(100L, 1L);
+        given(storeRepository.findByUserIdAndIsActiveTrue(1L)).willReturn(Optional.of(store));
+        given(breadRepository.findByIdAndIsDeletedFalse(10L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> breadService.updateBread(
+                1L,
+                10L,
+                new BreadCommonRequest("new", 4_000, 2_000, 3, "fresh"),
+                null
+        ))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.BREAD_NOT_FOUND);
+    }
+
+    @Test
+    void changeQuantity_삭제된빵_BREAD_NOT_FOUND() {
+        StoreEntity store = TestFixtures.store(100L, 1L);
+        given(storeRepository.findByUserIdAndIsActiveTrue(1L)).willReturn(Optional.of(store));
+        given(breadRepository.findByIdAndIsDeletedFalse(10L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> breadService.changeQuantity(1L, 10L, new BreadStockUpdateRequest(5)))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.BREAD_NOT_FOUND);
     }
 }

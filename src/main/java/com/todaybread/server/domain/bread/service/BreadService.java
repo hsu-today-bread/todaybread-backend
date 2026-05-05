@@ -26,6 +26,7 @@ import com.todaybread.server.domain.bread.dto.BreadSortType;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -133,7 +134,8 @@ public class BreadService {
     }
 
     /**
-     * 빵을 삭제합니다.
+     * 빵을 삭제합니다 (Soft Delete).
+     * 물리적 삭제 및 이미지 삭제를 수행하지 않고, is_deleted와 deleted_at만 설정합니다.
      *
      * @param userId 사장님 ID
      * @param breadId 빵 ID
@@ -143,8 +145,8 @@ public class BreadService {
     public BreadSuccessResponse deleteBread(Long userId, Long breadId) {
         BreadEntity breadEntity = getOwnedBread(userId, breadId);
 
-        breadImageService.deleteImage(breadEntity.getId());
-        breadRepository.delete(breadEntity);
+        // Soft Delete 수행 (물리적 삭제 및 이미지 삭제 제거)
+        breadEntity.softDelete(LocalDateTime.now(clock));
 
         return BreadSuccessResponse.ok();
     }
@@ -162,7 +164,7 @@ public class BreadService {
             throw new CustomException(ErrorCode.STORE_NOT_FOUND);
         }
 
-        List<BreadEntity> breadEntityList = breadRepository.findByStoreId(storeId);
+        List<BreadEntity> breadEntityList = breadRepository.findByStoreIdAndIsDeletedFalse(storeId);
 
         return toBreadResponse(breadEntityList);
     }
@@ -176,7 +178,7 @@ public class BreadService {
     @Transactional(readOnly = true)
     public List<BreadCommonResponse> getMyBreads(Long userId) {
         StoreEntity storeEntity = getStoreByUserId(userId);
-        List<BreadEntity> breadEntityList = breadRepository.findByStoreId(storeEntity.getId());
+        List<BreadEntity> breadEntityList = breadRepository.findByStoreIdAndIsDeletedFalse(storeEntity.getId());
 
         return toBreadResponse(breadEntityList);
     }
@@ -189,7 +191,7 @@ public class BreadService {
      */
     @Transactional(readOnly = true)
     public BreadDetailResponse getBreadDetail(Long breadId) {
-        Optional<BreadEntity> breadOpt = breadRepository.findById(breadId);
+        Optional<BreadEntity> breadOpt = breadRepository.findByIdAndIsDeletedFalse(breadId);
         if (breadOpt.isEmpty()) {
             throw new CustomException(ErrorCode.BREAD_NOT_FOUND);
         }
@@ -267,8 +269,8 @@ public class BreadService {
         int todayDayOfWeek = LocalDate.now(clock).getDayOfWeek().getValue();
         LocalTime now = LocalTime.now(clock);
 
-        // 5.5. 빵 일괄 조회
-        List<BreadEntity> allBreads = breadRepository.findByStoreIdIn(storeIds);
+        // 5.5. 빵 일괄 조회 (삭제되지 않은 빵만)
+        List<BreadEntity> allBreads = breadRepository.findByStoreIdInAndIsDeletedFalse(storeIds);
         if (allBreads.isEmpty()) {
             return Collections.emptyList();
         }
@@ -370,7 +372,9 @@ public class BreadService {
     }
 
     /**
-     * 사장님이 소유한 빵을 조회합니다.
+     * 사장님이 소유한 빵을 조회합니다 (삭제되지 않은 빵만).
+     * updateBread(), changeQuantity(), deleteBread()에서 공통으로 사용하므로,
+     * 삭제된 빵에 대해서는 자동으로 BREAD_NOT_FOUND가 반환됩니다.
      *
      * @param userId 사장님 ID
      * @param breadId 빵 ID
@@ -378,7 +382,7 @@ public class BreadService {
      */
     private BreadEntity getOwnedBread(Long userId, Long breadId) {
         StoreEntity storeEntity = getStoreByUserId(userId);
-        Optional<BreadEntity> breadEntityOptional = breadRepository.findById(breadId);
+        Optional<BreadEntity> breadEntityOptional = breadRepository.findByIdAndIsDeletedFalse(breadId);
 
         if (breadEntityOptional.isEmpty()) {
             throw new CustomException(ErrorCode.BREAD_NOT_FOUND);

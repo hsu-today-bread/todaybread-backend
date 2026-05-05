@@ -2,6 +2,7 @@ package com.todaybread.server.domain.review.service;
 
 import com.todaybread.server.domain.bread.entity.BreadEntity;
 import com.todaybread.server.domain.bread.repository.BreadRepository;
+import com.todaybread.server.domain.bread.service.BreadImageService;
 import com.todaybread.server.domain.order.repository.OrderRepository;
 import com.todaybread.server.domain.review.dto.ReviewSortType;
 import com.todaybread.server.domain.review.dto.StoreReviewResponse;
@@ -55,13 +56,16 @@ class ReviewServiceStoreReviewsPropertyTest {
     @Mock
     private BreadRepository breadRepository;
 
+    @Mock
+    private BreadImageService breadImageService;
+
     private ReviewQueryService reviewQueryService;
 
     @BeforeProperty
     void setUp() {
         MockitoAnnotations.openMocks(this);
         reviewQueryService = new ReviewQueryService(reviewRepository, reviewImageService,
-                storeRepository, userRepository, breadRepository, orderRepository);
+                storeRepository, userRepository, breadRepository, breadImageService, orderRepository);
     }
 
     // ========================================================================
@@ -281,6 +285,11 @@ class ReviewServiceStoreReviewsPropertyTest {
                 .map(bid -> TestFixtures.bread(bid, 1L, 10, 5000, 3000))
                 .toList();
         given(breadRepository.findAllById(breadIds)).willReturn(breads);
+
+        // Mock breadImageService.getImageUrls
+        Map<Long, String> breadImageMap = breadIds.stream()
+                .collect(Collectors.toMap(bid -> bid, bid -> "https://example.com/bread/" + bid + "/image.jpg"));
+        given(breadImageService.getImageUrls(breadIds)).willReturn(breadImageMap);
 
         // Mock reviewImageService.getImageUrlsByReviewIds
         Map<Long, List<String>> imageMap = reviewIds.stream()

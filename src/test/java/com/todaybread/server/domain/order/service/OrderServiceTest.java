@@ -2,6 +2,7 @@ package com.todaybread.server.domain.order.service;
 
 import com.todaybread.server.domain.bread.entity.BreadEntity;
 import com.todaybread.server.domain.bread.repository.BreadRepository;
+import com.todaybread.server.domain.bread.service.BreadImageService;
 import com.todaybread.server.domain.cart.entity.CartEntity;
 import com.todaybread.server.domain.cart.entity.CartItemEntity;
 import com.todaybread.server.domain.cart.service.CartService;
@@ -28,7 +29,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Clock;
+import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -58,6 +62,9 @@ class OrderServiceTest {
     @Mock
     private OrderNumberGenerator orderNumberGenerator;
 
+    @Mock
+    private BreadImageService breadImageService;
+
     private OrderService orderService;
 
     @BeforeEach
@@ -73,6 +80,7 @@ class OrderServiceTest {
                 storeRepository,
                 inventoryRestorer,
                 orderNumberGenerator,
+                breadImageService,
                 clock
         );
     }
@@ -87,6 +95,7 @@ class OrderServiceTest {
         given(orderRepository.findById(1L)).willReturn(Optional.of(order));
         given(storeRepository.findById(100L)).willReturn(Optional.of(store));
         given(orderItemRepository.findByOrderId(1L)).willReturn(List.of(item));
+        given(breadImageService.getImageUrls(List.of(10L))).willReturn(Collections.emptyMap());
 
         OrderDetailResponse response = orderService.createOrderFromCart(1L, "same-key");
 
@@ -114,6 +123,7 @@ class OrderServiceTest {
         });
         given(orderNumberGenerator.generate(any(), any())).willReturn("A2B3");
         given(storeRepository.findById(100L)).willReturn(Optional.of(store));
+        given(breadImageService.getImageUrls(List.of(10L))).willReturn(Collections.emptyMap());
 
         OrderDetailResponse response = orderService.createOrderFromCart(1L, "order-key");
 
@@ -138,6 +148,7 @@ class OrderServiceTest {
         given(orderRepository.findById(1L)).willReturn(Optional.of(order));
         given(storeRepository.findById(100L)).willReturn(Optional.of(store));
         given(orderItemRepository.findByOrderId(1L)).willReturn(List.of(item));
+        given(breadImageService.getImageUrls(List.of(10L))).willReturn(Collections.emptyMap());
 
         OrderDetailResponse response = orderService.createOrderFromCart(1L, "race-key");
 
@@ -160,12 +171,14 @@ class OrderServiceTest {
         });
         given(orderNumberGenerator.generate(any(), any())).willReturn("A2B3");
         given(storeRepository.findById(100L)).willReturn(Optional.of(store));
+        given(breadImageService.getImageUrl(10L)).willReturn("http://example.com/bread10.jpg");
 
         OrderDetailResponse response = orderService.createDirectOrder(1L, new DirectOrderRequest(10L, 2), "direct-key");
 
         assertThat(response.orderId()).isEqualTo(500L);
         assertThat(response.totalAmount()).isEqualTo(4_000);
         assertThat(response.orderNumber()).isEqualTo("A2B3");
+        assertThat(response.items().get(0).breadImageUrl()).isEqualTo("http://example.com/bread10.jpg");
         assertThat(bread.getRemainingQuantity()).isEqualTo(3);
         verify(orderItemRepository).save(any(OrderItemEntity.class));
     }
@@ -222,5 +235,79 @@ class OrderServiceTest {
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.ORDER_ACCESS_DENIED);
+    }
+
+    @Test
+    void createDirectOrder_삭제된빵_BREAD_NOT_FOUND() {
+        BreadEntity bread = TestFixtures.bread(10L, 100L, 5, 4_000, 2_000);
+        bread.softDelete(LocalDateTime.of(2026, 4, 1, 10, 0));
+
+        given(orderRepository.findByUserIdAndIdempotencyKey(1L, "direct-key"))
+                .willReturn(Optional.empty());
+        given(breadRepository.findAllByIdWithLock(List.of(10L))).willReturn(List.of(bread));
+
+        assertThatThrownBy(() -> orderService.createDirectOrder(1L, new DirectOrderRequest(10L, 1), "direct-key"))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.BREAD_NOT_FOUND);
+    }
+
+    @Test
+    void createOrderFromCart_삭제된빵포함_BREAD_NOT_FOUND() {
+        CartEntity cart = TestFixtures.cart(50L, 1L, 100L);
+        CartItemEntity cartItem = TestFixtures.cartItem(1L, 50L, 10L, 2);
+        BreadEntity bread = TestFixtures.bread(10L, 100L, 5, 4_000, 2_000);
+        bread.softDelete(LocalDateTime.of(2026, 4, 1, 10, 0));
+
+        given(orderRepository.findByUserIdAndIdempotencyKey(1L, "order-key"))
+                .willReturn(Optional.empty(), Optional.empty());
+        given(cartService.getCartWithItemsForCheckout(1L))
+                .willReturn(new CartService.CartWithItems(cart, List.of(cartItem)));
+        given(breadRepository.findAllByIdWithLock(List.of(10L))).willReturn(List.of(bread));
+
+        assertThatThrownBy(() -> orderService.createOrderFromCart(1L, "order-key"))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.BREAD_NOT_FOUND);
+    }
+
+    /**
+     * 삭제된 빵이 포함된 주문 상세 조회 시 스냅샷 데이터(breadName, breadPrice)와
+     * breadImageUrl이 정상적으로 반환되는지 검증합니다.
+     * OrderItemEntity에 저장된 스냅샷 필드를 사용하고,
+     * BreadImageService는 삭제된 빵의 이미지도 정상 반환합니다.
+     *
+     * Validates: Requirements 6.1, 6.5
+     */
+    @Test
+    void getOrderDetail_삭제된빵_스냅샷데이터유지() {
+        // Arrange: 삭제된 빵이 포함된 주문
+        Long userId = 1L;
+        Long orderId = 1L;
+        Long storeId = 100L;
+        Long breadId = 10L;
+        String expectedBreadName = "ordered-bread-1";
+        int expectedBreadPrice = 3_000;
+        String expectedImageUrl = "https://example.com/bread/10/image.jpg";
+
+        OrderEntity order = TestFixtures.order(orderId, userId, storeId, OrderStatus.PICKED_UP, expectedBreadPrice, "key");
+        StoreEntity store = TestFixtures.store(storeId, 10L);
+        OrderItemEntity item = TestFixtures.orderItem(1L, orderId, breadId, expectedBreadPrice, 1);
+
+        given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
+        given(storeRepository.findById(storeId)).willReturn(Optional.of(store));
+        given(orderItemRepository.findByOrderId(orderId)).willReturn(List.of(item));
+        // BreadImageService는 삭제된 빵의 이미지도 정상 반환
+        given(breadImageService.getImageUrls(List.of(breadId)))
+                .willReturn(Map.of(breadId, expectedImageUrl));
+
+        // Act
+        OrderDetailResponse response = orderService.getOrderDetail(userId, orderId);
+
+        // Assert: 스냅샷 데이터가 정상적으로 반환됨
+        assertThat(response.items()).hasSize(1);
+        assertThat(response.items().get(0).breadName()).isEqualTo(expectedBreadName);
+        assertThat(response.items().get(0).breadPrice()).isEqualTo(expectedBreadPrice);
+        assertThat(response.items().get(0).breadImageUrl()).isEqualTo(expectedImageUrl);
     }
 }

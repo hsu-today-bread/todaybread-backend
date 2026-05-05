@@ -8,16 +8,18 @@ import java.util.List;
  *
  * @param reviewId 리뷰 ID
  * @param breadName 빵 이름
+ * @param breadImageUrl 빵 대표 이미지 URL (nullable, 리뷰 첨부 이미지와 별개)
  * @param storeName 가게 이름
  * @param storeId 가게 ID
  * @param rating 평점
  * @param content 리뷰 내용
- * @param imageUrls 이미지 URL 목록
+ * @param imageUrls 리뷰 첨부 이미지 URL 목록
  * @param createdAt 작성일시
  */
 public record MyReviewResponse(
         Long reviewId,
         String breadName,
+        String breadImageUrl,
         String storeName,
         Long storeId,
         int rating,

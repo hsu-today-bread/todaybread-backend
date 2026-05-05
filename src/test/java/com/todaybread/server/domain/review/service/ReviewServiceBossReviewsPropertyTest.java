@@ -2,6 +2,7 @@ package com.todaybread.server.domain.review.service;
 
 import com.todaybread.server.domain.bread.entity.BreadEntity;
 import com.todaybread.server.domain.bread.repository.BreadRepository;
+import com.todaybread.server.domain.bread.service.BreadImageService;
 import com.todaybread.server.domain.order.dto.PurchaseCountProjection;
 import com.todaybread.server.domain.order.entity.OrderStatus;
 import com.todaybread.server.domain.order.repository.OrderRepository;
@@ -64,13 +65,16 @@ class ReviewServiceBossReviewsPropertyTest {
     @Mock
     private BreadRepository breadRepository;
 
+    @Mock
+    private BreadImageService breadImageService;
+
     private ReviewQueryService reviewQueryService;
 
     @BeforeProperty
     void setUp() {
         MockitoAnnotations.openMocks(this);
         reviewQueryService = new ReviewQueryService(reviewRepository, reviewImageService,
-                storeRepository, userRepository, breadRepository, orderRepository);
+                storeRepository, userRepository, breadRepository, breadImageService, orderRepository);
     }
 
     // ========================================================================
@@ -220,7 +224,7 @@ class ReviewServiceBossReviewsPropertyTest {
         // Arrange — fresh mocks per try to avoid cross-try invocation counts
         MockitoAnnotations.openMocks(this);
         reviewQueryService = new ReviewQueryService(reviewRepository, reviewImageService,
-                storeRepository, userRepository, breadRepository, orderRepository);
+                storeRepository, userRepository, breadRepository, breadImageService, orderRepository);
 
         StoreEntity store = TestFixtures.store(storeId, userId);
         given(storeRepository.findByUserIdAndIsActiveTrue(userId)).willReturn(Optional.of(store));
@@ -295,6 +299,11 @@ class ReviewServiceBossReviewsPropertyTest {
         Map<Long, List<String>> imageMap = reviewIds.stream()
                 .collect(Collectors.toMap(id -> id, id -> Collections.emptyList()));
         given(reviewImageService.getImageUrlsByReviewIds(reviewIds)).willReturn(imageMap);
+
+        // Mock breadImageService.getImageUrls
+        Map<Long, String> breadImageMap = breadIds.stream()
+                .collect(Collectors.toMap(bid -> bid, bid -> "https://example.com/bread/" + bid + "/image.jpg"));
+        given(breadImageService.getImageUrls(breadIds)).willReturn(breadImageMap);
 
         // Mock purchase counts using PurchaseCountProjection
         List<PurchaseCountProjection> purchaseCounts = new ArrayList<>();
@@ -415,6 +424,11 @@ class ReviewServiceBossReviewsPropertyTest {
                 .map(bid -> TestFixtures.bread(bid, storeId, 10, 5000, 3000))
                 .toList();
         given(breadRepository.findAllById(breadIds)).willReturn(breads);
+
+        // Mock breadImageService.getImageUrls
+        Map<Long, String> breadImageMap = breadIds.stream()
+                .collect(Collectors.toMap(bid -> bid, bid -> "https://example.com/bread/" + bid + "/image.jpg"));
+        given(breadImageService.getImageUrls(breadIds)).willReturn(breadImageMap);
 
         // Mock reviewImageService.getImageUrlsByReviewIds
         Map<Long, List<String>> imageMap = reviewIds.stream()
