@@ -138,13 +138,8 @@ public class KeywordService {
      */
     @Transactional
     public KeywordDeleteResponse deleteKeyword(Long userId, Long userKeywordId) {
-        Optional<UserKeywordEntity> entityOptional = userKeywordRepository.findById(userKeywordId);
-
-        if (entityOptional.isEmpty()) {
-            throw new CustomException(ErrorCode.KEYWORD_NOT_FOUND);
-        }
-
-        UserKeywordEntity entity = entityOptional.get();
+        UserKeywordEntity entity = userKeywordRepository.findById(userKeywordId)
+                .orElseThrow(() -> new CustomException(ErrorCode.KEYWORD_NOT_FOUND));
 
         if (!entity.getUserId().equals(userId)) {
             throw new CustomException(ErrorCode.KEYWORD_FORBIDDEN);

@@ -35,7 +35,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -159,10 +158,8 @@ public class BreadService {
      */
     @Transactional(readOnly = true)
     public List<BreadCommonResponse> getBreadsFromStore(Long storeId) {
-        Optional<StoreEntity> storeEntityOptional = storeRepository.findByIdAndIsActiveTrue(storeId);
-        if (storeEntityOptional.isEmpty()) {
-            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
-        }
+        storeRepository.findByIdAndIsActiveTrue(storeId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
 
         List<BreadEntity> breadEntityList = breadRepository.findByStoreIdAndIsDeletedFalse(storeId);
 
@@ -191,17 +188,11 @@ public class BreadService {
      */
     @Transactional(readOnly = true)
     public BreadDetailResponse getBreadDetail(Long breadId) {
-        Optional<BreadEntity> breadOpt = breadRepository.findByIdAndIsDeletedFalse(breadId);
-        if (breadOpt.isEmpty()) {
-            throw new CustomException(ErrorCode.BREAD_NOT_FOUND);
-        }
-        BreadEntity breadEntity = breadOpt.get();
+        BreadEntity breadEntity = breadRepository.findByIdAndIsDeletedFalse(breadId)
+                .orElseThrow(() -> new CustomException(ErrorCode.BREAD_NOT_FOUND));
 
-        Optional<StoreEntity> storeOpt = storeRepository.findByIdAndIsActiveTrue(breadEntity.getStoreId());
-        if (storeOpt.isEmpty()) {
-            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
-        }
-        StoreEntity storeEntity = storeOpt.get();
+        StoreEntity storeEntity = storeRepository.findByIdAndIsActiveTrue(breadEntity.getStoreId())
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
 
         String imageUrl = breadImageService.getImageUrl(breadEntity.getId());
 
@@ -364,11 +355,8 @@ public class BreadService {
      * @return 가게 엔티티
      */
     private StoreEntity getStoreByUserId(Long userId) {
-        Optional<StoreEntity> storeOpt = storeRepository.findByUserIdAndIsActiveTrue(userId);
-        if (storeOpt.isEmpty()) {
-            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
-        }
-        return storeOpt.get();
+        return storeRepository.findByUserIdAndIsActiveTrue(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
     }
 
     /**
@@ -382,13 +370,9 @@ public class BreadService {
      */
     private BreadEntity getOwnedBread(Long userId, Long breadId) {
         StoreEntity storeEntity = getStoreByUserId(userId);
-        Optional<BreadEntity> breadEntityOptional = breadRepository.findByIdAndIsDeletedFalse(breadId);
+        BreadEntity breadEntity = breadRepository.findByIdAndIsDeletedFalse(breadId)
+                .orElseThrow(() -> new CustomException(ErrorCode.BREAD_NOT_FOUND));
 
-        if (breadEntityOptional.isEmpty()) {
-            throw new CustomException(ErrorCode.BREAD_NOT_FOUND);
-        }
-
-        BreadEntity breadEntity = breadEntityOptional.get();
         if (!storeEntity.getId().equals(breadEntity.getStoreId())) {
             throw new CustomException(ErrorCode.BREAD_ACCESS_DENIED);
         }

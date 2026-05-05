@@ -39,7 +39,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -81,11 +80,8 @@ public class StoreService {
      */
     @Transactional(readOnly = true)
     public StoreInfoResponse getStoreInfo(Long userId) {
-        Optional<StoreEntity> storeOpt = storeRepository.findByUserIdAndIsActiveTrue(userId);
-        if (storeOpt.isEmpty()) {
-            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
-        }
-        StoreEntity storeEntity = storeOpt.get();
+        StoreEntity storeEntity = storeRepository.findByUserIdAndIsActiveTrue(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
 
         List<StoreBusinessHoursEntity> businessHours = storeBusinessHoursRepository.findByStoreIdOrderByDayOfWeekAsc(storeEntity.getId());
         StoreCommonResponse storeResponse = StoreCommonResponse.from(storeEntity, businessHours);
@@ -103,11 +99,8 @@ public class StoreService {
      */
     @Transactional(readOnly = true)
     public StoreDetailResponse getStoreDetail(Long storeId) {
-        Optional<StoreEntity> storeOpt = storeRepository.findByIdAndIsActiveTrue(storeId);
-        if (storeOpt.isEmpty()) {
-            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
-        }
-        StoreEntity storeEntity = storeOpt.get();
+        StoreEntity storeEntity = storeRepository.findByIdAndIsActiveTrue(storeId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
 
         List<StoreBusinessHoursEntity> businessHours = storeBusinessHoursRepository.findByStoreIdOrderByDayOfWeekAsc(storeId);
         StoreCommonResponse storeResponse = StoreCommonResponse.from(storeEntity, businessHours);
@@ -177,11 +170,8 @@ public class StoreService {
      */
     @Transactional
     public StoreCommonResponse updateStore(Long userId, StoreCommonRequest request) {
-        Optional<StoreEntity> storeOpt = storeRepository.findByUserIdAndIsActiveTrue(userId);
-        if (storeOpt.isEmpty()) {
-            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
-        }
-        StoreEntity storeEntity = storeOpt.get();
+        StoreEntity storeEntity = storeRepository.findByUserIdAndIsActiveTrue(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
         String phone = request.phone();
 
         if (!storeEntity.getPhoneNumber().equals(phone)

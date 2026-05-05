@@ -11,8 +11,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
-
 /**
  * 유저 도메인에서 아이디, 비밀번호 찾기 계층을 처리합니다.
  */
@@ -52,12 +50,10 @@ public class UserRecoveryService {
      */
     @Transactional(readOnly = true)
     public UserFindEmailResponse findEmailByPhone(String phone) {
-        Optional<UserEntity> userEntityOptional = userRepository.findByPhoneNumber(phone);
-        if (userEntityOptional.isEmpty()) {
-            throw new CustomException(ErrorCode.USER_RECOVERY_NOT_FOUND);
-        }
+        UserEntity userEntity = userRepository.findByPhoneNumber(phone)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_RECOVERY_NOT_FOUND));
 
-        String email = userEntityOptional.get().getEmail();
+        String email = userEntity.getEmail();
         String maskedEmail = maskEmail(email);
 
         return new UserFindEmailResponse(maskedEmail);
@@ -72,13 +68,10 @@ public class UserRecoveryService {
      */
     @Transactional(readOnly = true)
     public VerifyIdentityResponse verifyIdentity(String phone, String email) {
-        Optional<UserEntity> userEntityOptional = userRepository.findByPhoneNumberAndEmail(phone, email);
+        userRepository.findByPhoneNumberAndEmail(phone, email)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_RECOVERY_NOT_FOUND));
 
-        if (userEntityOptional.isEmpty()) {
-            throw new CustomException(ErrorCode.USER_RECOVERY_NOT_FOUND);
-        }
-
-        return new VerifyIdentityResponse(true,email);
+        return new VerifyIdentityResponse(true, email);
     }
 
     /**
@@ -89,12 +82,9 @@ public class UserRecoveryService {
      */
     @Transactional
     public ResetPasswordResponse resetPassword(ResetPasswordRequest request) {
-        Optional<UserEntity> userEntityOptional = userRepository.findByEmail(request.email());
-        if (userEntityOptional.isEmpty()) {
-            throw new CustomException(ErrorCode.USER_RECOVERY_NOT_FOUND);
-        }
+        UserEntity userEntity = userRepository.findByEmail(request.email())
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_RECOVERY_NOT_FOUND));
 
-        UserEntity userEntity = userEntityOptional.get();
         userEntity.changePassword(passwordEncoder.encode(request.newPassword()));
 
         // 기존 Refresh Token 무효화 (비밀번호 변경 시 기존 세션 강제 종료)

@@ -159,11 +159,8 @@ public class OrderService {
         cartService.clearCart(userId);
 
         // 8. 응답 생성
-        Optional<StoreEntity> storeOpt = storeRepository.findById(order.getStoreId());
-        if (storeOpt.isEmpty()) {
-            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
-        }
-        StoreEntity store = storeOpt.get();
+        StoreEntity store = storeRepository.findById(order.getStoreId())
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
 
         // 빵 대표 이미지 URL 조회
         Map<Long, String> breadImageUrlMap = breadImageService.getImageUrls(breadIds);
@@ -241,11 +238,8 @@ public class OrderService {
         order.assignOrderNumber(orderNumber);
         orderRepository.save(order);
 
-        Optional<StoreEntity> storeOpt = storeRepository.findById(bread.getStoreId());
-        if (storeOpt.isEmpty()) {
-            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
-        }
-        StoreEntity store = storeOpt.get();
+        StoreEntity store = storeRepository.findById(bread.getStoreId())
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
 
         // 빵 대표 이미지 URL 조회
         String breadImageUrl = breadImageService.getImageUrl(bread.getId());
@@ -262,11 +256,8 @@ public class OrderService {
      */
     @Transactional
     public void cancelOrder(Long userId, Long orderId) {
-        Optional<OrderEntity> orderOpt = orderRepository.findByIdWithLock(orderId);
-        if (orderOpt.isEmpty()) {
-            throw new CustomException(ErrorCode.ORDER_NOT_FOUND);
-        }
-        OrderEntity order = orderOpt.get();
+        OrderEntity order = orderRepository.findByIdWithLock(orderId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
 
         if (!order.getUserId().equals(userId)) {
             throw new CustomException(ErrorCode.ORDER_ACCESS_DENIED);
@@ -288,11 +279,8 @@ public class OrderService {
      */
     @Transactional
     public void confirmOrder(Long orderId) {
-        Optional<OrderEntity> orderOpt = orderRepository.findByIdWithLock(orderId);
-        if (orderOpt.isEmpty()) {
-            throw new CustomException(ErrorCode.ORDER_NOT_FOUND);
-        }
-        OrderEntity order = orderOpt.get();
+        OrderEntity order = orderRepository.findByIdWithLock(orderId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
         order.updateStatus(OrderStatus.CONFIRMED);
         log.info("주문 확정: orderId={}", orderId);
     }
@@ -332,21 +320,15 @@ public class OrderService {
      */
     @Transactional(readOnly = true)
     public OrderDetailResponse getOrderDetail(Long userId, Long orderId) {
-        Optional<OrderEntity> orderOpt = orderRepository.findById(orderId);
-        if (orderOpt.isEmpty()) {
-            throw new CustomException(ErrorCode.ORDER_NOT_FOUND);
-        }
-        OrderEntity order = orderOpt.get();
+        OrderEntity order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
 
         if (!order.getUserId().equals(userId)) {
             throw new CustomException(ErrorCode.ORDER_ACCESS_DENIED);
         }
 
-        Optional<StoreEntity> storeOpt = storeRepository.findById(order.getStoreId());
-        if (storeOpt.isEmpty()) {
-            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
-        }
-        StoreEntity store = storeOpt.get();
+        StoreEntity store = storeRepository.findById(order.getStoreId())
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
 
         List<OrderItemEntity> orderItems = orderItemRepository.findByOrderId(orderId);
 

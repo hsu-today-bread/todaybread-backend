@@ -78,13 +78,8 @@ public class AuthService {
         }
 
         // userId로 저장된 해시 토큰 조회
-        Optional<RefreshTokenEntity> refreshTokenOptional = refreshTokenRepository.findByUserId(userId);
-
-        if (refreshTokenOptional.isEmpty()) {
-            throw new CustomException(ErrorCode.AUTH_REFRESH_TOKEN_INVALID);
-        }
-
-        RefreshTokenEntity refreshTokenEntity = refreshTokenOptional.get();
+        RefreshTokenEntity refreshTokenEntity = refreshTokenRepository.findByUserId(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.AUTH_REFRESH_TOKEN_INVALID));
 
         // 해시 비교
         if (!passwordEncoder.matches(oldRefreshToken, refreshTokenEntity.getToken())) {
@@ -96,12 +91,8 @@ public class AuthService {
             throw new CustomException(ErrorCode.AUTH_REFRESH_TOKEN_INVALID);
         }
 
-        Optional<UserEntity> userEntityOptional = userRepository.findById(userId);
-        if (userEntityOptional.isEmpty()) {
-            throw new CustomException(ErrorCode.USER_NOT_FOUND);
-        }
-
-        UserEntity userEntity = userEntityOptional.get();
+        UserEntity userEntity = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         String userEmail = userEntity.getEmail();
         String userRole = userEntity.getIsBoss() ? "BOSS" : "USER";
