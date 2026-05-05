@@ -2,6 +2,7 @@ package com.todaybread.server.domain.store.repository;
 
 import com.todaybread.server.domain.store.entity.StoreEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -91,4 +92,23 @@ public interface StoreRepository extends JpaRepository<StoreEntity, Long> {
      * @return 활성 가게 엔티티 목록
      */
     List<StoreEntity> findByIdInAndIsActiveTrue(List<Long> ids);
+
+    /**
+     * 가게 ID로 활성 가게 존재 여부를 확인합니다.
+     *
+     * @param id 가게 ID
+     * @return 활성 가게가 있으면 true
+     */
+    boolean existsByIdAndIsActiveTrue(Long id);
+
+    /**
+     * 리뷰 추가 시 평점 집계를 원자적으로 갱신합니다.
+     * ratingSum에 평점을 더하고 reviewCount를 1 증가시킵니다.
+     *
+     * @param storeId 가게 ID
+     * @param rating  추가된 리뷰의 평점 (1~5)
+     */
+    @Modifying
+    @Query("UPDATE StoreEntity s SET s.ratingSum = s.ratingSum + :rating, s.reviewCount = s.reviewCount + 1 WHERE s.id = :storeId")
+    void addReviewRating(@Param("storeId") Long storeId, @Param("rating") int rating);
 }

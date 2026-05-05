@@ -2,7 +2,9 @@ package com.todaybread.server.domain.payment.service;
 
 import com.todaybread.server.domain.order.entity.OrderEntity;
 import com.todaybread.server.domain.order.entity.OrderStatus;
+import com.todaybread.server.domain.order.repository.OrderItemRepository;
 import com.todaybread.server.domain.order.repository.OrderRepository;
+import com.todaybread.server.domain.order.service.InventoryRestorer;
 import com.todaybread.server.domain.order.service.OrderService;
 import com.todaybread.server.domain.payment.client.TossPaymentException;
 import com.todaybread.server.domain.payment.entity.PaymentEntity;
@@ -33,19 +35,23 @@ import static org.mockito.Mockito.*;
 class PaymentServicePropertyTest {
 
     private OrderRepository orderRepository;
+    private OrderItemRepository orderItemRepository;
     private PaymentRepository paymentRepository;
     private PaymentProcessor paymentProcessor;
     private OrderService orderService;
+    private InventoryRestorer inventoryRestorer;
     private Clock clock;
     private PaymentService paymentService;
 
     private void setupMocks() {
         orderRepository = Mockito.mock(OrderRepository.class);
+        orderItemRepository = Mockito.mock(OrderItemRepository.class);
         paymentRepository = Mockito.mock(PaymentRepository.class);
         paymentProcessor = Mockito.mock(PaymentProcessor.class);
         orderService = Mockito.mock(OrderService.class);
+        inventoryRestorer = Mockito.mock(InventoryRestorer.class);
         clock = TestFixtures.FIXED_CLOCK;
-        paymentService = new PaymentService(orderRepository, paymentRepository, paymentProcessor, orderService, clock);
+        paymentService = new PaymentService(orderRepository, orderItemRepository, paymentRepository, paymentProcessor, orderService, inventoryRestorer, clock);
     }
 
     // ========================================================================
@@ -75,14 +81,14 @@ class PaymentServicePropertyTest {
         // Arrange: PENDING 주문, 금액 일치
         OrderEntity order = TestFixtures.order(orderId, userId, 100L, OrderStatus.PENDING, amount, "order-key");
         given(orderRepository.findByIdWithLock(orderId)).willReturn(Optional.of(order));
-        given(paymentRepository.findByIdempotencyKey(idempotencyKey)).willReturn(Optional.empty());
+        given(paymentRepository.findByOrderIdAndIdempotencyKey(orderId, idempotencyKey)).willReturn(Optional.empty());
         given(paymentRepository.findByOrderId(orderId)).willReturn(Optional.empty());
         given(paymentRepository.save(any(PaymentEntity.class))).willAnswer(inv -> inv.getArgument(0));
 
         // 토스 DONE 응답
         PaymentResult successResult = new PaymentResult(
                 PaymentStatus.APPROVED, "ok", paymentKey, method, "2025-07-01T18:31:00+09:00");
-        given(paymentProcessor.confirm(eq(paymentKey), eq("order_" + orderId), eq(amount)))
+        given(paymentProcessor.confirm(eq(paymentKey), eq("order_" + orderId), eq(amount), eq(idempotencyKey)))
                 .willReturn(successResult);
 
         // Act
@@ -125,12 +131,12 @@ class PaymentServicePropertyTest {
         // Arrange: PENDING 주문, 금액 일치
         OrderEntity order = TestFixtures.order(orderId, userId, 100L, OrderStatus.PENDING, amount, "order-key");
         given(orderRepository.findByIdWithLock(orderId)).willReturn(Optional.of(order));
-        given(paymentRepository.findByIdempotencyKey(idempotencyKey)).willReturn(Optional.empty());
+        given(paymentRepository.findByOrderIdAndIdempotencyKey(orderId, idempotencyKey)).willReturn(Optional.empty());
         given(paymentRepository.findByOrderId(orderId)).willReturn(Optional.empty());
         given(paymentRepository.save(any(PaymentEntity.class))).willAnswer(inv -> inv.getArgument(0));
 
         // 토스 에러 응답 (카드 관련 에러 - TossPaymentException으로 전파)
-        given(paymentProcessor.confirm(eq(paymentKey), eq("order_" + orderId), eq(amount)))
+        given(paymentProcessor.confirm(eq(paymentKey), eq("order_" + orderId), eq(amount), eq(idempotencyKey)))
                 .willThrow(new TossPaymentException(errorCode, errorMessage, 400));
 
         // Act & Assert: TossPaymentException이 전파됨
@@ -178,14 +184,18 @@ class PaymentServicePropertyTest {
                 java.time.LocalDateTime.of(2026, 4, 5, 12, 0),
                 idempotencyKey, paymentKey, "카드");
 
-        given(paymentRepository.findByIdempotencyKey(idempotencyKey))
+        given(paymentRepository.findByOrderIdAndIdempotencyKey(orderId, idempotencyKey))
                 .willReturn(Optional.of(existingPayment));
+
+        // C3: 소유자 검증을 위한 주문 조회 stub
+        OrderEntity order = TestFixtures.order(orderId, userId, 100L, OrderStatus.CONFIRMED, amount, "order-key");
+        given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
 
         // Act: 두 번째 호출 (동일 idempotencyKey)
         PaymentEntity result = paymentService.confirmPayment(userId, paymentKey, orderId, amount, idempotencyKey);
 
         // Assert: 토스 API 호출하지 않음
-        verify(paymentProcessor, never()).confirm(any(), any(), anyInt());
+        verify(paymentProcessor, never()).confirm(any(), any(), anyInt(), any());
 
         // Assert: 기존 결과와 동일
         assertThat(result.getId()).isEqualTo(existingPayment.getId());

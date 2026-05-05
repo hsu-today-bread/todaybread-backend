@@ -2,10 +2,10 @@ package com.todaybread.server.domain.payment.service;
 
 import com.todaybread.server.domain.order.entity.OrderEntity;
 import com.todaybread.server.domain.order.entity.OrderStatus;
+import com.todaybread.server.domain.order.repository.OrderItemRepository;
 import com.todaybread.server.domain.order.repository.OrderRepository;
+import com.todaybread.server.domain.order.service.InventoryRestorer;
 import com.todaybread.server.domain.order.service.OrderService;
-import com.todaybread.server.domain.payment.dto.PaymentRequest;
-import com.todaybread.server.domain.payment.dto.PaymentResponse;
 import com.todaybread.server.domain.payment.entity.PaymentEntity;
 import com.todaybread.server.domain.payment.entity.PaymentStatus;
 import com.todaybread.server.domain.payment.processor.PaymentProcessor;
@@ -27,15 +27,24 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+/**
+ * PaymentService 단위 테스트입니다.
+ * processPayment()는 I2(Deprecated 엔드포인트 제거)에 의해 삭제되었으므로,
+ * confirmPayment() 기반 테스트만 유지합니다.
+ */
 @ExtendWith(MockitoExtension.class)
 class PaymentServiceTest {
 
     @Mock
     private OrderRepository orderRepository;
+
+    @Mock
+    private OrderItemRepository orderItemRepository;
 
     @Mock
     private PaymentRepository paymentRepository;
@@ -47,93 +56,80 @@ class PaymentServiceTest {
     private OrderService orderService;
 
     @Mock
+    private InventoryRestorer inventoryRestorer;
+
+    @Mock
     private Clock clock;
 
     @InjectMocks
     private PaymentService paymentService;
 
     @Test
-    void processPayment_returnsExistingPaymentForSameIdempotencyKey() {
-        OrderEntity order = TestFixtures.order(1L, 1L, 100L, OrderStatus.PENDING, 3_000, "order-key");
+    void confirmPayment_returnsExistingPaymentForSameOrderIdAndIdempotencyKey() {
         PaymentEntity payment = TestFixtures.payment(10L, 1L, 3_000, PaymentStatus.APPROVED,
                 LocalDateTime.of(2026, 4, 5, 12, 0), "pay-key");
-        given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
         given(paymentRepository.findByOrderIdAndIdempotencyKey(1L, "pay-key")).willReturn(Optional.of(payment));
+        // C3: 소유자 검증을 위한 주문 조회 stub
+        OrderEntity order = TestFixtures.order(1L, 1L, 100L, OrderStatus.CONFIRMED, 3_000, "order-key");
+        given(orderRepository.findById(1L)).willReturn(Optional.of(order));
 
-        PaymentResponse response = paymentService.processPayment(1L, new PaymentRequest(1L, 3_000), "pay-key");
+        PaymentEntity result = paymentService.confirmPayment(1L, "tgen_abc", 1L, 3_000, "pay-key");
 
-        assertThat(response.paymentId()).isEqualTo(10L);
-        verify(paymentProcessor, never()).pay(any(), any(Integer.class));
+        assertThat(result.getId()).isEqualTo(10L);
+        verify(paymentProcessor, never()).confirm(any(), any(), any(Integer.class), any());
     }
 
     @Test
-    void processPayment_rejectsMissingOrder() {
+    void confirmPayment_rejectsMissingOrder() {
+        given(paymentRepository.findByOrderIdAndIdempotencyKey(1L, "pay-key")).willReturn(Optional.empty());
         given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> paymentService.processPayment(1L, new PaymentRequest(1L, 3_000), "pay-key"))
+        assertThatThrownBy(() -> paymentService.confirmPayment(1L, "tgen_abc", 1L, 3_000, "pay-key"))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.ORDER_NOT_FOUND);
     }
 
     @Test
-    void processPayment_rejectsAmountMismatch() {
+    void confirmPayment_rejectsAmountMismatch() {
         OrderEntity order = TestFixtures.order(1L, 1L, 100L, OrderStatus.PENDING, 3_000, "order-key");
-        given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
         given(paymentRepository.findByOrderIdAndIdempotencyKey(1L, "pay-key")).willReturn(Optional.empty());
-        given(paymentRepository.findByOrderId(1L)).willReturn(Optional.empty());
+        given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
 
-        assertThatThrownBy(() -> paymentService.processPayment(1L, new PaymentRequest(1L, 2_000), "pay-key"))
+        assertThatThrownBy(() -> paymentService.confirmPayment(1L, "tgen_abc", 1L, 2_000, "pay-key"))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
     }
 
     @Test
-    void processPayment_rejectsNonPendingOrder() {
+    void confirmPayment_rejectsNonPendingOrder() {
         OrderEntity order = TestFixtures.order(1L, 1L, 100L, OrderStatus.CONFIRMED, 3_000, "order-key");
-        given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
         given(paymentRepository.findByOrderIdAndIdempotencyKey(1L, "pay-key")).willReturn(Optional.empty());
-        given(paymentRepository.findByOrderId(1L)).willReturn(Optional.empty());
+        given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
 
-        assertThatThrownBy(() -> paymentService.processPayment(1L, new PaymentRequest(1L, 3_000), "pay-key"))
+        assertThatThrownBy(() -> paymentService.confirmPayment(1L, "tgen_abc", 1L, 3_000, "pay-key"))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.PAYMENT_ORDER_STATUS_INVALID);
     }
 
     @Test
-    void processPayment_approvesNewPaymentAndConfirmsOrder() {
+    void confirmPayment_approvesNewPaymentAndConfirmsOrder() {
         OrderEntity order = TestFixtures.order(1L, 1L, 100L, OrderStatus.PENDING, 3_000, "order-key");
-        given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
         given(paymentRepository.findByOrderIdAndIdempotencyKey(1L, "pay-key")).willReturn(Optional.empty());
+        given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
         given(paymentRepository.findByOrderId(1L)).willReturn(Optional.empty());
-        given(paymentProcessor.pay(1L, 3_000)).willReturn(new PaymentResult(PaymentStatus.APPROVED, "ok"));
+        given(paymentProcessor.confirm(eq("tgen_abc"), eq("order_1"), eq(3_000), eq("pay-key")))
+                .willReturn(new PaymentResult(PaymentStatus.APPROVED, "ok", "tgen_abc", "카드", "2025-07-01T18:31:00+09:00"));
         given(clock.instant()).willReturn(TestFixtures.FIXED_CLOCK.instant());
         given(clock.getZone()).willReturn(TestFixtures.FIXED_CLOCK.getZone());
         given(paymentRepository.save(any(PaymentEntity.class))).willAnswer(invocation -> invocation.getArgument(0));
 
-        PaymentResponse response = paymentService.processPayment(1L, new PaymentRequest(1L, 3_000), "pay-key");
+        PaymentEntity result = paymentService.confirmPayment(1L, "tgen_abc", 1L, 3_000, "pay-key");
 
-        assertThat(response.status()).isEqualTo(PaymentStatus.APPROVED);
-        assertThat(response.paidAt()).isNotNull();
+        assertThat(result.getStatus()).isEqualTo(PaymentStatus.APPROVED);
+        assertThat(result.getPaidAt()).isNotNull();
         verify(orderService).confirmOrder(1L);
-    }
-
-    @Test
-    void processPayment_updatesExistingFailedPaymentWhenRetryFailsAgain() {
-        OrderEntity order = TestFixtures.order(1L, 1L, 100L, OrderStatus.PENDING, 3_000, "order-key");
-        PaymentEntity existingPayment = TestFixtures.payment(10L, 1L, 3_000, PaymentStatus.FAILED, null, "old-key");
-        given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
-        given(paymentRepository.findByOrderIdAndIdempotencyKey(1L, "new-key")).willReturn(Optional.empty());
-        given(paymentRepository.findByOrderId(1L)).willReturn(Optional.of(existingPayment));
-        given(paymentProcessor.pay(1L, 3_000)).willReturn(new PaymentResult(PaymentStatus.FAILED, "declined"));
-
-        PaymentResponse response = paymentService.processPayment(1L, new PaymentRequest(1L, 3_000), "new-key");
-
-        assertThat(response.paymentId()).isEqualTo(10L);
-        assertThat(existingPayment.getStatus()).isEqualTo(PaymentStatus.FAILED);
-        assertThat(existingPayment.getIdempotencyKey()).isEqualTo("new-key");
-        verify(orderService, never()).confirmOrder(any());
     }
 }

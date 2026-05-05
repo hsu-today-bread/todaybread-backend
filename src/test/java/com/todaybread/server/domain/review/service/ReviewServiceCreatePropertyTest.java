@@ -1,6 +1,5 @@
 package com.todaybread.server.domain.review.service;
 
-import com.todaybread.server.domain.bread.repository.BreadRepository;
 import com.todaybread.server.domain.order.entity.OrderEntity;
 import com.todaybread.server.domain.order.entity.OrderItemEntity;
 import com.todaybread.server.domain.order.entity.OrderStatus;
@@ -12,7 +11,6 @@ import com.todaybread.server.domain.review.entity.ReviewEntity;
 import com.todaybread.server.domain.review.repository.ReviewRepository;
 import com.todaybread.server.domain.store.entity.StoreEntity;
 import com.todaybread.server.domain.store.repository.StoreRepository;
-import com.todaybread.server.domain.user.repository.UserRepository;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
 import com.todaybread.server.support.TestFixtures;
@@ -34,11 +32,11 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.doNothing;
 
 /**
  * ReviewService.createReview() 비즈니스 로직 속성 테스트.
@@ -61,20 +59,13 @@ class ReviewServiceCreatePropertyTest {
     @Mock
     private StoreRepository storeRepository;
 
-    @Mock
-    private UserRepository userRepository;
-
-    @Mock
-    private BreadRepository breadRepository;
-
     private ReviewService reviewService;
 
     @BeforeProperty
     void setUp() {
         MockitoAnnotations.openMocks(this);
         reviewService = new ReviewService(reviewRepository, reviewImageService,
-                orderItemRepository, orderRepository, storeRepository,
-                userRepository, breadRepository);
+                orderItemRepository, orderRepository, storeRepository);
     }
 
     // ========================================================================
@@ -212,12 +203,11 @@ class ReviewServiceCreatePropertyTest {
         // Arrange: all prerequisites pass
         OrderItemEntity orderItem = TestFixtures.orderItem(orderItemId, orderId, breadId, 3000, 1);
         OrderEntity order = TestFixtures.order(orderId, userId, storeId, OrderStatus.PICKED_UP, 3000, "key");
-        StoreEntity store = TestFixtures.store(storeId, 999L);
 
         given(orderItemRepository.findById(orderItemId)).willReturn(Optional.of(orderItem));
         given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
         given(reviewRepository.existsByUserIdAndOrderItemId(userId, orderItemId)).willReturn(false);
-        given(storeRepository.findById(storeId)).willReturn(Optional.of(store));
+        doNothing().when(storeRepository).addReviewRating(anyLong(), anyInt());
         given(reviewImageService.uploadImages(any(), any())).willReturn(Collections.emptyList());
 
         // Mock save to set the ID on the entity via Answer
@@ -264,12 +254,11 @@ class ReviewServiceCreatePropertyTest {
         // Arrange: all prerequisites pass
         OrderItemEntity orderItem = TestFixtures.orderItem(orderItemId, orderId, breadId, 3000, 1);
         OrderEntity order = TestFixtures.order(orderId, userId, storeId, OrderStatus.PICKED_UP, 3000, "key");
-        StoreEntity store = TestFixtures.store(storeId, 999L);
 
         given(orderItemRepository.findById(orderItemId)).willReturn(Optional.of(orderItem));
         given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
         given(reviewRepository.existsByUserIdAndOrderItemId(userId, orderItemId)).willReturn(false);
-        given(storeRepository.findById(storeId)).willReturn(Optional.of(store));
+        doNothing().when(storeRepository).addReviewRating(anyLong(), anyInt());
 
         // Mock save
         given(reviewRepository.save(any(ReviewEntity.class))).willAnswer(invocation -> {
@@ -282,10 +271,10 @@ class ReviewServiceCreatePropertyTest {
         // Build image list
         List<MultipartFile> images = buildMockImages(imageCount);
 
-        // Mock uploadImages to return filenames for valid counts
+        // Mock uploadImages to return URLs for valid counts
         List<String> expectedUrls = new ArrayList<>();
         for (int i = 0; i < imageCount; i++) {
-            expectedUrls.add("review/1/image-" + i + ".jpg");
+            expectedUrls.add("https://example.com/review/1/image-" + i + ".jpg");
         }
         given(reviewImageService.uploadImages(any(), eq(images))).willReturn(expectedUrls);
 
@@ -319,12 +308,11 @@ class ReviewServiceCreatePropertyTest {
         // Arrange: all prerequisites pass
         OrderItemEntity orderItem = TestFixtures.orderItem(orderItemId, orderId, breadId, 3000, 1);
         OrderEntity order = TestFixtures.order(orderId, userId, storeId, OrderStatus.PICKED_UP, 3000, "key");
-        StoreEntity store = TestFixtures.store(storeId, 999L);
 
         given(orderItemRepository.findById(orderItemId)).willReturn(Optional.of(orderItem));
         given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
         given(reviewRepository.existsByUserIdAndOrderItemId(userId, orderItemId)).willReturn(false);
-        given(storeRepository.findById(storeId)).willReturn(Optional.of(store));
+        doNothing().when(storeRepository).addReviewRating(anyLong(), anyInt());
 
         // Mock save
         given(reviewRepository.save(any(ReviewEntity.class))).willAnswer(invocation -> {
@@ -395,7 +383,7 @@ class ReviewServiceCreatePropertyTest {
 
     @Provide
     Arbitrary<OrderStatus> nonPickedUpStatuses() {
-        return Arbitraries.of(OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.CANCELLED);
+        return Arbitraries.of(OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.CANCELLED, OrderStatus.CANCEL_PENDING);
     }
 
     @Provide

@@ -25,7 +25,8 @@ class OrderEntityStatusTransitionTest {
 
     private static final Map<OrderStatus, Set<OrderStatus>> ALLOWED_TRANSITIONS = Map.of(
             OrderStatus.PENDING, Set.of(OrderStatus.CONFIRMED, OrderStatus.CANCELLED),
-            OrderStatus.CONFIRMED, Set.of(OrderStatus.PICKED_UP, OrderStatus.CANCELLED)
+            OrderStatus.CONFIRMED, Set.of(OrderStatus.PICKED_UP, OrderStatus.CANCELLED, OrderStatus.CANCEL_PENDING),
+            OrderStatus.CANCEL_PENDING, Set.of(OrderStatus.CANCELLED, OrderStatus.CONFIRMED)
     );
 
     /**

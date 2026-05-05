@@ -391,7 +391,7 @@ class OrderExpiryServicePropertyTest {
                 Arbitraries.longs().between(1, 1000),                            // userId
                 Arbitraries.longs().between(1, 500),                             // storeId
                 Arbitraries.integers().between(100, 100000),                     // totalAmount
-                Arbitraries.of(OrderStatus.CONFIRMED, OrderStatus.CANCELLED),    // non-PENDING status
+                Arbitraries.of(OrderStatus.CONFIRMED, OrderStatus.CANCELLED, OrderStatus.CANCEL_PENDING),    // non-PENDING status
                 Arbitraries.integers().between(1, 5)                             // number of breads
         ).flatAs((orderId, userId, storeId, totalAmount, status, breadCount) -> {
             OrderEntity order = OrderEntity.builder()

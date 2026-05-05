@@ -43,7 +43,7 @@ public class ReviewImageService {
      *
      * @param reviewId 리뷰 ID
      * @param files    업로드할 이미지 파일 목록
-     * @return 저장된 이미지 파일명 목록
+     * @return 저장된 이미지 URL 목록
      * @throws CustomException REVIEW_IMAGE_LIMIT_EXCEEDED — 3장 이상 첨부 시
      * @throws CustomException COMMON_IMAGE_INVALID_TYPE — 허용되지 않는 파일 형식
      * @throws CustomException COMMON_FILE_SIZE_EXCEEDED — 파일 크기 5MB 초과
@@ -109,7 +109,12 @@ public class ReviewImageService {
             }
         });
 
-        return storedFilenames;
+        // 4. 저장 파일명을 URL로 변환하여 반환
+        List<String> imageUrls = new ArrayList<>();
+        for (String storedFilename : storedFilenames) {
+            imageUrls.add(fileStorage.getFileUrl(storedFilename));
+        }
+        return imageUrls;
     }
 
     /**

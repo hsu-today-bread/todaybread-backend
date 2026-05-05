@@ -2,7 +2,9 @@ package com.todaybread.server.domain.payment.service;
 
 import com.todaybread.server.domain.order.entity.OrderEntity;
 import com.todaybread.server.domain.order.entity.OrderStatus;
+import com.todaybread.server.domain.order.repository.OrderItemRepository;
 import com.todaybread.server.domain.order.repository.OrderRepository;
+import com.todaybread.server.domain.order.service.InventoryRestorer;
 import com.todaybread.server.domain.order.service.OrderService;
 import com.todaybread.server.domain.payment.client.TossPaymentException;
 import com.todaybread.server.domain.payment.entity.PaymentEntity;
@@ -24,6 +26,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,6 +48,9 @@ class PaymentServiceConfirmTest {
     private OrderRepository orderRepository;
 
     @Mock
+    private OrderItemRepository orderItemRepository;
+
+    @Mock
     private PaymentRepository paymentRepository;
 
     @Mock
@@ -52,6 +58,9 @@ class PaymentServiceConfirmTest {
 
     @Mock
     private OrderService orderService;
+
+    @Mock
+    private InventoryRestorer inventoryRestorer;
 
     @Mock
     private Clock clock;
@@ -73,7 +82,7 @@ class PaymentServiceConfirmTest {
             // Arrange
             OrderEntity order = TestFixtures.order(1L, 1L, 100L, OrderStatus.PENDING, 5_000, "order-key");
             given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
-            given(paymentRepository.findByIdempotencyKey("idem-1")).willReturn(Optional.empty());
+            given(paymentRepository.findByOrderIdAndIdempotencyKey(1L, "idem-1")).willReturn(Optional.empty());
             given(paymentRepository.findByOrderId(1L)).willReturn(Optional.empty());
             given(paymentRepository.save(any(PaymentEntity.class))).willAnswer(inv -> inv.getArgument(0));
             given(clock.instant()).willReturn(TestFixtures.FIXED_CLOCK.instant());
@@ -81,7 +90,7 @@ class PaymentServiceConfirmTest {
 
             PaymentResult result = new PaymentResult(
                     PaymentStatus.APPROVED, "ok", "tgen_abc123", "카드", "2025-07-01T18:31:00+09:00");
-            given(paymentProcessor.confirm("tgen_abc123", "order_1", 5_000)).willReturn(result);
+            given(paymentProcessor.confirm("tgen_abc123", "order_1", 5_000, "idem-1")).willReturn(result);
 
             // Act
             PaymentEntity payment = paymentService.confirmPayment(1L, "tgen_abc123", 1L, 5_000, "idem-1");
@@ -99,11 +108,11 @@ class PaymentServiceConfirmTest {
             // Arrange
             OrderEntity order = TestFixtures.order(1L, 1L, 100L, OrderStatus.PENDING, 5_000, "order-key");
             given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
-            given(paymentRepository.findByIdempotencyKey("idem-1")).willReturn(Optional.empty());
+            given(paymentRepository.findByOrderIdAndIdempotencyKey(1L, "idem-1")).willReturn(Optional.empty());
             given(paymentRepository.findByOrderId(1L)).willReturn(Optional.empty());
             given(paymentRepository.save(any(PaymentEntity.class))).willAnswer(inv -> inv.getArgument(0));
 
-            given(paymentProcessor.confirm("tgen_abc123", "order_1", 5_000))
+            given(paymentProcessor.confirm("tgen_abc123", "order_1", 5_000, "idem-1"))
                     .willThrow(new TossPaymentException("REJECT_CARD_PAYMENT", "카드 결제가 거절되었습니다.", 400));
 
             // Act & Assert
@@ -121,7 +130,10 @@ class PaymentServiceConfirmTest {
             // Arrange
             PaymentEntity existing = TestFixtures.payment(10L, 1L, 5_000, PaymentStatus.APPROVED,
                     LocalDateTime.of(2026, 4, 5, 12, 0), "idem-1");
-            given(paymentRepository.findByIdempotencyKey("idem-1")).willReturn(Optional.of(existing));
+            given(paymentRepository.findByOrderIdAndIdempotencyKey(1L, "idem-1")).willReturn(Optional.of(existing));
+            // C3: 소유자 검증을 위한 주문 조회 stub
+            OrderEntity existingOrder = TestFixtures.order(1L, 1L, 100L, OrderStatus.CONFIRMED, 5_000, "order-key");
+            given(orderRepository.findById(1L)).willReturn(Optional.of(existingOrder));
 
             // Act
             PaymentEntity payment = paymentService.confirmPayment(1L, "tgen_abc123", 1L, 5_000, "idem-1");
@@ -129,7 +141,7 @@ class PaymentServiceConfirmTest {
             // Assert
             assertThat(payment.getId()).isEqualTo(10L);
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.APPROVED);
-            verify(paymentProcessor, never()).confirm(any(), any(), anyInt());
+            verify(paymentProcessor, never()).confirm(any(), any(), anyInt(), any());
         }
 
         @Test
@@ -138,7 +150,7 @@ class PaymentServiceConfirmTest {
             // Arrange
             OrderEntity order = TestFixtures.order(1L, 1L, 100L, OrderStatus.PENDING, 5_000, "order-key");
             given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
-            given(paymentRepository.findByIdempotencyKey("idem-1")).willReturn(Optional.empty());
+            given(paymentRepository.findByOrderIdAndIdempotencyKey(1L, "idem-1")).willReturn(Optional.empty());
 
             // Act & Assert
             assertThatThrownBy(() ->
@@ -152,7 +164,7 @@ class PaymentServiceConfirmTest {
         @DisplayName("주문 미존재: ORDER_NOT_FOUND 에러")
         void orderNotFound() {
             // Arrange
-            given(paymentRepository.findByIdempotencyKey("idem-1")).willReturn(Optional.empty());
+            given(paymentRepository.findByOrderIdAndIdempotencyKey(1L, "idem-1")).willReturn(Optional.empty());
             given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.empty());
 
             // Act & Assert
@@ -169,7 +181,7 @@ class PaymentServiceConfirmTest {
             // Arrange
             OrderEntity order = TestFixtures.order(1L, 1L, 100L, OrderStatus.CONFIRMED, 5_000, "order-key");
             given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
-            given(paymentRepository.findByIdempotencyKey("idem-1")).willReturn(Optional.empty());
+            given(paymentRepository.findByOrderIdAndIdempotencyKey(1L, "idem-1")).willReturn(Optional.empty());
 
             // Act & Assert
             assertThatThrownBy(() ->
@@ -189,7 +201,7 @@ class PaymentServiceConfirmTest {
     class CancelPayment {
 
         @Test
-        @DisplayName("성공: 토스 취소 성공 시 Payment=CANCELLED, 주문 취소 위임")
+        @DisplayName("성공: 토스 취소 성공 시 Payment=CANCELLED, 주문 CANCELLED, 재고 복원")
         void success() {
             // Arrange
             PaymentEntity payment = TestFixtures.payment(10L, 1L, 5_000, PaymentStatus.APPROVED,
@@ -199,14 +211,21 @@ class PaymentServiceConfirmTest {
 
             OrderEntity order = TestFixtures.order(1L, 1L, 100L, OrderStatus.CONFIRMED, 5_000, "order-key");
 
+            // prepareCancelPayment: 1단계
+            given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
             given(paymentRepository.findByOrderIdAndStatus(1L, PaymentStatus.APPROVED))
                     .willReturn(Optional.of(payment));
-            given(orderRepository.findById(1L)).willReturn(Optional.of(order));
 
+            // 2단계: 토스 Cancel API
             CancelResult cancelResult = new CancelResult(
                     "tgen_abc123", "1", "CANCELED", "2025-07-01T19:00:00+09:00");
             given(paymentProcessor.cancel("tgen_abc123", "고객 요청", 5_000))
                     .willReturn(cancelResult);
+
+            // completeCancelPayment: 3단계
+            given(paymentRepository.findById(10L)).willReturn(Optional.of(payment));
+            given(orderItemRepository.findByOrderId(1L)).willReturn(Collections.emptyList());
+            given(clock.getZone()).willReturn(TestFixtures.FIXED_CLOCK.getZone());
 
             // Act
             paymentService.cancelPayment(1L, 1L);
@@ -215,11 +234,12 @@ class PaymentServiceConfirmTest {
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.CANCELLED);
             assertThat(payment.getCancelReason()).isEqualTo("고객 요청");
             assertThat(payment.getCancelledAt()).isNotNull();
-            verify(orderService).cancelOrder(1L, 1L);
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
+            verify(inventoryRestorer).restoreInventory(eq(1L), any());
         }
 
         @Test
-        @DisplayName("실패: 토스 취소 API 에러 시 PAYMENT_CANCEL_FAILED 에러")
+        @DisplayName("실패: 토스 취소 API 에러 시 PAYMENT_CANCEL_FAILED 에러, 주문 CONFIRMED 복원")
         void failure_tossError() {
             // Arrange
             PaymentEntity payment = TestFixtures.payment(10L, 1L, 5_000, PaymentStatus.APPROVED,
@@ -228,9 +248,12 @@ class PaymentServiceConfirmTest {
 
             OrderEntity order = TestFixtures.order(1L, 1L, 100L, OrderStatus.CONFIRMED, 5_000, "order-key");
 
+            // prepareCancelPayment: 1단계
+            given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
             given(paymentRepository.findByOrderIdAndStatus(1L, PaymentStatus.APPROVED))
                     .willReturn(Optional.of(payment));
-            given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+
+            // 2단계: 토스 Cancel API 실패
             given(paymentProcessor.cancel("tgen_abc123", "고객 요청", 5_000))
                     .willThrow(new TossPaymentException("CANCEL_FAILED", "취소 실패", 500));
 
@@ -239,14 +262,16 @@ class PaymentServiceConfirmTest {
                     .isInstanceOf(CustomException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.PAYMENT_CANCEL_FAILED);
+
+            // C4: 실패 시 CONFIRMED로 복원됨
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.CONFIRMED);
         }
 
         @Test
-        @DisplayName("결제 미존재: APPROVED 상태 결제가 없으면 ORDER_NOT_FOUND 에러")
-        void paymentNotFound() {
+        @DisplayName("주문 미존재: findByIdWithLock이 빈 결과면 ORDER_NOT_FOUND 에러")
+        void orderNotFound() {
             // Arrange
-            given(paymentRepository.findByOrderIdAndStatus(1L, PaymentStatus.APPROVED))
-                    .willReturn(Optional.empty());
+            given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.empty());
 
             // Act & Assert
             assertThatThrownBy(() -> paymentService.cancelPayment(1L, 1L))
@@ -256,17 +281,17 @@ class PaymentServiceConfirmTest {
         }
 
         @Test
-        @DisplayName("이미 취소된 결제: APPROVED 상태가 아니면 결제를 찾을 수 없음")
-        void alreadyCancelled() {
-            // Arrange: CANCELLED 상태 결제는 findByOrderIdAndStatus(APPROVED)에서 조회되지 않음
-            given(paymentRepository.findByOrderIdAndStatus(1L, PaymentStatus.APPROVED))
-                    .willReturn(Optional.empty());
+        @DisplayName("CONFIRMED가 아닌 주문: ORDER_STATUS_CANNOT_CHANGE 에러")
+        void orderNotConfirmed() {
+            // Arrange
+            OrderEntity order = TestFixtures.order(1L, 1L, 100L, OrderStatus.PENDING, 5_000, "order-key");
+            given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
 
             // Act & Assert
             assertThatThrownBy(() -> paymentService.cancelPayment(1L, 1L))
                     .isInstanceOf(CustomException.class)
                     .extracting("errorCode")
-                    .isEqualTo(ErrorCode.ORDER_NOT_FOUND);
+                    .isEqualTo(ErrorCode.ORDER_STATUS_CANNOT_CHANGE);
         }
     }
 }

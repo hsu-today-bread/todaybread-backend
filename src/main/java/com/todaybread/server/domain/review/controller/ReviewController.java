@@ -6,11 +6,13 @@ import com.todaybread.server.domain.review.dto.ReviewCreateRequest;
 import com.todaybread.server.domain.review.dto.ReviewResponse;
 import com.todaybread.server.domain.review.dto.ReviewSortType;
 import com.todaybread.server.domain.review.dto.StoreReviewResponse;
+import com.todaybread.server.domain.review.service.ReviewQueryService;
 import com.todaybread.server.domain.review.service.ReviewService;
 import com.todaybread.server.global.util.JwtRoleHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -37,6 +39,7 @@ import java.util.List;
 public class ReviewController {
 
     private final ReviewService reviewService;
+    private final ReviewQueryService reviewQueryService;
 
     /**
      * 리뷰를 작성합니다.
@@ -76,9 +79,10 @@ public class ReviewController {
     public Page<StoreReviewResponse> getStoreReviews(
             @PathVariable Long storeId,
             @RequestParam(defaultValue = "LATEST") String sort,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return reviewService.getStoreReviews(storeId, ReviewSortType.from(sort), PageRequest.of(page, size));
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) int size) {
+        return reviewQueryService.getStoreReviews(storeId, ReviewSortType.from(sort),
+                PageRequest.of(page, Math.min(size, 100)));
     }
 
     /**
@@ -97,9 +101,10 @@ public class ReviewController {
     public Page<MyReviewResponse> getMyReviews(
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam(defaultValue = "LATEST") String sort,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) int size) {
         Long userId = JwtRoleHelper.getUserId(jwt);
-        return reviewService.getMyReviews(userId, MyReviewSortType.from(sort), PageRequest.of(page, size));
+        return reviewQueryService.getMyReviews(userId, MyReviewSortType.from(sort),
+                PageRequest.of(page, Math.min(size, 100)));
     }
 }

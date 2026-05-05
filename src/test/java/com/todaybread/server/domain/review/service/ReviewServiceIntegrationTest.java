@@ -38,10 +38,12 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doNothing;
 
 /**
  * ReviewService 통합 테스트입니다.
@@ -73,6 +75,7 @@ class ReviewServiceIntegrationTest {
     private BreadRepository breadRepository;
 
     private ReviewService reviewService;
+    private ReviewQueryService reviewQueryService;
 
     // Shared test data
     private static final Long USER_ID = 1L;
@@ -91,8 +94,9 @@ class ReviewServiceIntegrationTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         reviewService = new ReviewService(reviewRepository, reviewImageService,
-                orderItemRepository, orderRepository, storeRepository,
-                userRepository, breadRepository);
+                orderItemRepository, orderRepository, storeRepository);
+        reviewQueryService = new ReviewQueryService(reviewRepository, reviewImageService,
+                storeRepository, userRepository, breadRepository, orderRepository);
 
         store = TestFixtures.store(STORE_ID, 999L);
         user = TestFixtures.user(USER_ID, false);
@@ -108,7 +112,7 @@ class ReviewServiceIntegrationTest {
         given(orderItemRepository.findById(ORDER_ITEM_ID)).willReturn(Optional.of(orderItem));
         given(orderRepository.findById(ORDER_ID)).willReturn(Optional.of(order));
         given(reviewRepository.existsByUserIdAndOrderItemId(USER_ID, ORDER_ITEM_ID)).willReturn(false);
-        given(storeRepository.findById(STORE_ID)).willReturn(Optional.of(store));
+        doNothing().when(storeRepository).addReviewRating(anyLong(), anyInt());
         given(reviewImageService.uploadImages(any(), any())).willReturn(Collections.emptyList());
         given(reviewRepository.save(any(ReviewEntity.class))).willAnswer(invocation -> {
             ReviewEntity entity = invocation.getArgument(0);
@@ -133,13 +137,13 @@ class ReviewServiceIntegrationTest {
     }
 
     @Test
-    @DisplayName("리뷰 작성 후 가게의 averageRating과 reviewCount가 갱신된다")
-    void createReview_updatesStoreRating() {
+    @DisplayName("리뷰 작성 후 가게의 addReviewRating이 호출된다")
+    void createReview_callsAtomicRatingUpdate() {
         // Arrange
         given(orderItemRepository.findById(ORDER_ITEM_ID)).willReturn(Optional.of(orderItem));
         given(orderRepository.findById(ORDER_ID)).willReturn(Optional.of(order));
         given(reviewRepository.existsByUserIdAndOrderItemId(USER_ID, ORDER_ITEM_ID)).willReturn(false);
-        given(storeRepository.findById(STORE_ID)).willReturn(Optional.of(store));
+        doNothing().when(storeRepository).addReviewRating(anyLong(), anyInt());
         given(reviewImageService.uploadImages(any(), any())).willReturn(Collections.emptyList());
         given(reviewRepository.save(any(ReviewEntity.class))).willAnswer(invocation -> {
             ReviewEntity entity = invocation.getArgument(0);
@@ -148,47 +152,20 @@ class ReviewServiceIntegrationTest {
             return entity;
         });
 
-        // Store starts with 0 reviews
-        assertThat(store.getReviewCount()).isZero();
-        assertThat(store.getAverageRating()).isEqualTo(0.0);
-
-        // Act: create first review with rating 4
+        // Act: create review with rating 4
         ReviewCreateRequest request1 = new ReviewCreateRequest(ORDER_ITEM_ID, 4, "정말 맛있는 빵이었습니다! 추천합니다.");
         reviewService.createReview(USER_ID, request1, Collections.emptyList());
 
-        // Assert: store rating updated after first review
-        assertThat(store.getReviewCount()).isEqualTo(1);
-        assertThat(store.getAverageRating()).isEqualTo(4.0);
-
-        // Arrange: second review from different user/orderItem
-        Long secondUserId = 2L;
-        Long secondOrderItemId = 2001L;
-        Long secondOrderId = 1001L;
-        OrderItemEntity orderItem2 = TestFixtures.orderItem(secondOrderItemId, secondOrderId, BREAD_ID, 3000, 1);
-        OrderEntity order2 = TestFixtures.order(secondOrderId, secondUserId, STORE_ID, OrderStatus.PICKED_UP, 3000, "key-2");
-
-        given(orderItemRepository.findById(secondOrderItemId)).willReturn(Optional.of(orderItem2));
-        given(orderRepository.findById(secondOrderId)).willReturn(Optional.of(order2));
-        given(reviewRepository.existsByUserIdAndOrderItemId(secondUserId, secondOrderItemId)).willReturn(false);
-        given(reviewRepository.save(any(ReviewEntity.class))).willAnswer(invocation -> {
-            ReviewEntity entity = invocation.getArgument(0);
-            ReflectionTestUtils.setField(entity, "id", 2L);
-            ReflectionTestUtils.setField(entity, "createdAt", LocalDateTime.of(2026, 4, 5, 13, 0));
-            return entity;
-        });
-
-        // Act: create second review with rating 2
-        ReviewCreateRequest request2 = new ReviewCreateRequest(secondOrderItemId, 2, "기대보다 별로였어요. 다음에는 다른 빵을 먹어볼게요.");
-        reviewService.createReview(secondUserId, request2, Collections.emptyList());
-
-        // Assert: store rating updated after second review (4+2)/2 = 3.0
-        assertThat(store.getReviewCount()).isEqualTo(2);
-        assertThat(store.getAverageRating()).isEqualTo(3.0);
+        // Assert: atomic update was called
+        org.mockito.Mockito.verify(storeRepository).addReviewRating(STORE_ID, 4);
     }
 
     @Test
     @DisplayName("getStoreReviews로 작성된 리뷰가 목록에 나타난다")
     void getStoreReviews_returnsCreatedReview() {
+        // Arrange: store exists and is active
+        given(storeRepository.existsByIdAndIsActiveTrue(STORE_ID)).willReturn(true);
+
         // Arrange: create a review entity as if it was saved
         ReviewEntity review = ReviewEntity.builder()
                 .userId(USER_ID)
@@ -210,7 +187,7 @@ class ReviewServiceIntegrationTest {
         given(reviewImageService.getImageUrlsByReviewIds(List.of(1L))).willReturn(Collections.emptyMap());
 
         // Act
-        Page<StoreReviewResponse> result = reviewService.getStoreReviews(STORE_ID, ReviewSortType.LATEST, pageable);
+        Page<StoreReviewResponse> result = reviewQueryService.getStoreReviews(STORE_ID, ReviewSortType.LATEST, pageable);
 
         // Assert
         assertThat(result.getContent()).hasSize(1);
@@ -247,7 +224,7 @@ class ReviewServiceIntegrationTest {
         given(reviewImageService.getImageUrlsByReviewIds(List.of(1L))).willReturn(Collections.emptyMap());
 
         // Act
-        Page<MyReviewResponse> result = reviewService.getMyReviews(USER_ID, MyReviewSortType.LATEST, pageable);
+        Page<MyReviewResponse> result = reviewQueryService.getMyReviews(USER_ID, MyReviewSortType.LATEST, pageable);
 
         // Assert
         assertThat(result.getContent()).hasSize(1);
@@ -263,6 +240,9 @@ class ReviewServiceIntegrationTest {
     @Test
     @DisplayName("페이지네이션: 여러 리뷰 생성 후 페이지 크기가 올바르게 동작한다")
     void pagination_worksCorrectlyWithMultipleReviews() {
+        // Arrange: store exists and is active
+        given(storeRepository.existsByIdAndIsActiveTrue(STORE_ID)).willReturn(true);
+
         // Arrange: 5 reviews, page size 2
         List<ReviewEntity> allReviews = new java.util.ArrayList<>();
         for (int i = 1; i <= 5; i++) {
@@ -289,7 +269,7 @@ class ReviewServiceIntegrationTest {
         given(reviewImageService.getImageUrlsByReviewIds(anyList())).willReturn(Collections.emptyMap());
 
         // Act
-        Page<StoreReviewResponse> result0 = reviewService.getStoreReviews(STORE_ID, ReviewSortType.LATEST, page0);
+        Page<StoreReviewResponse> result0 = reviewQueryService.getStoreReviews(STORE_ID, ReviewSortType.LATEST, page0);
 
         // Assert: page 0
         assertThat(result0.getContent()).hasSize(2);
@@ -304,7 +284,7 @@ class ReviewServiceIntegrationTest {
         given(reviewRepository.findByStoreId(eq(STORE_ID), any(PageRequest.class))).willReturn(reviewPage2);
 
         // Act
-        Page<StoreReviewResponse> result2 = reviewService.getStoreReviews(STORE_ID, ReviewSortType.LATEST, page2);
+        Page<StoreReviewResponse> result2 = reviewQueryService.getStoreReviews(STORE_ID, ReviewSortType.LATEST, page2);
 
         // Assert: last page
         assertThat(result2.getContent()).hasSize(1);

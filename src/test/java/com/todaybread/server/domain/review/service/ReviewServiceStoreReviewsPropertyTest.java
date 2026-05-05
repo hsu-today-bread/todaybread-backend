@@ -2,7 +2,6 @@ package com.todaybread.server.domain.review.service;
 
 import com.todaybread.server.domain.bread.entity.BreadEntity;
 import com.todaybread.server.domain.bread.repository.BreadRepository;
-import com.todaybread.server.domain.order.repository.OrderItemRepository;
 import com.todaybread.server.domain.order.repository.OrderRepository;
 import com.todaybread.server.domain.review.dto.ReviewSortType;
 import com.todaybread.server.domain.review.dto.StoreReviewResponse;
@@ -29,7 +28,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 
 /**
- * ReviewService.getStoreReviews() 비즈니스 로직 속성 테스트.
+ * ReviewQueryService.getStoreReviews() 비즈니스 로직 속성 테스트.
  * jqwik + Mockito를 사용하여 가게 리뷰 조회의 핵심 불변 조건을 검증합니다.
  *
  * - Property 6: 가게 리뷰 필터링
@@ -45,9 +44,6 @@ class ReviewServiceStoreReviewsPropertyTest {
     private ReviewImageService reviewImageService;
 
     @Mock
-    private OrderItemRepository orderItemRepository;
-
-    @Mock
     private OrderRepository orderRepository;
 
     @Mock
@@ -59,14 +55,13 @@ class ReviewServiceStoreReviewsPropertyTest {
     @Mock
     private BreadRepository breadRepository;
 
-    private ReviewService reviewService;
+    private ReviewQueryService reviewQueryService;
 
     @BeforeProperty
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        reviewService = new ReviewService(reviewRepository, reviewImageService,
-                orderItemRepository, orderRepository, storeRepository,
-                userRepository, breadRepository);
+        reviewQueryService = new ReviewQueryService(reviewRepository, reviewImageService,
+                storeRepository, userRepository, breadRepository, orderRepository);
     }
 
     // ========================================================================
@@ -87,6 +82,9 @@ class ReviewServiceStoreReviewsPropertyTest {
             @ForAll("validStoreIds") Long storeId,
             @ForAll("reviewCounts") int reviewCount
     ) {
+        // Arrange: store exists and is active
+        given(storeRepository.existsByIdAndIsActiveTrue(storeId)).willReturn(true);
+
         // Arrange: create reviews all belonging to the requested storeId
         List<ReviewEntity> reviews = buildReviewEntities(storeId, reviewCount);
         Page<ReviewEntity> reviewPage = new PageImpl<>(reviews, PageRequest.of(0, 20), reviews.size());
@@ -100,7 +98,7 @@ class ReviewServiceStoreReviewsPropertyTest {
         Pageable pageable = PageRequest.of(0, 20);
 
         // Act
-        Page<StoreReviewResponse> result = reviewService.getStoreReviews(storeId, ReviewSortType.LATEST, pageable);
+        Page<StoreReviewResponse> result = reviewQueryService.getStoreReviews(storeId, ReviewSortType.LATEST, pageable);
 
         // Assert: the number of returned reviews matches exactly what the repository returned
         assertThat(result.getContent()).hasSize(reviewCount);
@@ -128,6 +126,9 @@ class ReviewServiceStoreReviewsPropertyTest {
             @ForAll("validStoreIds") Long storeId,
             @ForAll("allSortTypes") ReviewSortType sortType
     ) {
+        // Arrange: store exists and is active
+        given(storeRepository.existsByIdAndIsActiveTrue(storeId)).willReturn(true);
+
         // Arrange: create a few reviews
         List<ReviewEntity> reviews = buildReviewEntities(storeId, 3);
         Page<ReviewEntity> reviewPage = new PageImpl<>(reviews, PageRequest.of(0, 20), reviews.size());
@@ -143,7 +144,7 @@ class ReviewServiceStoreReviewsPropertyTest {
         Pageable pageable = PageRequest.of(0, 20);
 
         // Act
-        reviewService.getStoreReviews(storeId, sortType, pageable);
+        reviewQueryService.getStoreReviews(storeId, sortType, pageable);
 
         // Assert: verify the Sort passed to the repository
         assertThat(capturedPageables).isNotEmpty();
@@ -185,6 +186,9 @@ class ReviewServiceStoreReviewsPropertyTest {
             @ForAll("validStoreIds") Long storeId,
             @ForAll("nonEmptyReviewCounts") int reviewCount
     ) {
+        // Arrange: store exists and is active
+        given(storeRepository.existsByIdAndIsActiveTrue(storeId)).willReturn(true);
+
         // Arrange
         List<ReviewEntity> reviews = buildReviewEntities(storeId, reviewCount);
         Page<ReviewEntity> reviewPage = new PageImpl<>(reviews, PageRequest.of(0, 20), reviews.size());
@@ -195,7 +199,7 @@ class ReviewServiceStoreReviewsPropertyTest {
         Pageable pageable = PageRequest.of(0, 20);
 
         // Act
-        Page<StoreReviewResponse> result = reviewService.getStoreReviews(storeId, ReviewSortType.LATEST, pageable);
+        Page<StoreReviewResponse> result = reviewQueryService.getStoreReviews(storeId, ReviewSortType.LATEST, pageable);
 
         // Assert: every response field must be non-null
         for (StoreReviewResponse response : result.getContent()) {

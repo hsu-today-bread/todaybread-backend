@@ -1,18 +1,21 @@
 package com.todaybread.server.domain.payment.service;
 
 import com.todaybread.server.domain.order.entity.OrderEntity;
+import com.todaybread.server.domain.order.entity.OrderItemEntity;
 import com.todaybread.server.domain.order.entity.OrderStatus;
+import com.todaybread.server.domain.order.repository.OrderItemRepository;
 import com.todaybread.server.domain.order.repository.OrderRepository;
+import com.todaybread.server.domain.order.service.InventoryRestorer;
 import com.todaybread.server.domain.order.service.OrderService;
 import com.todaybread.server.domain.payment.client.TossPaymentException;
-import com.todaybread.server.domain.payment.dto.PaymentRequest;
-import com.todaybread.server.domain.payment.dto.PaymentResponse;
+import com.todaybread.server.domain.payment.client.dto.TossPaymentResponse;
 import com.todaybread.server.domain.payment.entity.PaymentEntity;
 import com.todaybread.server.domain.payment.entity.PaymentStatus;
 import com.todaybread.server.domain.payment.processor.CancelResult;
 import com.todaybread.server.domain.payment.processor.PaymentProcessor;
 import com.todaybread.server.domain.payment.processor.PaymentResult;
 import com.todaybread.server.domain.payment.repository.PaymentRepository;
+import com.todaybread.server.domain.payment.util.TossOrderIdHelper;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +25,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -34,101 +40,21 @@ import java.util.Optional;
 public class PaymentService {
 
     private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
     private final PaymentRepository paymentRepository;
     private final PaymentProcessor paymentProcessor;
     private final OrderService orderService;
+    private final InventoryRestorer inventoryRestorer;
     private final Clock clock;
-
-    /**
-     * 결제를 처리합니다.
-     * 비관적 락으로 주문을 조회하여 동시 결제를 방지합니다.
-     * 기존 FAILED 결제가 있으면 상태를 갱신하여 재시도를 지원합니다.
-     *
-     * @param userId         유저 ID
-     * @param request        결제 요청
-     * @param idempotencyKey 멱등성 키
-     * @return 결제 응답
-     */
-    @Transactional
-    public PaymentResponse processPayment(Long userId, PaymentRequest request, String idempotencyKey) {
-        // 1. 비관적 락으로 Order 조회 — 동시 결제 방지
-        Optional<OrderEntity> orderOpt = orderRepository.findByIdWithLock(request.orderId());
-        if (orderOpt.isEmpty()) {
-            throw new CustomException(ErrorCode.ORDER_NOT_FOUND);
-        }
-        OrderEntity order = orderOpt.get();
-
-        // 2. 소유자 확인
-        if (!order.getUserId().equals(userId)) {
-            throw new CustomException(ErrorCode.ORDER_ACCESS_DENIED);
-        }
-
-        // 3. 동일 idempotency key 재시도면 기존 응답을 그대로 반환
-        Optional<PaymentEntity> sameRequestPayment = paymentRepository
-                .findByOrderIdAndIdempotencyKey(order.getId(), idempotencyKey);
-        if (sameRequestPayment.isPresent()) {
-            return PaymentResponse.of(sameRequestPayment.get());
-        }
-
-        // 4. 기존 결제 확인 — 이미 APPROVED면 거부, FAILED면 새 key로 재시도 허용
-        Optional<PaymentEntity> existingPayment = paymentRepository.findByOrderId(order.getId());
-
-        // 5. PENDING 상태 확인
-        if (order.getStatus() != OrderStatus.PENDING) {
-            throw new CustomException(ErrorCode.PAYMENT_ORDER_STATUS_INVALID);
-        }
-
-        if (existingPayment.isPresent() && existingPayment.get().getStatus() == PaymentStatus.APPROVED) {
-            throw new CustomException(ErrorCode.PAYMENT_ORDER_STATUS_INVALID);
-        }
-
-        // 6. 금액 일치 확인
-        if (request.amount() != order.getTotalAmount()) {
-            throw new CustomException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
-        }
-
-        // 7. PaymentProcessor 호출 (orderId를 외부 idempotency key로 전달)
-        PaymentResult result = paymentProcessor.pay(order.getId(), request.amount());
-
-        // 8. Payment 저장 또는 갱신
-        PaymentEntity payment;
-        if (existingPayment.isPresent()) {
-            payment = existingPayment.get();
-            if (result.status() == PaymentStatus.APPROVED) {
-                payment.approve(LocalDateTime.now(clock), idempotencyKey);
-            } else {
-                payment.updateStatus(result.status(), idempotencyKey);
-            }
-        } else {
-            payment = PaymentEntity.builder()
-                    .orderId(order.getId())
-                    .amount(request.amount())
-                    .status(result.status())
-                    .paidAt(result.status() == PaymentStatus.APPROVED ? LocalDateTime.now(clock) : null)
-                    .idempotencyKey(idempotencyKey)
-                    .build();
-            paymentRepository.save(payment);
-        }
-
-        // 9. APPROVED → Order 확정
-        if (result.status() == PaymentStatus.APPROVED) {
-            orderService.confirmOrder(order.getId());
-            log.info("결제 승인 완료: paymentId={}, orderId={}, amount={}", payment.getId(), order.getId(), request.amount());
-        } else {
-            log.warn("결제 실패: orderId={}, status={}, message={}", order.getId(), result.status(), result.message());
-        }
-
-        return PaymentResponse.of(payment);
-    }
 
     /**
      * 토스 결제 승인을 확정합니다.
      * 프론트엔드에서 받은 paymentKey, orderId, amount를 검증하고 토스 Confirm API를 호출합니다.
      *
-     * <p>멱등성: 동일 idempotencyKey로 이미 APPROVED 결제가 있으면 기존 결과를 반환합니다.
+     * <p>멱등성: 동일 orderId + idempotencyKey로 이미 APPROVED 결제가 있으면 기존 결과를 반환합니다.
      * <p>토스 에러 처리:
      * <ul>
-     *   <li>ALREADY_PROCESSED_PAYMENT → 기존 결제 결과 조회 후 반환</li>
+     *   <li>ALREADY_PROCESSED_PAYMENT → 토스 조회 API로 실제 상태 확인 후 동기화</li>
      *   <li>PROVIDER_ERROR → PAYMENT_004 에러 반환</li>
      *   <li>카드 관련 에러 → 토스 에러 메시지 그대로 전달</li>
      * </ul>
@@ -143,9 +69,15 @@ public class PaymentService {
     @Transactional
     public PaymentEntity confirmPayment(Long userId, String paymentKey, Long orderId, int amount,
                                         String idempotencyKey) {
-        // 1. 멱등성 처리: 동일 idempotencyKey로 기존 APPROVED 결제가 있으면 기존 결과 반환
-        Optional<PaymentEntity> existingByKey = paymentRepository.findByIdempotencyKey(idempotencyKey);
+        // 1. 멱등성 처리: 동일 orderId + idempotencyKey로 기존 APPROVED 결제가 있으면 기존 결과 반환 (P1)
+        Optional<PaymentEntity> existingByKey = paymentRepository.findByOrderIdAndIdempotencyKey(orderId, idempotencyKey);
         if (existingByKey.isPresent() && existingByKey.get().getStatus() == PaymentStatus.APPROVED) {
+            // C3: 소유자 검증 추가 — 멱등성 반환 전에 주문 소유자 확인
+            OrderEntity existingOrder = orderRepository.findById(orderId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
+            if (!existingOrder.getUserId().equals(userId)) {
+                throw new CustomException(ErrorCode.ORDER_ACCESS_DENIED);
+            }
             return existingByKey.get();
         }
 
@@ -171,11 +103,10 @@ public class PaymentService {
         // 6. 기존 결제 확인
         Optional<PaymentEntity> existingPayment = paymentRepository.findByOrderId(orderId);
 
-        // 7. PaymentProcessor.confirm() 호출
-        // 토스 orderId 규격: 6~64자 영문/숫자/-/_ 문자열
-        String tossOrderId = "order_" + orderId;
+        // 7. PaymentProcessor.confirm() 호출 (I4: TossOrderIdHelper 사용, I1: idempotencyKey 전달)
+        String tossOrderId = TossOrderIdHelper.toTossOrderId(orderId);
         try {
-            PaymentResult result = paymentProcessor.confirm(paymentKey, tossOrderId, amount);
+            PaymentResult result = paymentProcessor.confirm(paymentKey, tossOrderId, amount, idempotencyKey);
 
             // 성공 시: Payment 저장 (APPROVED, paymentKey, method), 주문 CONFIRMED 전환
             PaymentEntity payment;
@@ -203,17 +134,13 @@ public class PaymentService {
         } catch (TossPaymentException ex) {
             log.error("토스 결제 에러: code={}, message={}", ex.getErrorCode(), ex.getErrorMessage());
 
-            // ALREADY_PROCESSED_PAYMENT: 기존 결제 결과 조회 후 반환
+            // ALREADY_PROCESSED_PAYMENT: 토스 조회 API로 실제 상태 확인 후 동기화 (P2)
             if ("ALREADY_PROCESSED_PAYMENT".equals(ex.getErrorCode())) {
-                Optional<PaymentEntity> alreadyProcessed = paymentRepository.findByOrderId(orderId);
-                if (alreadyProcessed.isPresent()) {
-                    return alreadyProcessed.get();
-                }
+                return handleAlreadyProcessedPayment(paymentKey, orderId, amount, idempotencyKey, existingPayment);
             }
 
             // PROVIDER_ERROR: PAYMENT_004 에러 반환
             if ("PROVIDER_ERROR".equals(ex.getErrorCode())) {
-                // 실패 시: Payment 저장 (FAILED), 주문 PENDING 유지
                 saveFailedPayment(orderId, amount, idempotencyKey, existingPayment);
                 throw new CustomException(ErrorCode.PAYMENT_PROVIDER_ERROR);
             }
@@ -225,52 +152,168 @@ public class PaymentService {
     }
 
     /**
-     * 결제를 취소합니다.
-     * orderId로 APPROVED 상태의 결제를 조회하고, 토스 Cancel API를 호출하여 결제를 취소합니다.
-     *
-     * <p>취소 성공 시: Payment 상태를 CANCELLED로 변경하고, 취소 사유와 취소 시각을 저장합니다.
-     * <p>취소 실패 시: PAYMENT_007 에러를 반환합니다.
-     * <p>취소 성공 후 주문 취소 처리를 {@link OrderService#cancelOrder(Long, Long)}에 위임합니다.
+     * 결제를 취소합니다. (C4: 2단계 취소 패턴)
+     * 1단계: 짧은 트랜잭션으로 주문 상태를 CANCEL_PENDING으로 변경
+     * 2단계: 트랜잭션 밖에서 토스 Cancel API 호출
+     * 3단계: 짧은 트랜잭션으로 최종 상태 반영 (CANCELLED + 재고 복원 또는 CONFIRMED 롤백)
      *
      * @param userId  유저 ID
      * @param orderId 주문 ID
      */
-    @Transactional
     public void cancelPayment(Long userId, Long orderId) {
-        // 1. orderId로 APPROVED 상태 결제 조회
-        PaymentEntity payment = paymentRepository.findByOrderIdAndStatus(orderId, PaymentStatus.APPROVED)
+        // 1단계: 취소 준비 (짧은 트랜잭션)
+        CancelPreparation prep = prepareCancelPayment(userId, orderId);
+
+        // 2단계: 토스 Cancel API 호출 (트랜잭션 밖)
+        CancelResult cancelResult;
+        try {
+            cancelResult = paymentProcessor.cancel(
+                    prep.paymentKey(), "고객 요청", prep.amount());
+        } catch (TossPaymentException ex) {
+            log.error("결제 취소 실패: orderId={}, code={}, message={}",
+                    orderId, ex.getErrorCode(), ex.getErrorMessage());
+            // 토스 취소 실패 → CONFIRMED로 복원
+            rollbackCancelPayment(orderId);
+            throw new CustomException(ErrorCode.PAYMENT_CANCEL_FAILED);
+        }
+
+        // 3단계: 취소 완료 (짧은 트랜잭션)
+        completeCancelPayment(orderId, prep.paymentId(), cancelResult);
+    }
+
+    /** 취소 준비에 필요한 정보를 담는 내부 레코드 */
+    private record CancelPreparation(Long paymentId, String paymentKey, int amount) {}
+
+    /**
+     * 취소 1단계: 비관적 락으로 주문을 조회하고 CANCEL_PENDING으로 전환합니다.
+     */
+    @Transactional
+    public CancelPreparation prepareCancelPayment(Long userId, Long orderId) {
+        // 1. 비관적 락으로 주문 조회
+        OrderEntity order = orderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
 
-        // 2. 소유자 검증: 주문 조회하여 userId 확인
-        OrderEntity order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
-
+        // 2. 소유자 검증
         if (!order.getUserId().equals(userId)) {
             throw new CustomException(ErrorCode.ORDER_ACCESS_DENIED);
         }
 
-        // 3. PaymentProcessor.cancel() 호출
-        String cancelReason = "고객 요청";
-        try {
-            CancelResult cancelResult = paymentProcessor.cancel(
-                    payment.getPaymentKey(), cancelReason, payment.getAmount());
-
-            // 4. 성공 시: Payment 상태 CANCELLED, cancelReason, cancelledAt 저장
-            LocalDateTime cancelledAt = LocalDateTime.parse(cancelResult.cancelledAt(),
-                    java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-            payment.cancel(cancelReason, cancelledAt);
-
-            log.info("결제 취소 완료: orderId={}, paymentKey={}", orderId, payment.getPaymentKey());
-
-        } catch (TossPaymentException ex) {
-            // 5. 실패 시: PAYMENT_007 에러 반환
-            log.error("결제 취소 실패: orderId={}, code={}, message={}",
-                    orderId, ex.getErrorCode(), ex.getErrorMessage());
-            throw new CustomException(ErrorCode.PAYMENT_CANCEL_FAILED);
+        // 3. 상태 검증: CONFIRMED만 허용
+        if (order.getStatus() != OrderStatus.CONFIRMED) {
+            throw new CustomException(ErrorCode.ORDER_STATUS_CANNOT_CHANGE);
         }
 
-        // 6. 주문 취소 처리 위임
-        orderService.cancelOrder(userId, orderId);
+        // 4. APPROVED 상태 결제 조회
+        PaymentEntity payment = paymentRepository.findByOrderIdAndStatus(orderId, PaymentStatus.APPROVED)
+                .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
+
+        // 5. CANCEL_PENDING으로 전환
+        order.updateStatus(OrderStatus.CANCEL_PENDING);
+
+        return new CancelPreparation(payment.getId(), payment.getPaymentKey(), payment.getAmount());
+    }
+
+    /**
+     * 취소 3단계 (성공): CANCELLED + payment.cancel() + 재고 복원
+     */
+    @Transactional
+    public void completeCancelPayment(Long orderId, Long paymentId, CancelResult cancelResult) {
+        OrderEntity order = orderRepository.findByIdWithLock(orderId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
+
+        PaymentEntity payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
+
+        // cancelledAt 파싱 (P4)
+        LocalDateTime cancelledAt;
+        if (cancelResult.cancelledAt() != null) {
+            cancelledAt = parseCancelledAt(cancelResult.cancelledAt(), orderId);
+        } else {
+            log.warn("토스 취소 응답에 cancelledAt 없음, 현재 시각으로 대체: orderId={}", orderId);
+            cancelledAt = LocalDateTime.now(clock);
+        }
+        payment.cancel("고객 요청", cancelledAt);
+
+        // 주문 CANCELLED 전환
+        order.updateStatus(OrderStatus.CANCELLED);
+
+        // C2: 재고 복원
+        List<OrderItemEntity> orderItems = orderItemRepository.findByOrderId(orderId);
+        inventoryRestorer.restoreInventory(orderId, orderItems);
+
+        log.info("결제 취소 완료: orderId={}, paymentKey={}", orderId, payment.getPaymentKey());
+    }
+
+    /**
+     * 취소 3단계 (실패): CONFIRMED로 복원
+     */
+    @Transactional
+    public void rollbackCancelPayment(Long orderId) {
+        OrderEntity order = orderRepository.findByIdWithLock(orderId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
+        order.updateStatus(OrderStatus.CONFIRMED);
+        log.warn("결제 취소 실패로 CONFIRMED 복원: orderId={}", orderId);
+    }
+
+    /**
+     * ALREADY_PROCESSED_PAYMENT 에러 시 토스 조회 API로 실제 상태를 확인하고 동기화합니다. (P2)
+     */
+    private PaymentEntity handleAlreadyProcessedPayment(String paymentKey, Long orderId, int amount,
+                                                         String idempotencyKey,
+                                                         Optional<PaymentEntity> existingPayment) {
+        // 기존 결제가 APPROVED면 그대로 반환
+        if (existingPayment.isPresent() && existingPayment.get().getStatus() == PaymentStatus.APPROVED) {
+            return existingPayment.get();
+        }
+
+        // 기존 결제가 FAILED이거나 없으면 → 토스 조회 API로 실제 상태 확인
+        try {
+            TossPaymentResponse tossPayment = paymentProcessor.getPayment(paymentKey);
+
+            if ("DONE".equals(tossPayment.status())) {
+                // C1: 토스 조회 결과의 orderId/totalAmount/paymentKey를 현재 요청과 비교
+                String expectedTossOrderId = TossOrderIdHelper.toTossOrderId(orderId);
+                if (!expectedTossOrderId.equals(tossPayment.orderId())
+                        || tossPayment.totalAmount() != amount
+                        || !paymentKey.equals(tossPayment.paymentKey())) {
+                    log.error("ALREADY_PROCESSED 재조정 불일치: expected orderId={}, amount={}, paymentKey={} / actual orderId={}, amount={}, paymentKey={}",
+                            expectedTossOrderId, amount, paymentKey,
+                            tossPayment.orderId(), tossPayment.totalAmount(), tossPayment.paymentKey());
+                    saveFailedPayment(orderId, amount, idempotencyKey, existingPayment);
+                    throw new CustomException(ErrorCode.PAYMENT_PROVIDER_ERROR);
+                }
+
+                // 토스 상태가 DONE → 기존 결제를 APPROVED로 갱신 + 주문 확정
+                PaymentEntity payment;
+                if (existingPayment.isPresent()) {
+                    payment = existingPayment.get();
+                    payment.approve(LocalDateTime.now(clock), idempotencyKey,
+                            tossPayment.paymentKey(), tossPayment.method());
+                } else {
+                    payment = PaymentEntity.builder()
+                            .orderId(orderId)
+                            .amount(amount)
+                            .status(PaymentStatus.APPROVED)
+                            .paidAt(LocalDateTime.now(clock))
+                            .idempotencyKey(idempotencyKey)
+                            .build();
+                    payment.approve(LocalDateTime.now(clock), idempotencyKey,
+                            tossPayment.paymentKey(), tossPayment.method());
+                    paymentRepository.save(payment);
+                }
+
+                orderService.confirmOrder(orderId);
+                log.info("ALREADY_PROCESSED 재조정 완료 (DONE): orderId={}, paymentKey={}",
+                        orderId, tossPayment.paymentKey());
+                return payment;
+            }
+        } catch (Exception e) {
+            log.error("토스 결제 조회 실패: paymentKey={}, orderId={}", paymentKey, orderId, e);
+        }
+
+        // 토스 상태가 DONE이 아니거나 조회 실패 → FAILED 저장 후 예외
+        saveFailedPayment(orderId, amount, idempotencyKey, existingPayment);
+        throw new CustomException(ErrorCode.PAYMENT_PROVIDER_ERROR);
     }
 
     /**
@@ -288,6 +331,20 @@ public class PaymentService {
                     .idempotencyKey(idempotencyKey)
                     .build();
             paymentRepository.save(failedPayment);
+        }
+    }
+
+    /**
+     * cancelledAt 문자열을 LocalDateTime으로 파싱합니다.
+     * 파싱 실패 시 현재 시각으로 대체합니다.
+     */
+    private LocalDateTime parseCancelledAt(String cancelledAtStr, Long orderId) {
+        try {
+            OffsetDateTime odt = OffsetDateTime.parse(cancelledAtStr);
+            return odt.atZoneSameInstant(clock.getZone()).toLocalDateTime();
+        } catch (DateTimeParseException e) {
+            log.warn("cancelledAt 파싱 실패: {}, 현재 시각으로 대체: orderId={}", cancelledAtStr, orderId, e);
+            return LocalDateTime.now(clock);
         }
     }
 }

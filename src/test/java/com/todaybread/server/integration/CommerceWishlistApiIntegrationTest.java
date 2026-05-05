@@ -107,16 +107,17 @@ class CommerceWishlistApiIntegrationTest extends ApiIntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].orderId").value(orderId));
 
-        mockMvc.perform(post("/api/payments")
+        mockMvc.perform(post("/api/payments/confirm")
                         .header("Authorization", "Bearer " + userToken)
                         .header("Idempotency-Key", "payment-key-1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                  "paymentKey": "tgen_stub_%d",
                                   "orderId": %d,
                                   "amount": 5000
                                 }
-                                """.formatted(orderId)))
+                                """.formatted(orderId, orderId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.orderId").value(orderId))
                 .andExpect(jsonPath("$.status").value("APPROVED"));

@@ -2,7 +2,6 @@ package com.todaybread.server.domain.review.service;
 
 import com.todaybread.server.domain.bread.entity.BreadEntity;
 import com.todaybread.server.domain.bread.repository.BreadRepository;
-import com.todaybread.server.domain.order.repository.OrderItemRepository;
 import com.todaybread.server.domain.order.repository.OrderRepository;
 import com.todaybread.server.domain.review.dto.MyReviewResponse;
 import com.todaybread.server.domain.review.dto.MyReviewSortType;
@@ -29,7 +28,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 
 /**
- * ReviewService.getMyReviews() 비즈니스 로직 속성 테스트.
+ * ReviewQueryService.getMyReviews() 비즈니스 로직 속성 테스트.
  * jqwik + Mockito를 사용하여 내 리뷰 조회의 핵심 불변 조건을 검증합니다.
  *
  * - Property 14: 내 리뷰 필터링 및 정렬
@@ -44,9 +43,6 @@ class ReviewServiceMyReviewsPropertyTest {
     private ReviewImageService reviewImageService;
 
     @Mock
-    private OrderItemRepository orderItemRepository;
-
-    @Mock
     private OrderRepository orderRepository;
 
     @Mock
@@ -58,14 +54,13 @@ class ReviewServiceMyReviewsPropertyTest {
     @Mock
     private BreadRepository breadRepository;
 
-    private ReviewService reviewService;
+    private ReviewQueryService reviewQueryService;
 
     @BeforeProperty
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        reviewService = new ReviewService(reviewRepository, reviewImageService,
-                orderItemRepository, orderRepository, storeRepository,
-                userRepository, breadRepository);
+        reviewQueryService = new ReviewQueryService(reviewRepository, reviewImageService,
+                storeRepository, userRepository, breadRepository, orderRepository);
     }
 
     // ========================================================================
@@ -99,7 +94,7 @@ class ReviewServiceMyReviewsPropertyTest {
         Pageable pageable = PageRequest.of(0, 20);
 
         // Act
-        Page<MyReviewResponse> result = reviewService.getMyReviews(userId, MyReviewSortType.LATEST, pageable);
+        Page<MyReviewResponse> result = reviewQueryService.getMyReviews(userId, MyReviewSortType.LATEST, pageable);
 
         // Assert: the number of returned reviews matches exactly what the repository returned
         assertThat(result.getContent()).hasSize(reviewCount);
@@ -137,7 +132,7 @@ class ReviewServiceMyReviewsPropertyTest {
         Pageable pageable = PageRequest.of(0, 20);
 
         // Act
-        reviewService.getMyReviews(userId, sortType, pageable);
+        reviewQueryService.getMyReviews(userId, sortType, pageable);
 
         // Assert: verify the Sort passed to the repository
         assertThat(capturedPageables).isNotEmpty();
@@ -184,7 +179,7 @@ class ReviewServiceMyReviewsPropertyTest {
         Pageable pageable = PageRequest.of(0, 20);
 
         // Act
-        Page<MyReviewResponse> result = reviewService.getMyReviews(userId, MyReviewSortType.LATEST, pageable);
+        Page<MyReviewResponse> result = reviewQueryService.getMyReviews(userId, MyReviewSortType.LATEST, pageable);
 
         // Assert: every response field must be non-null
         for (MyReviewResponse response : result.getContent()) {

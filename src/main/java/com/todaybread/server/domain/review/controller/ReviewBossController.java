@@ -3,10 +3,11 @@ package com.todaybread.server.domain.review.controller;
 import com.todaybread.server.domain.review.dto.BossReviewFilterType;
 import com.todaybread.server.domain.review.dto.BossReviewResponse;
 import com.todaybread.server.domain.review.dto.BossReviewSortType;
-import com.todaybread.server.domain.review.service.ReviewService;
+import com.todaybread.server.domain.review.service.ReviewQueryService;
 import com.todaybread.server.global.util.JwtRoleHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -28,7 +29,7 @@ import org.springframework.web.bind.annotation.*;
 @PreAuthorize("hasRole('BOSS')")
 public class ReviewBossController {
 
-    private final ReviewService reviewService;
+    private final ReviewQueryService reviewQueryService;
 
     /**
      * 사장님 가게 리뷰 관리 목록을 조회합니다.
@@ -49,13 +50,13 @@ public class ReviewBossController {
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam(defaultValue = "LATEST") String sort,
             @RequestParam(defaultValue = "ALL") String filter,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) int size) {
         Long userId = JwtRoleHelper.getUserId(jwt);
-        return reviewService.getBossReviews(
+        return reviewQueryService.getBossReviews(
                 userId,
                 BossReviewSortType.from(sort),
                 BossReviewFilterType.from(filter),
-                PageRequest.of(page, size));
+                PageRequest.of(page, Math.min(size, 100)));
     }
 }

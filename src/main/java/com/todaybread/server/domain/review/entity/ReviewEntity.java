@@ -49,6 +49,7 @@ public class ReviewEntity extends BaseEntity {
     private ReviewEntity(Long userId, Long storeId, Long breadId,
                          Long orderItemId, int rating, String content) {
         validateRating(rating);
+        validateContent(content);
         this.userId = userId;
         this.storeId = storeId;
         this.breadId = breadId;
@@ -64,6 +65,20 @@ public class ReviewEntity extends BaseEntity {
      */
     private void validateRating(int rating) {
         if (rating < 1 || rating > 5) {
+            throw new CustomException(ErrorCode.COMMON_REQUEST_VALIDATION_FAILED);
+        }
+    }
+
+    /**
+     * 리뷰 내용이 null/공백이 아니고 10~500자 범위인지 검증합니다.
+     *
+     * @param content 리뷰 내용
+     */
+    private void validateContent(String content) {
+        if (content == null || content.isBlank()) {
+            throw new CustomException(ErrorCode.COMMON_REQUEST_VALIDATION_FAILED);
+        }
+        if (content.length() < 10 || content.length() > 500) {
             throw new CustomException(ErrorCode.COMMON_REQUEST_VALIDATION_FAILED);
         }
     }

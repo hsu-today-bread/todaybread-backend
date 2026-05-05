@@ -2,8 +2,8 @@ package com.todaybread.server.domain.review.service;
 
 import com.todaybread.server.domain.bread.entity.BreadEntity;
 import com.todaybread.server.domain.bread.repository.BreadRepository;
+import com.todaybread.server.domain.order.dto.PurchaseCountProjection;
 import com.todaybread.server.domain.order.entity.OrderStatus;
-import com.todaybread.server.domain.order.repository.OrderItemRepository;
 import com.todaybread.server.domain.order.repository.OrderRepository;
 import com.todaybread.server.domain.review.dto.BossReviewFilterType;
 import com.todaybread.server.domain.review.dto.BossReviewResponse;
@@ -36,7 +36,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
 /**
- * ReviewService.getBossReviews() 비즈니스 로직 속성 테스트.
+ * ReviewQueryService.getBossReviews() 비즈니스 로직 속성 테스트.
  * jqwik + Mockito를 사용하여 사장님 리뷰 관리 목록의 핵심 불변 조건을 검증합니다.
  *
  * - Property 9: 사장님 가게 소유권 검증
@@ -53,9 +53,6 @@ class ReviewServiceBossReviewsPropertyTest {
     private ReviewImageService reviewImageService;
 
     @Mock
-    private OrderItemRepository orderItemRepository;
-
-    @Mock
     private OrderRepository orderRepository;
 
     @Mock
@@ -67,14 +64,13 @@ class ReviewServiceBossReviewsPropertyTest {
     @Mock
     private BreadRepository breadRepository;
 
-    private ReviewService reviewService;
+    private ReviewQueryService reviewQueryService;
 
     @BeforeProperty
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        reviewService = new ReviewService(reviewRepository, reviewImageService,
-                orderItemRepository, orderRepository, storeRepository,
-                userRepository, breadRepository);
+        reviewQueryService = new ReviewQueryService(reviewRepository, reviewImageService,
+                storeRepository, userRepository, breadRepository, orderRepository);
     }
 
     // ========================================================================
@@ -98,7 +94,7 @@ class ReviewServiceBossReviewsPropertyTest {
         Pageable pageable = PageRequest.of(0, 20);
 
         // Act & Assert
-        assertThatThrownBy(() -> reviewService.getBossReviews(userId, BossReviewSortType.LATEST,
+        assertThatThrownBy(() -> reviewQueryService.getBossReviews(userId, BossReviewSortType.LATEST,
                 BossReviewFilterType.ALL, pageable))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
@@ -127,7 +123,7 @@ class ReviewServiceBossReviewsPropertyTest {
         Pageable pageable = PageRequest.of(0, 20);
 
         // Act
-        Page<BossReviewResponse> result = reviewService.getBossReviews(userId, BossReviewSortType.LATEST,
+        Page<BossReviewResponse> result = reviewQueryService.getBossReviews(userId, BossReviewSortType.LATEST,
                 BossReviewFilterType.ALL, pageable);
 
         // Assert: should succeed without exception
@@ -172,7 +168,7 @@ class ReviewServiceBossReviewsPropertyTest {
         Pageable pageable = PageRequest.of(0, 20);
 
         // Act
-        reviewService.getBossReviews(userId, sortType, BossReviewFilterType.ALL, pageable);
+        reviewQueryService.getBossReviews(userId, sortType, BossReviewFilterType.ALL, pageable);
 
         // Assert: verify the Sort passed to the repository
         assertThat(capturedPageables).isNotEmpty();
@@ -223,9 +219,8 @@ class ReviewServiceBossReviewsPropertyTest {
     ) {
         // Arrange — fresh mocks per try to avoid cross-try invocation counts
         MockitoAnnotations.openMocks(this);
-        reviewService = new ReviewService(reviewRepository, reviewImageService,
-                orderItemRepository, orderRepository, storeRepository,
-                userRepository, breadRepository);
+        reviewQueryService = new ReviewQueryService(reviewRepository, reviewImageService,
+                storeRepository, userRepository, breadRepository, orderRepository);
 
         StoreEntity store = TestFixtures.store(storeId, userId);
         given(storeRepository.findByUserIdAndIsActiveTrue(userId)).willReturn(Optional.of(store));
@@ -243,7 +238,7 @@ class ReviewServiceBossReviewsPropertyTest {
         Pageable pageable = PageRequest.of(0, 20);
 
         // Act
-        reviewService.getBossReviews(userId, BossReviewSortType.LATEST, filterType, pageable);
+        reviewQueryService.getBossReviews(userId, BossReviewSortType.LATEST, filterType, pageable);
 
         // Assert: verify the correct repository method was called
         switch (filterType) {
@@ -301,14 +296,21 @@ class ReviewServiceBossReviewsPropertyTest {
                 .collect(Collectors.toMap(id -> id, id -> Collections.emptyList()));
         given(reviewImageService.getImageUrlsByReviewIds(reviewIds)).willReturn(imageMap);
 
-        // Mock purchase counts: each user gets a distinct count based on their index
-        List<Object[]> purchaseCounts = new ArrayList<>();
+        // Mock purchase counts using PurchaseCountProjection
+        List<PurchaseCountProjection> purchaseCounts = new ArrayList<>();
         Map<Long, Long> expectedPurchaseMap = new HashMap<>();
         for (int i = 0; i < userIds.size(); i++) {
             Long uid = userIds.get(i);
             long count = basePurchaseCount + i;
-            purchaseCounts.add(new Object[]{uid, count});
             expectedPurchaseMap.put(uid, count);
+            final Long finalUid = uid;
+            final long finalCount = count;
+            purchaseCounts.add(new PurchaseCountProjection() {
+                @Override
+                public Long getUserId() { return finalUid; }
+                @Override
+                public Long getPurchaseCount() { return finalCount; }
+            });
         }
         given(orderRepository.countByStoreIdAndStatusAndUserIdIn(
                 eq(storeId), eq(OrderStatus.PICKED_UP), eq(userIds)))
@@ -317,7 +319,7 @@ class ReviewServiceBossReviewsPropertyTest {
         Pageable pageable = PageRequest.of(0, 20);
 
         // Act
-        Page<BossReviewResponse> result = reviewService.getBossReviews(bossUserId, BossReviewSortType.LATEST,
+        Page<BossReviewResponse> result = reviewQueryService.getBossReviews(bossUserId, BossReviewSortType.LATEST,
                 BossReviewFilterType.ALL, pageable);
 
         // Assert: each response's purchaseCount matches the mocked count

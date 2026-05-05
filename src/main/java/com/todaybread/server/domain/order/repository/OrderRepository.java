@@ -1,6 +1,7 @@
 package com.todaybread.server.domain.order.repository;
 
 import com.todaybread.server.domain.order.dto.DailySalesProjection;
+import com.todaybread.server.domain.order.dto.PurchaseCountProjection;
 import com.todaybread.server.domain.order.entity.OrderEntity;
 import com.todaybread.server.domain.order.entity.OrderStatus;
 import jakarta.persistence.LockModeType;
@@ -135,10 +136,10 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long> {
      * @param storeId 가게 ID
      * @param status  주문 상태
      * @param userIds 유저 ID 목록
-     * @return [userId, count] 형태의 Object 배열 목록
+     * @return PurchaseCountProjection 목록
      */
-    @Query("SELECT o.userId, COUNT(o) FROM OrderEntity o WHERE o.storeId = :storeId AND o.status = :status AND o.userId IN :userIds GROUP BY o.userId")
-    List<Object[]> countByStoreIdAndStatusAndUserIdIn(
+    @Query("SELECT o.userId AS userId, COUNT(o) AS purchaseCount FROM OrderEntity o WHERE o.storeId = :storeId AND o.status = :status AND o.userId IN :userIds GROUP BY o.userId")
+    List<PurchaseCountProjection> countByStoreIdAndStatusAndUserIdIn(
             @Param("storeId") Long storeId,
             @Param("status") OrderStatus status,
             @Param("userIds") List<Long> userIds);
