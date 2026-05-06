@@ -96,9 +96,7 @@ TOSS_CLIENT_KEY=test_ck_...
 | [SCRIPTS.md](docs/SCRIPTS.md) | `scripts/` 폴더의 실행 스크립트와 seed 이미지 규칙 |
 | [TOSS.md](docs/TOSS.md) | 토스 페이먼츠 결제 흐름, 키 관리, confirm/cancel 구조 |
 | [JWT-GUIDE.md](docs/JWT-GUIDE.md) | JWT 인증 엔드포인트 작성 패턴 |
-| [CLASS-DIAGRAM.md](docs/CLASS-DIAGRAM.md) | 커머스 코어 엔티티 관계 |
 | [CONVENTION.md](docs/CONVENTION.md) | 코드, API, 예외, 협업 컨벤션 |
-| [READING-GUIDE.md](docs/READING-GUIDE.md) | 프로젝트를 처음 읽을 때 추천 순서 |
 
 ## 프로젝트 구조
 
@@ -124,15 +122,17 @@ TOSS_CLIENT_KEY=test_ck_...
 │   │   ├── keyword/
 │   │   ├── order/
 │   │   ├── payment/
+│   │   ├── review/
 │   │   ├── store/
 │   │   ├── user/
 │   │   └── wishlist/
 │   ├── global/
 │   └── system/
-└── src/main/resources/
-    ├── application.properties
-    └── db/migration/
-        └── V1__init_schema.sql
+├── src/main/resources/
+│   ├── application.properties
+│   └── db/migration/
+│       └── V1__init_schema.sql
+└── src/test/
 ```
 
 각 도메인은 대체로 아래 레이어를 따릅니다.
@@ -149,11 +149,11 @@ domain/{name}/
 
 ## DB 마이그레이션
 
-현재 로컬 신규 환경용 Flyway 마이그레이션은 단일 baseline 파일입니다.
+Flyway 마이그레이션은 단일 baseline 파일 하나로 전체 스키마를 생성합니다.
 
 | 파일 | 설명 |
 |------|------|
-| `src/main/resources/db/migration/V1__init_schema.sql` | 현재 전체 스키마 생성 |
+| `V1__init_schema.sql` | 전체 스키마 (테이블, 인덱스, FK, CHECK 제약 포함) |
 
 주요 테이블:
 
@@ -161,14 +161,16 @@ domain/{name}/
 |--------|------|
 | `users` | 사용자 정보 |
 | `refresh_token` | JWT refresh token 해시 |
+| `password_reset_token` | 비밀번호 재설정 일회용 토큰 (10분 유효) |
 | `keyword`, `user_keyword` | 키워드 마스터와 사용자 키워드 |
 | `store`, `store_image`, `store_business_hours`, `favourite_store` | 매장, 이미지, 영업시간, 단골 매장 |
-| `bread`, `bread_image` | 빵 메뉴와 이미지 |
-| `cart`, `cart_item` | 장바구니 |
-| `orders`, `order_item` | 주문과 주문 항목 |
-| `payment` | 결제 승인/취소 정보 |
+| `bread`, `bread_image` | 빵 메뉴와 이미지 (soft delete 지원) |
+| `cart`, `cart_item` | 장바구니 (단일 매장 제약) |
+| `orders`, `order_item` | 주문과 주문 항목 (멱등성 키, 상태 머신) |
+| `payment` | 결제 승인/취소 정보 (토스 페이먼츠 연동) |
+| `review`, `review_image` | 리뷰와 리뷰 이미지 |
 
-기존 로컬 DB에 오래된 Flyway 이력이 남아 있으면 baseline과 맞지 않을 수 있습니다. 개발 DB를 새 스키마로 맞추려면 볼륨을 초기화합니다.
+기존 로컬 DB에 오래된 Flyway 이력(V1~V11 분리 시절)이 남아 있으면 baseline과 맞지 않을 수 있습니다. 개발 DB를 새 스키마로 맞추려면 볼륨을 초기화합니다.
 
 ```bash
 docker compose down -v

@@ -211,7 +211,7 @@ false
 }
 ```
 
-**에러 응답:** `USER_003`, `USER_004`, `COMMON_001`
+**에러 응답:** `USER_002`, `USER_003`, `USER_004`, `COMMON_001`
 
 ---
 
@@ -242,14 +242,15 @@ false
 
 > 사장님 등록 후 역할이 BOSS로 변경되므로 새 토큰이 발급됩니다.
 
-**에러 응답:** `USER_004`, `USER_006`, `USER_007`
+**에러 응답:** `USER_004`, `USER_006`, `USER_007`, `COMMON_001`
 
 ---
 
 ### 3. 계정 복구 (User Recovery)
 
-> 아래 API는 인증 없이 접근 가능합니다. 현재 별도의 인증 토큰(OTP 등) 없이 동작하므로,
-> 운영 배포 전 Rate Limiting 또는 일회용 토큰 검증 추가를 권장합니다.
+> 아래 API는 인증 없이 접근 가능합니다. `verify-identity` 성공 시 10분 유효 일회용 `resetToken`이 발급되고,
+> `reset-password`는 해당 토큰의 존재/만료/userId 일치를 검증한 뒤 비밀번호를 변경합니다.
+> 단, recovery 엔드포인트 자체의 Rate Limiting은 별도 구현되어 있지 않습니다.
 
 #### `GET /api/user/find-email?phone=` — 이메일 찾기
 
@@ -267,7 +268,7 @@ false
 }
 ```
 
-**에러 응답:** `USER_005`
+**에러 응답:** `USER_005`, `COMMON_001`
 
 ---
 
@@ -289,7 +290,7 @@ false
 }
 ```
 
-**에러 응답:** `USER_005`
+**에러 응답:** `USER_005`, `COMMON_001`
 
 ---
 
@@ -590,6 +591,10 @@ false
 }
 ```
 
+> 메뉴 삭제는 Soft Delete입니다. 실제 `bread` 레코드와 빵 이미지는 삭제하지 않고,
+> 일반 목록/상세/장바구니/신규 주문에서는 삭제된 빵을 노출하거나 선택할 수 없게 처리합니다.
+> 기존 주문 항목, 리뷰, 빵 이미지 조회에 필요한 데이터는 유지됩니다.
+
 **에러 응답:** `BREAD_001`, `BREAD_002`
 
 ---
@@ -719,6 +724,8 @@ false
 }
 ```
 
+**에러 응답:** `STORE_001`
+
 ---
 
 #### `GET /api/boss/store` — 내 가게 정보 + 이미지 조회
@@ -845,6 +852,10 @@ false
 ```
 - `images` (파일 목록, 1~5장): 가게 이미지
 
+> 영업시간은 7개 요일을 모두 전달해야 합니다. 영업일(`isClosed=false`)은 `startTime`, `endTime`, `lastOrderTime`이 모두 필수이고,
+> 휴무일(`isClosed=true`)은 세 시간값이 모두 `null`이어야 합니다.
+> 자정 넘김 영업은 허용하지만 `startTime == endTime`은 유효하지 않습니다.
+
 **응답 형식:**
 
 ```json
@@ -912,6 +923,9 @@ false
 }
 ```
 
+> 영업시간 수정도 등록과 동일한 validation 정책을 사용합니다. 일반 영업은 `lastOrderTime`이 시작~종료 범위 안에 있어야 하고,
+> 자정 넘김 영업은 `lastOrderTime >= startTime` 또는 `lastOrderTime <= endTime`이면 유효합니다.
+
 **응답 형식:**
 
 ```json
@@ -967,7 +981,7 @@ false
 ]
 ```
 
-**에러 응답:** `STORE_001`, `STORE_004`, `STORE_IMAGE_002`, `COMMON_005`, `COMMON_006`, `COMMON_007`
+**에러 응답:** `STORE_001`, `STORE_004`, `STORE_IMAGE_002`, `COMMON_001`, `COMMON_005`, `COMMON_006`, `COMMON_007`
 
 ---
 
@@ -1036,7 +1050,7 @@ false
 
 **응답 형식:** 응답 바디 없음 (HTTP 200)
 
-**에러 응답:** `ORDER_001`, `ORDER_002`, `ORDER_003`
+**에러 응답:** `STORE_001`, `STORE_004`, `ORDER_001`, `ORDER_002`, `ORDER_003`
 
 ---
 
@@ -1078,7 +1092,7 @@ false
 
 > 삭제된 메뉴의 `breadId`는 `null`로 표시됩니다.
 
-**에러 응답:** `STORE_001`, `STORE_004`
+**에러 응답:** `STORE_001`, `STORE_004`, `COMMON_001`
 
 ---
 
@@ -1232,7 +1246,7 @@ false
 
 > `added: true` → 단골 추가됨, `added: false` → 단골 해제됨
 
-**에러 응답:** `STORE_004`, `FAVOURITE_STORE_001`
+**에러 응답:** `STORE_004`, `FAVOURITE_STORE_001`, `COMMON_001`
 
 ---
 
@@ -1344,6 +1358,11 @@ false
 }
 ```
 
+> 장바구니에 담긴 빵이 Soft Delete 처리되면 장바구니 조회 시 해당 항목은 자동 제거됩니다.
+> 제거 후 유효 항목이 없으면 `storeName`, `lastOrderTime`은 `null`, `items`는 빈 배열로 반환됩니다.
+
+**에러 응답:** `STORE_004`
+
 ---
 
 #### `PATCH /api/cart/items/{cartItemId}` — 장바구니 수량 변경
@@ -1364,7 +1383,7 @@ false
 
 **응답 형식:** 응답 바디 없음 (HTTP 200)
 
-**에러 응답:** `BREAD_001`, `BREAD_003`, `CART_002`, `COMMON_001`
+**에러 응답:** `BREAD_001`, `BREAD_003`, `CART_002`, `CART_003`, `COMMON_001`
 
 ---
 
@@ -1379,7 +1398,7 @@ false
 
 **응답 형식:** 응답 바디 없음 (HTTP 204)
 
-**에러 응답:** `CART_002`
+**에러 응답:** `CART_002`, `CART_003`
 
 ---
 
@@ -1428,7 +1447,7 @@ false
 }
 ```
 
-**에러 응답:** `CART_003`, `BREAD_003`, `COMMON_008`, `ORDER_004`
+**에러 응답:** `CART_003`, `BREAD_001`, `BREAD_003`, `COMMON_001`, `COMMON_008`, `ORDER_004`
 
 ---
 
@@ -1483,7 +1502,7 @@ false
 
 **응답 형식:** 응답 바디 없음 (HTTP 200)
 
-**에러 응답:** `ORDER_001`, `ORDER_002`, `ORDER_003`
+**에러 응답:** `ORDER_001`, `ORDER_002`, `ORDER_003`, `PAYMENT_007`
 
 ---
 
@@ -1601,7 +1620,9 @@ false
 
 > 결제 상태: `PENDING`, `APPROVED`, `FAILED`, `CANCELLED`
 
-**에러 응답:** `PAYMENT_001`, `PAYMENT_003`, `PAYMENT_004`, `PAYMENT_005`, `PAYMENT_008`, `ORDER_001`
+**에러 응답:** `PAYMENT_001`, `PAYMENT_003`, `PAYMENT_004`, `PAYMENT_008`, `ORDER_001`, `ORDER_002`, `COMMON_001`
+
+> 토스 4xx 오류는 토스에서 내려준 원본 에러 코드와 메시지가 그대로 반환될 수 있습니다.
 
 ---
 
@@ -1630,8 +1651,9 @@ false
 | 항목 | 값 |
 |------|-----|
 | 인증 | O |
-| 권한 | USER |
+| 권한 | USER 이상 |
 | Content-Type | `multipart/form-data` |
+| 응답 코드 | 201 Created |
 
 **요청 파트:**
 
@@ -1655,7 +1677,7 @@ false
 
 ```json
 {
-  "id": 1,
+  "reviewId": 1,
   "orderItemId": 2000,
   "rating": 4,
   "content": "정말 맛있는 빵이었습니다! 추천합니다.",
@@ -1667,7 +1689,7 @@ false
 > 수령 완료(PICKED_UP) 상태의 주문 항목에 대해서만 리뷰 작성이 가능합니다.
 > 동일 주문 항목에 대해 중복 리뷰는 허용되지 않습니다.
 
-**에러 응답:** `ORDER_001`, `REVIEW_001`, `REVIEW_002`, `REVIEW_003`, `REVIEW_005`, `COMMON_001`
+**에러 응답:** `ORDER_001`, `REVIEW_001`, `REVIEW_002`, `REVIEW_003`, `REVIEW_005`, `COMMON_001`, `COMMON_005`, `COMMON_006`, `COMMON_007`
 
 ---
 
@@ -1676,6 +1698,7 @@ false
 | 항목 | 값 |
 |------|-----|
 | 인증 | O |
+| 권한 | USER 이상 |
 
 **경로 변수:** `storeId` (가게 ID)
 
@@ -1693,7 +1716,7 @@ false
 {
   "content": [
     {
-      "id": 1,
+      "reviewId": 1,
       "nickname": "빵순이",
       "rating": 4,
       "content": "정말 맛있는 빵이었습니다! 추천합니다.",
@@ -1714,7 +1737,7 @@ false
 
 > `breadName`은 주문 시점의 빵 이름 스냅샷입니다. 빵 이름이 변경되어도 리뷰에는 구매 당시 이름이 표시됩니다.
 
-**에러 응답:** `STORE_004`
+**에러 응답:** `STORE_004`, `COMMON_001`
 
 ---
 
@@ -1723,6 +1746,7 @@ false
 | 항목 | 값 |
 |------|-----|
 | 인증 | O |
+| 권한 | USER 이상 |
 
 **쿼리 파라미터:**
 
@@ -1738,7 +1762,7 @@ false
 {
   "content": [
     {
-      "id": 1,
+      "reviewId": 1,
       "breadName": "시그니처 소금빵",
       "breadImageUrl": "/images/bread/1.jpg",
       "storeName": "투데이브레드 데모 강남점",
@@ -1757,6 +1781,8 @@ false
   "empty": false
 }
 ```
+
+**에러 응답:** `COMMON_001`
 
 ---
 
@@ -1782,7 +1808,7 @@ false
 {
   "content": [
     {
-      "id": 1,
+      "reviewId": 1,
       "nickname": "빵순이",
       "rating": 4,
       "content": "정말 맛있는 빵이었습니다! 추천합니다.",
@@ -1804,7 +1830,7 @@ false
 
 > `purchaseCount`는 해당 리뷰 작성자의 이 가게 총 구매 횟수(PICKED_UP 기준)입니다.
 
-**에러 응답:** `STORE_001`, `STORE_004`
+**에러 응답:** `STORE_001`, `STORE_004`, `COMMON_001`
 
 ---
 
