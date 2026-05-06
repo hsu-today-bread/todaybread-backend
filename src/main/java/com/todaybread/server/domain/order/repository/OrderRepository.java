@@ -32,14 +32,6 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long> {
     Page<OrderEntity> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 
     /**
-     * 유저 ID로 주문 목록을 최신순으로 전체 조회합니다.
-     *
-     * @param userId 유저 ID
-     * @return 주문 엔티티 목록 (최신순)
-     */
-    List<OrderEntity> findByUserIdOrderByCreatedAtDesc(Long userId);
-
-    /**
      * 비관적 락으로 주문을 조회합니다.
      * 주문 취소/결제 시 동시성 제어를 위해 사용합니다.
      *

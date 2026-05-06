@@ -15,12 +15,13 @@ import com.todaybread.server.domain.order.entity.OrderItemEntity;
 import com.todaybread.server.domain.order.entity.OrderStatus;
 import com.todaybread.server.domain.order.repository.OrderItemRepository;
 import com.todaybread.server.domain.order.repository.OrderRepository;
+import com.todaybread.server.domain.payment.service.PaymentService;
 import com.todaybread.server.domain.store.entity.StoreEntity;
 import com.todaybread.server.domain.store.repository.StoreRepository;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -41,7 +42,6 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class OrderService {
 
     private final OrderRepository orderRepository;
@@ -53,6 +53,29 @@ public class OrderService {
     private final OrderNumberGenerator orderNumberGenerator;
     private final BreadImageService breadImageService;
     private final Clock clock;
+    private final PaymentService paymentService;
+
+    public OrderService(OrderRepository orderRepository,
+                        OrderItemRepository orderItemRepository,
+                        CartService cartService,
+                        BreadRepository breadRepository,
+                        StoreRepository storeRepository,
+                        InventoryRestorer inventoryRestorer,
+                        OrderNumberGenerator orderNumberGenerator,
+                        BreadImageService breadImageService,
+                        Clock clock,
+                        @Lazy PaymentService paymentService) {
+        this.orderRepository = orderRepository;
+        this.orderItemRepository = orderItemRepository;
+        this.cartService = cartService;
+        this.breadRepository = breadRepository;
+        this.storeRepository = storeRepository;
+        this.inventoryRestorer = inventoryRestorer;
+        this.orderNumberGenerator = orderNumberGenerator;
+        this.breadImageService = breadImageService;
+        this.clock = clock;
+        this.paymentService = paymentService;
+    }
 
     /**
      * 장바구니 기반 주문을 생성합니다.
@@ -249,18 +272,76 @@ public class OrderService {
 
     /**
      * 주문을 취소합니다.
-     * 비관적 락으로 주문을 조회하고, 재고를 복원합니다.
+     * 비관적 락으로 주문을 조회한 뒤 상태에 따라 적절한 취소 경로를 선택합니다.
+     * - CONFIRMED: PaymentService.cancelPayment()를 호출하여 결제 취소 + 주문 취소 + 재고 복원
+     * - PENDING: 즉시 CANCELLED로 전환 + 재고 복원
+     * - 그 외: ORDER_STATUS_CANNOT_CHANGE 예외
+     *
+     * <p>CONFIRMED 경로는 PaymentService의 2단계 취소 패턴을 사용하므로
+     * 이 메서드 자체는 @Transactional을 선언하지 않습니다.
+     * PENDING 경로는 내부에서 cancelPendingOrder()를 호출하여 트랜잭션을 처리합니다.
      *
      * @param userId  유저 ID
      * @param orderId 주문 ID
      */
-    @Transactional
     public void cancelOrder(Long userId, Long orderId) {
+        // 먼저 소유자 검증 + 상태 확인 (짧은 트랜잭션)
+        OrderStatus status = verifyCancelEligibility(userId, orderId);
+
+        if (status == OrderStatus.CONFIRMED) {
+            // CONFIRMED 상태: 결제 취소 필요 — PaymentService에 위임 (2단계 취소 패턴)
+            paymentService.cancelPayment(userId, orderId);
+        } else if (status == OrderStatus.PENDING) {
+            // PENDING 상태: 결제 취소 불필요, 즉시 취소 + 재고 복원
+            cancelPendingOrder(userId, orderId);
+        } else {
+            throw new CustomException(ErrorCode.ORDER_STATUS_CANNOT_CHANGE);
+        }
+    }
+
+    /**
+     * 주문 취소 가능 여부를 검증합니다.
+     * 비관적 락으로 주문을 조회하고 소유자 검증 후 현재 상태를 반환합니다.
+     *
+     * @param userId  유저 ID
+     * @param orderId 주문 ID
+     * @return 현재 주문 상태
+     */
+    @Transactional
+    public OrderStatus verifyCancelEligibility(Long userId, Long orderId) {
         OrderEntity order = orderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
 
         if (!order.getUserId().equals(userId)) {
             throw new CustomException(ErrorCode.ORDER_ACCESS_DENIED);
+        }
+
+        OrderStatus status = order.getStatus();
+        if (status != OrderStatus.PENDING && status != OrderStatus.CONFIRMED) {
+            throw new CustomException(ErrorCode.ORDER_STATUS_CANNOT_CHANGE);
+        }
+
+        return status;
+    }
+
+    /**
+     * PENDING 상태 주문을 취소하고 재고를 복원합니다.
+     *
+     * @param userId  유저 ID
+     * @param orderId 주문 ID
+     */
+    @Transactional
+    public void cancelPendingOrder(Long userId, Long orderId) {
+        OrderEntity order = orderRepository.findByIdWithLock(orderId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
+
+        if (!order.getUserId().equals(userId)) {
+            throw new CustomException(ErrorCode.ORDER_ACCESS_DENIED);
+        }
+
+        // 상태가 이미 변경되었을 수 있으므로 재확인
+        if (order.getStatus() != OrderStatus.PENDING) {
+            throw new CustomException(ErrorCode.ORDER_STATUS_CANNOT_CHANGE);
         }
 
         order.updateStatus(OrderStatus.CANCELLED);

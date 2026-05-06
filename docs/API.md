@@ -995,7 +995,8 @@ false
         {
           "breadName": "시그니처 소금빵",
           "breadPrice": 2500,
-          "quantity": 3
+          "quantity": 3,
+          "breadImageUrl": null
         }
       ]
     }
@@ -1011,6 +1012,8 @@ false
   "empty": false
 }
 ```
+
+> 사장님 주문 목록의 `breadImageUrl`은 항상 `null`입니다. 사장님 화면에서는 빵 이미지가 불필요하므로 의도적으로 생략합니다.
 
 **에러 응답:** `STORE_001`, `STORE_004`
 
@@ -1412,7 +1415,8 @@ false
     {
       "breadName": "시그니처 소금빵",
       "breadPrice": 2500,
-      "quantity": 3
+      "quantity": 3,
+      "breadImageUrl": "/images/bread/1.jpg"
     }
   ]
 }
@@ -1452,7 +1456,8 @@ false
     {
       "breadName": "시그니처 소금빵",
       "breadPrice": 2500,
-      "quantity": 2
+      "quantity": 2,
+      "breadImageUrl": "/images/bread/1.jpg"
     }
   ]
 }
@@ -1515,7 +1520,7 @@ false
 }
 ```
 
-> 주문 상태: `PENDING`, `CONFIRMED`, `CANCELLED`, `PICKED_UP`
+> 주문 상태: `PENDING`, `CONFIRMED`, `CANCEL_PENDING`, `CANCELLED`, `PICKED_UP`
 
 ---
 
@@ -1541,7 +1546,8 @@ false
     {
       "breadName": "시그니처 소금빵",
       "breadPrice": 2500,
-      "quantity": 3
+      "quantity": 3,
+      "breadImageUrl": "/images/bread/1.jpg"
     }
   ]
 }

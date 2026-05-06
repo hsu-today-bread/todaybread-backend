@@ -14,6 +14,7 @@ import com.todaybread.server.domain.order.entity.OrderItemEntity;
 import com.todaybread.server.domain.order.entity.OrderStatus;
 import com.todaybread.server.domain.order.repository.OrderItemRepository;
 import com.todaybread.server.domain.order.repository.OrderRepository;
+import com.todaybread.server.domain.payment.service.PaymentService;
 import com.todaybread.server.domain.store.entity.StoreEntity;
 import com.todaybread.server.domain.store.repository.StoreRepository;
 import com.todaybread.server.global.exception.CustomException;
@@ -65,6 +66,9 @@ class OrderServiceTest {
     @Mock
     private BreadImageService breadImageService;
 
+    @Mock
+    private PaymentService paymentService;
+
     private OrderService orderService;
 
     @BeforeEach
@@ -81,7 +85,8 @@ class OrderServiceTest {
                 inventoryRestorer,
                 orderNumberGenerator,
                 breadImageService,
-                clock
+                clock,
+                paymentService
         );
     }
 
