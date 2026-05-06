@@ -21,7 +21,7 @@ public class KeywordEntity extends BaseEntity {
     @Column(name = "id")
     private Long id;
 
-    @Column(name = "normalised_text", nullable = false, unique = true, length = 255)
+    @Column(name = "normalised_text", nullable = false, unique = true, length = 10)
     private String normalisedText;
 
     @Builder

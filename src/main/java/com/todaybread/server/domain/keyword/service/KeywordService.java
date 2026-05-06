@@ -15,7 +15,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,13 +33,16 @@ public class KeywordService {
 
     /**
      * 키워드 텍스트를 정규화합니다.
-     * 앞뒤 공백을 제거하고, 영어 문자가 포함된 경우 소문자로 변환합니다.
+     * 앞뒤 공백을 제거하고, 내부 공백을 모두 제거한 뒤, 영어 문자가 포함된 경우 소문자로 변환합니다.
      *
      * @param text 키워드
      * @return 정규화된 키워드
      */
     private String normalise(String text) {
-        String stripped = text.strip();
+        String stripped = text.strip().replaceAll("\\s+", "");
+        if (stripped.isEmpty()) {
+            throw new CustomException(ErrorCode.KEYWORD_LENGTH_LIMIT);
+        }
         boolean hasEnglish = false;
         for (int i = 0; i < stripped.length(); i++) {
             char c = stripped.charAt(i);
@@ -103,7 +105,7 @@ public class KeywordService {
                     UserKeywordEntity.builder()
                             .userId(userId)
                             .keywordId(keywordEntity.getId())
-                            .displayText(request.keyword())
+                            .displayText(request.keyword().strip())
                             .build()
             );
         } catch (DataIntegrityViolationException e) {
@@ -121,12 +123,9 @@ public class KeywordService {
      */
     @Transactional(readOnly = true)
     public List<KeywordResponse> getMyKeywords(Long userId) {
-        List<UserKeywordEntity> userKeywords = userKeywordRepository.findByUserId(userId);
-        List<KeywordResponse> responses = new ArrayList<>();
-        for (UserKeywordEntity keyword : userKeywords) {
-            responses.add(new KeywordResponse(keyword.getId(), keyword.getDisplayText()));
-        }
-        return responses;
+        return userKeywordRepository.findByUserId(userId).stream()
+                .map(keyword -> new KeywordResponse(keyword.getId(), keyword.getDisplayText()))
+                .toList();
     }
 
     /**

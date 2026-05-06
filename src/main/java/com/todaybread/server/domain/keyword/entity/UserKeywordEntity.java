@@ -28,7 +28,7 @@ public class UserKeywordEntity extends BaseEntity {
     @Column(name = "keyword_id", nullable = false)
     private Long keywordId;
 
-    @Column(name = "display_text", nullable = false, length = 255)
+    @Column(name = "display_text", nullable = false, length = 10)
     private String displayText;
 
     @Builder

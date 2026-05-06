@@ -1189,8 +1189,7 @@ false
 
 ```json
 {
-  "success": true,
-  "message": "키워드가 삭제되었습니다."
+  "success": true
 }
 ```
 
