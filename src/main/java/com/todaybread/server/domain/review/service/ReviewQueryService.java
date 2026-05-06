@@ -1,10 +1,11 @@
 package com.todaybread.server.domain.review.service;
 
-import com.todaybread.server.domain.bread.entity.BreadEntity;
 import com.todaybread.server.domain.bread.repository.BreadRepository;
 import com.todaybread.server.domain.bread.service.BreadImageService;
 import com.todaybread.server.domain.order.dto.PurchaseCountProjection;
+import com.todaybread.server.domain.order.entity.OrderItemEntity;
 import com.todaybread.server.domain.order.entity.OrderStatus;
+import com.todaybread.server.domain.order.repository.OrderItemRepository;
 import com.todaybread.server.domain.order.repository.OrderRepository;
 import com.todaybread.server.domain.review.dto.BossReviewFilterType;
 import com.todaybread.server.domain.review.dto.BossReviewResponse;
@@ -50,6 +51,7 @@ public class ReviewQueryService {
     private final BreadRepository breadRepository;
     private final BreadImageService breadImageService;
     private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
 
     /**
      * 가게 리뷰 목록을 조회합니다.
@@ -88,14 +90,15 @@ public class ReviewQueryService {
         List<Long> reviewIds = reviews.stream().map(ReviewEntity::getId).toList();
         List<Long> userIds = reviews.stream().map(ReviewEntity::getUserId).distinct().toList();
         List<Long> breadIds = reviews.stream().map(ReviewEntity::getBreadId).distinct().toList();
+        List<Long> orderItemIds = reviews.stream().map(ReviewEntity::getOrderItemId).distinct().toList();
 
         // 닉네임 매핑
         Map<Long, String> nicknameMap = userRepository.findAllById(userIds).stream()
                 .collect(Collectors.toMap(UserEntity::getId, UserEntity::getNickname));
 
-        // 빵 이름 매핑
-        Map<Long, String> breadNameMap = breadRepository.findAllById(breadIds).stream()
-                .collect(Collectors.toMap(BreadEntity::getId, BreadEntity::getName));
+        // 빵 이름 매핑 (주문 시점 스냅샷 사용)
+        Map<Long, String> orderItemBreadNameMap = orderItemRepository.findAllById(orderItemIds).stream()
+                .collect(Collectors.toMap(OrderItemEntity::getId, OrderItemEntity::getBreadName));
 
         // 빵 대표 이미지 URL 매핑
         Map<Long, String> breadImageUrlMap = breadImageService.getImageUrls(breadIds);
@@ -109,7 +112,7 @@ public class ReviewQueryService {
                 nicknameMap.getOrDefault(review.getUserId(), "알 수 없음"),
                 review.getRating(),
                 review.getContent(),
-                breadNameMap.getOrDefault(review.getBreadId(), "알 수 없음"),
+                orderItemBreadNameMap.getOrDefault(review.getOrderItemId(), "알 수 없음"),
                 breadImageUrlMap.get(review.getBreadId()),
                 imageUrlsMap.getOrDefault(review.getId(), Collections.emptyList()),
                 review.getCreatedAt()
@@ -174,14 +177,15 @@ public class ReviewQueryService {
         List<Long> reviewIds = reviews.stream().map(ReviewEntity::getId).toList();
         List<Long> userIds = reviews.stream().map(ReviewEntity::getUserId).distinct().toList();
         List<Long> breadIds = reviews.stream().map(ReviewEntity::getBreadId).distinct().toList();
+        List<Long> orderItemIds = reviews.stream().map(ReviewEntity::getOrderItemId).distinct().toList();
 
         // 닉네임 매핑
         Map<Long, String> nicknameMap = userRepository.findAllById(userIds).stream()
                 .collect(Collectors.toMap(UserEntity::getId, UserEntity::getNickname));
 
-        // 빵 이름 매핑
-        Map<Long, String> breadNameMap = breadRepository.findAllById(breadIds).stream()
-                .collect(Collectors.toMap(BreadEntity::getId, BreadEntity::getName));
+        // 빵 이름 매핑 (주문 시점 스냅샷 사용)
+        Map<Long, String> orderItemBreadNameMap = orderItemRepository.findAllById(orderItemIds).stream()
+                .collect(Collectors.toMap(OrderItemEntity::getId, OrderItemEntity::getBreadName));
 
         // 빵 대표 이미지 URL 매핑
         Map<Long, String> breadImageUrlMap = breadImageService.getImageUrls(breadIds);
@@ -205,7 +209,7 @@ public class ReviewQueryService {
                 nicknameMap.getOrDefault(review.getUserId(), "알 수 없음"),
                 review.getRating(),
                 review.getContent(),
-                breadNameMap.getOrDefault(review.getBreadId(), "알 수 없음"),
+                orderItemBreadNameMap.getOrDefault(review.getOrderItemId(), "알 수 없음"),
                 breadImageUrlMap.get(review.getBreadId()),
                 imageUrlsMap.getOrDefault(review.getId(), Collections.emptyList()),
                 review.getCreatedAt(),
@@ -259,10 +263,11 @@ public class ReviewQueryService {
         List<Long> reviewIds = reviews.stream().map(ReviewEntity::getId).toList();
         List<Long> breadIds = reviews.stream().map(ReviewEntity::getBreadId).distinct().toList();
         List<Long> storeIds = reviews.stream().map(ReviewEntity::getStoreId).distinct().toList();
+        List<Long> orderItemIds = reviews.stream().map(ReviewEntity::getOrderItemId).distinct().toList();
 
-        // 빵 이름 매핑
-        Map<Long, String> breadNameMap = breadRepository.findAllById(breadIds).stream()
-                .collect(Collectors.toMap(BreadEntity::getId, BreadEntity::getName));
+        // 빵 이름 매핑 (주문 시점 스냅샷 사용)
+        Map<Long, String> orderItemBreadNameMap = orderItemRepository.findAllById(orderItemIds).stream()
+                .collect(Collectors.toMap(OrderItemEntity::getId, OrderItemEntity::getBreadName));
 
         // 빵 대표 이미지 URL 매핑
         Map<Long, String> breadImageUrlMap = breadImageService.getImageUrls(breadIds);
@@ -277,7 +282,7 @@ public class ReviewQueryService {
         // 5. 응답 매핑
         return reviewPage.map(review -> new MyReviewResponse(
                 review.getId(),
-                breadNameMap.getOrDefault(review.getBreadId(), "알 수 없음"),
+                orderItemBreadNameMap.getOrDefault(review.getOrderItemId(), "알 수 없음"),
                 breadImageUrlMap.get(review.getBreadId()),
                 storeMap.containsKey(review.getStoreId())
                         ? storeMap.get(review.getStoreId()).getName()

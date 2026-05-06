@@ -107,6 +107,17 @@ public class StoreEntity extends BaseEntity {
     }
 
     /**
+     * 리뷰 삭제 시 평점 집계를 차감합니다.
+     * ratingSum에서 평점을 빼고 reviewCount를 1 감소시킵니다.
+     *
+     * @param rating 삭제된 리뷰의 평점 (1~5)
+     */
+    public void subtractReviewRating(int rating) {
+        this.ratingSum -= rating;
+        this.reviewCount -= 1;
+    }
+
+    /**
      * 평균 평점을 소수점 첫째 자리까지 반올림하여 반환합니다.
      * 리뷰가 없는 경우 0.0을 반환합니다.
      *

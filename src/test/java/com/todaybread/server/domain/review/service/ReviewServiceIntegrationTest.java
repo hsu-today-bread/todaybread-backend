@@ -100,7 +100,7 @@ class ReviewServiceIntegrationTest {
         reviewService = new ReviewService(reviewRepository, reviewImageService,
                 orderItemRepository, orderRepository, storeRepository);
         reviewQueryService = new ReviewQueryService(reviewRepository, reviewImageService,
-                storeRepository, userRepository, breadRepository, breadImageService, orderRepository);
+                storeRepository, userRepository, breadRepository, breadImageService, orderRepository, orderItemRepository);
 
         store = TestFixtures.store(STORE_ID, 999L);
         user = TestFixtures.user(USER_ID, false);
@@ -187,7 +187,7 @@ class ReviewServiceIntegrationTest {
 
         given(reviewRepository.findByStoreId(eq(STORE_ID), any(PageRequest.class))).willReturn(reviewPage);
         given(userRepository.findAllById(List.of(USER_ID))).willReturn(List.of(user));
-        given(breadRepository.findAllById(List.of(BREAD_ID))).willReturn(List.of(bread));
+        given(orderItemRepository.findAllById(List.of(ORDER_ITEM_ID))).willReturn(List.of(orderItem));
         given(breadImageService.getImageUrls(List.of(BREAD_ID))).willReturn(Collections.emptyMap());
         given(reviewImageService.getImageUrlsByReviewIds(List.of(1L))).willReturn(Collections.emptyMap());
 
@@ -201,7 +201,7 @@ class ReviewServiceIntegrationTest {
         assertThat(storeReview.nickname()).isEqualTo("nick-1");
         assertThat(storeReview.rating()).isEqualTo(4);
         assertThat(storeReview.content()).isEqualTo("정말 맛있는 빵이었습니다! 추천합니다.");
-        assertThat(storeReview.breadName()).isEqualTo("bread-100");
+        assertThat(storeReview.breadName()).isEqualTo("ordered-bread-" + ORDER_ITEM_ID);
         assertThat(storeReview.createdAt()).isNotNull();
     }
 
@@ -224,7 +224,7 @@ class ReviewServiceIntegrationTest {
         Page<ReviewEntity> reviewPage = new PageImpl<>(List.of(review), pageable, 1);
 
         given(reviewRepository.findByUserId(eq(USER_ID), any(PageRequest.class))).willReturn(reviewPage);
-        given(breadRepository.findAllById(List.of(BREAD_ID))).willReturn(List.of(bread));
+        given(orderItemRepository.findAllById(List.of(ORDER_ITEM_ID))).willReturn(List.of(orderItem));
         given(breadImageService.getImageUrls(List.of(BREAD_ID))).willReturn(Collections.emptyMap());
         given(storeRepository.findAllById(List.of(STORE_ID))).willReturn(List.of(store));
         given(reviewImageService.getImageUrlsByReviewIds(List.of(1L))).willReturn(Collections.emptyMap());
@@ -238,7 +238,7 @@ class ReviewServiceIntegrationTest {
         assertThat(myReview.reviewId()).isEqualTo(1L);
         assertThat(myReview.storeId()).isEqualTo(STORE_ID);
         assertThat(myReview.storeName()).isEqualTo("store-10");
-        assertThat(myReview.breadName()).isEqualTo("bread-100");
+        assertThat(myReview.breadName()).isEqualTo("ordered-bread-" + ORDER_ITEM_ID);
         assertThat(myReview.rating()).isEqualTo(5);
         assertThat(myReview.content()).isEqualTo("최고의 빵집입니다! 매일 가고 싶어요.");
     }
@@ -271,7 +271,8 @@ class ReviewServiceIntegrationTest {
 
         given(reviewRepository.findByStoreId(eq(STORE_ID), any(PageRequest.class))).willReturn(reviewPage0);
         given(userRepository.findAllById(anyList())).willReturn(List.of(user));
-        given(breadRepository.findAllById(anyList())).willReturn(List.of(bread));
+        given(orderItemRepository.findAllById(anyList())).willReturn(
+                allReviews.stream().map(r -> TestFixtures.orderItem(r.getOrderItemId(), ORDER_ID, BREAD_ID, 3000, 1)).toList());
         given(breadImageService.getImageUrls(anyList())).willReturn(Collections.emptyMap());
         given(reviewImageService.getImageUrlsByReviewIds(anyList())).willReturn(Collections.emptyMap());
 

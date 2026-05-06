@@ -55,6 +55,11 @@ public class ReviewService {
         OrderItemEntity orderItem = orderItemRepository.findById(request.orderItemId())
                 .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
 
+        // 1-1. 빵 삭제 여부 방어 (FK SET NULL 시 breadId가 null)
+        if (orderItem.getBreadId() == null) {
+            throw new CustomException(ErrorCode.REVIEW_BREAD_NOT_AVAILABLE);
+        }
+
         // 2. 주문 조회
         OrderEntity order = orderRepository.findById(orderItem.getOrderId())
                 .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));

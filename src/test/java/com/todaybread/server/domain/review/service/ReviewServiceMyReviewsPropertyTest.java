@@ -3,6 +3,8 @@ package com.todaybread.server.domain.review.service;
 import com.todaybread.server.domain.bread.entity.BreadEntity;
 import com.todaybread.server.domain.bread.repository.BreadRepository;
 import com.todaybread.server.domain.bread.service.BreadImageService;
+import com.todaybread.server.domain.order.entity.OrderItemEntity;
+import com.todaybread.server.domain.order.repository.OrderItemRepository;
 import com.todaybread.server.domain.order.repository.OrderRepository;
 import com.todaybread.server.domain.review.dto.MyReviewResponse;
 import com.todaybread.server.domain.review.dto.MyReviewSortType;
@@ -47,6 +49,9 @@ class ReviewServiceMyReviewsPropertyTest {
     private OrderRepository orderRepository;
 
     @Mock
+    private OrderItemRepository orderItemRepository;
+
+    @Mock
     private StoreRepository storeRepository;
 
     @Mock
@@ -64,7 +69,7 @@ class ReviewServiceMyReviewsPropertyTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         reviewQueryService = new ReviewQueryService(reviewRepository, reviewImageService,
-                storeRepository, userRepository, breadRepository, breadImageService, orderRepository);
+                storeRepository, userRepository, breadRepository, breadImageService, orderRepository, orderItemRepository);
     }
 
     // ========================================================================
@@ -254,12 +259,13 @@ class ReviewServiceMyReviewsPropertyTest {
         List<Long> breadIds = reviews.stream().map(ReviewEntity::getBreadId).distinct().toList();
         List<Long> storeIds = reviews.stream().map(ReviewEntity::getStoreId).distinct().toList();
         List<Long> reviewIds = reviews.stream().map(ReviewEntity::getId).toList();
+        List<Long> orderItemIds = reviews.stream().map(ReviewEntity::getOrderItemId).distinct().toList();
 
-        // Mock breadRepository.findAllById
-        List<BreadEntity> breads = breadIds.stream()
-                .map(bid -> TestFixtures.bread(bid, 1L, 10, 5000, 3000))
+        // Mock orderItemRepository.findAllById (breadName snapshot)
+        List<OrderItemEntity> orderItems = orderItemIds.stream()
+                .map(oiId -> TestFixtures.orderItem(oiId, 1000L, 200L + oiId, 3000, 1))
                 .toList();
-        given(breadRepository.findAllById(breadIds)).willReturn(breads);
+        given(orderItemRepository.findAllById(orderItemIds)).willReturn(orderItems);
 
         // Mock breadImageService.getImageUrls
         Map<Long, String> breadImageMap = breadIds.stream()

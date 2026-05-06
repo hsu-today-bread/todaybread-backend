@@ -150,6 +150,7 @@ public enum ErrorCode {
      */
     REVIEW_PURCHASE_REQUIRED("REVIEW_001", "구매 이력이 없어 리뷰를 작성할 수 없습니다.", HttpStatus.BAD_REQUEST),
     REVIEW_ALREADY_EXISTS("REVIEW_002", "이미 해당 주문 항목에 대한 리뷰를 작성했습니다.", HttpStatus.CONFLICT),
+    REVIEW_BREAD_NOT_AVAILABLE("REVIEW_003", "해당 상품이 삭제되어 리뷰를 작성할 수 없습니다.", HttpStatus.BAD_REQUEST),
     REVIEW_IMAGE_LIMIT_EXCEEDED("REVIEW_005", "리뷰 이미지는 최대 2장까지 첨부할 수 있습니다.", HttpStatus.BAD_REQUEST);
 
     private final String code;

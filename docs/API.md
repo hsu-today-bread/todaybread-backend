@@ -1617,7 +1617,192 @@ false
 
 ---
 
-### 16. 시스템 (System)
+### 16. 리뷰 (Review)
+
+#### `POST /api/review` — 리뷰 작성 (multipart)
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+| 권한 | USER |
+| Content-Type | `multipart/form-data` |
+
+**요청 파트:**
+
+- `request` (JSON):
+```json
+{
+  "orderItemId": 2000,
+  "rating": 4,
+  "content": "정말 맛있는 빵이었습니다! 추천합니다."
+}
+```
+- `images` (파일 목록, 선택): 리뷰 이미지 (최대 2장)
+
+| 필드 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| `orderItemId` | Long | O | 주문 항목 ID |
+| `rating` | int | O | 평점 (1~5) |
+| `content` | String | O | 리뷰 내용 (10~500자) |
+
+**응답 형식:**
+
+```json
+{
+  "id": 1,
+  "orderItemId": 2000,
+  "rating": 4,
+  "content": "정말 맛있는 빵이었습니다! 추천합니다.",
+  "imageUrls": ["/images/review/1_0.jpg"],
+  "createdAt": "2026-04-15T18:30:00"
+}
+```
+
+> 수령 완료(PICKED_UP) 상태의 주문 항목에 대해서만 리뷰 작성이 가능합니다.
+> 동일 주문 항목에 대해 중복 리뷰는 허용되지 않습니다.
+
+**에러 응답:** `ORDER_001`, `REVIEW_001`, `REVIEW_002`, `REVIEW_003`, `REVIEW_005`, `COMMON_001`
+
+---
+
+#### `GET /api/review/store/{storeId}` — 가게 리뷰 목록
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+
+**경로 변수:** `storeId` (가게 ID)
+
+**쿼리 파라미터:**
+
+| 파라미터 | 타입 | 필수 | 기본값 | 설명 |
+|----------|------|------|--------|------|
+| `sort` | String | X | LATEST | 정렬: `LATEST`, `RATING_HIGH`, `RATING_LOW` |
+| `page` | int | X | 0 | 페이지 번호 (0부터) |
+| `size` | int | X | 20 | 페이지 크기 (최대 100) |
+
+**응답 형식 (Spring Page):**
+
+```json
+{
+  "content": [
+    {
+      "id": 1,
+      "nickname": "빵순이",
+      "rating": 4,
+      "content": "정말 맛있는 빵이었습니다! 추천합니다.",
+      "breadName": "시그니처 소금빵",
+      "breadImageUrl": "/images/bread/1.jpg",
+      "imageUrls": ["/images/review/1_0.jpg"],
+      "createdAt": "2026-04-15T18:30:00"
+    }
+  ],
+  "pageable": { "pageNumber": 0, "pageSize": 20 },
+  "totalElements": 5,
+  "totalPages": 1,
+  "last": true,
+  "first": true,
+  "empty": false
+}
+```
+
+> `breadName`은 주문 시점의 빵 이름 스냅샷입니다. 빵 이름이 변경되어도 리뷰에는 구매 당시 이름이 표시됩니다.
+
+**에러 응답:** `STORE_004`
+
+---
+
+#### `GET /api/review/my` — 내 리뷰 목록
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+
+**쿼리 파라미터:**
+
+| 파라미터 | 타입 | 필수 | 기본값 | 설명 |
+|----------|------|------|--------|------|
+| `sort` | String | X | LATEST | 정렬: `LATEST`, `OLDEST` |
+| `page` | int | X | 0 | 페이지 번호 (0부터) |
+| `size` | int | X | 20 | 페이지 크기 (최대 100) |
+
+**응답 형식 (Spring Page):**
+
+```json
+{
+  "content": [
+    {
+      "id": 1,
+      "breadName": "시그니처 소금빵",
+      "breadImageUrl": "/images/bread/1.jpg",
+      "storeName": "투데이브레드 데모 강남점",
+      "storeId": 1,
+      "rating": 4,
+      "content": "정말 맛있는 빵이었습니다! 추천합니다.",
+      "imageUrls": ["/images/review/1_0.jpg"],
+      "createdAt": "2026-04-15T18:30:00"
+    }
+  ],
+  "pageable": { "pageNumber": 0, "pageSize": 20 },
+  "totalElements": 3,
+  "totalPages": 1,
+  "last": true,
+  "first": true,
+  "empty": false
+}
+```
+
+---
+
+#### `GET /api/boss/review` — 사장님 리뷰 관리
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+| 권한 | BOSS |
+
+**쿼리 파라미터:**
+
+| 파라미터 | 타입 | 필수 | 기본값 | 설명 |
+|----------|------|------|--------|------|
+| `sort` | String | X | LATEST | 정렬: `LATEST`, `OLDEST`, `RATING_HIGH`, `RATING_LOW` |
+| `filter` | String | X | ALL | 필터: `ALL`, `WITH_IMAGE`, `TEXT_ONLY` |
+| `page` | int | X | 0 | 페이지 번호 (0부터) |
+| `size` | int | X | 20 | 페이지 크기 (최대 100) |
+
+**응답 형식 (Spring Page):**
+
+```json
+{
+  "content": [
+    {
+      "id": 1,
+      "nickname": "빵순이",
+      "rating": 4,
+      "content": "정말 맛있는 빵이었습니다! 추천합니다.",
+      "breadName": "시그니처 소금빵",
+      "breadImageUrl": "/images/bread/1.jpg",
+      "imageUrls": ["/images/review/1_0.jpg"],
+      "createdAt": "2026-04-15T18:30:00",
+      "purchaseCount": 3
+    }
+  ],
+  "pageable": { "pageNumber": 0, "pageSize": 20 },
+  "totalElements": 10,
+  "totalPages": 1,
+  "last": true,
+  "first": true,
+  "empty": false
+}
+```
+
+> `purchaseCount`는 해당 리뷰 작성자의 이 가게 총 구매 횟수(PICKED_UP 기준)입니다.
+
+**에러 응답:** `STORE_001`, `STORE_004`
+
+---
+
+### 17. 시스템 (System)
 
 #### `GET /api/system/health` — 서버 상태 확인
 
@@ -1775,3 +1960,12 @@ false
 | `PAYMENT_004` | 502 | 결제 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요. |
 | `PAYMENT_007` | 502 | 결제 취소 처리 중 오류가 발생했습니다. |
 | `PAYMENT_008` | 400 | Idempotency-Key 헤더가 필요합니다. |
+
+### 리뷰 (REVIEW)
+
+| 코드 | HTTP | 메시지 |
+|------|------|--------|
+| `REVIEW_001` | 400 | 구매 이력이 없어 리뷰를 작성할 수 없습니다. |
+| `REVIEW_002` | 409 | 이미 해당 주문 항목에 대한 리뷰를 작성했습니다. |
+| `REVIEW_003` | 400 | 해당 상품이 삭제되어 리뷰를 작성할 수 없습니다. |
+| `REVIEW_005` | 400 | 리뷰 이미지는 최대 2장까지 첨부할 수 있습니다. |

@@ -3,6 +3,8 @@ package com.todaybread.server.domain.review.service;
 import com.todaybread.server.domain.bread.entity.BreadEntity;
 import com.todaybread.server.domain.bread.repository.BreadRepository;
 import com.todaybread.server.domain.bread.service.BreadImageService;
+import com.todaybread.server.domain.order.entity.OrderItemEntity;
+import com.todaybread.server.domain.order.repository.OrderItemRepository;
 import com.todaybread.server.domain.order.repository.OrderRepository;
 import com.todaybread.server.domain.review.dto.ReviewSortType;
 import com.todaybread.server.domain.review.dto.StoreReviewResponse;
@@ -59,13 +61,16 @@ class ReviewQueryServiceTest {
     @Mock
     private OrderRepository orderRepository;
 
+    @Mock
+    private OrderItemRepository orderItemRepository;
+
     private ReviewQueryService reviewQueryService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
         reviewQueryService = new ReviewQueryService(reviewRepository, reviewImageService,
-                storeRepository, userRepository, breadRepository, breadImageService, orderRepository);
+                storeRepository, userRepository, breadRepository, breadImageService, orderRepository, orderItemRepository);
     }
 
     /**
@@ -80,17 +85,21 @@ class ReviewQueryServiceTest {
         Long storeId = 1L;
         Long breadId = 10L;
         Long userId = 100L;
+        Long orderItemId = 300L;
 
         // 삭제된 빵 생성
         BreadEntity deletedBread = TestFixtures.bread(breadId, storeId, 5, 4_000, 2_000);
         deletedBread.softDelete(LocalDateTime.of(2026, 4, 1, 10, 0));
+
+        // 주문 항목 생성 (주문 시점 스냅샷 이름 사용)
+        OrderItemEntity orderItem = TestFixtures.orderItem(orderItemId, 1000L, breadId, 2000, 1);
 
         // 리뷰 생성 (삭제된 빵에 대한 리뷰)
         ReviewEntity review = ReviewEntity.builder()
                 .userId(userId)
                 .storeId(storeId)
                 .breadId(breadId)
-                .orderItemId(300L)
+                .orderItemId(orderItemId)
                 .rating(4)
                 .content("맛있었어요 정말 좋았습니다")
                 .build();
@@ -103,18 +112,18 @@ class ReviewQueryServiceTest {
         given(reviewRepository.findByStoreId(eq(storeId), any(Pageable.class))).willReturn(reviewPage);
         given(userRepository.findAllById(List.of(userId)))
                 .willReturn(List.of(TestFixtures.user(userId, false)));
-        // findAllById는 삭제된 빵도 반환 (필터 없음)
-        given(breadRepository.findAllById(List.of(breadId))).willReturn(List.of(deletedBread));
+        // orderItemRepository로 breadName 스냅샷 조회
+        given(orderItemRepository.findAllById(List.of(orderItemId))).willReturn(List.of(orderItem));
         given(breadImageService.getImageUrls(List.of(breadId))).willReturn(Collections.emptyMap());
         given(reviewImageService.getImageUrlsByReviewIds(List.of(1L))).willReturn(Collections.emptyMap());
 
         // Act
         Page<StoreReviewResponse> result = reviewQueryService.getStoreReviews(storeId, ReviewSortType.LATEST, PageRequest.of(0, 20));
 
-        // Assert: 삭제된 빵의 이름이 정상적으로 반환됨
+        // Assert: 주문 시점 스냅샷 빵 이름이 정상적으로 반환됨
         assertThat(result.getContent()).hasSize(1);
         StoreReviewResponse response = result.getContent().get(0);
-        assertThat(response.breadName()).isEqualTo(deletedBread.getName());
+        assertThat(response.breadName()).isEqualTo(orderItem.getBreadName());
     }
 
     /**
@@ -130,18 +139,22 @@ class ReviewQueryServiceTest {
         Long storeId = 1L;
         Long breadId = 10L;
         Long userId = 100L;
+        Long orderItemId = 300L;
         String expectedImageUrl = "https://example.com/bread/10/image.jpg";
 
         // 삭제된 빵 생성
         BreadEntity deletedBread = TestFixtures.bread(breadId, storeId, 5, 4_000, 2_000);
         deletedBread.softDelete(LocalDateTime.of(2026, 4, 1, 10, 0));
 
+        // 주문 항목 생성
+        OrderItemEntity orderItem = TestFixtures.orderItem(orderItemId, 1000L, breadId, 2000, 1);
+
         // 리뷰 생성 (삭제된 빵에 대한 리뷰)
         ReviewEntity review = ReviewEntity.builder()
                 .userId(userId)
                 .storeId(storeId)
                 .breadId(breadId)
-                .orderItemId(300L)
+                .orderItemId(orderItemId)
                 .rating(5)
                 .content("빵이 정말 맛있었습니다 추천합니다")
                 .build();
@@ -154,7 +167,7 @@ class ReviewQueryServiceTest {
         given(reviewRepository.findByStoreId(eq(storeId), any(Pageable.class))).willReturn(reviewPage);
         given(userRepository.findAllById(List.of(userId)))
                 .willReturn(List.of(TestFixtures.user(userId, false)));
-        given(breadRepository.findAllById(List.of(breadId))).willReturn(List.of(deletedBread));
+        given(orderItemRepository.findAllById(List.of(orderItemId))).willReturn(List.of(orderItem));
         // BreadImageService는 삭제된 빵의 이미지도 정상 반환
         given(breadImageService.getImageUrls(List.of(breadId)))
                 .willReturn(Map.of(breadId, expectedImageUrl));

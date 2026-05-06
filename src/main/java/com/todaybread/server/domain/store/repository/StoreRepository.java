@@ -111,4 +111,15 @@ public interface StoreRepository extends JpaRepository<StoreEntity, Long> {
     @Modifying
     @Query("UPDATE StoreEntity s SET s.ratingSum = s.ratingSum + :rating, s.reviewCount = s.reviewCount + 1 WHERE s.id = :storeId")
     void addReviewRating(@Param("storeId") Long storeId, @Param("rating") int rating);
+
+    /**
+     * 리뷰 삭제 시 평점 집계를 원자적으로 차감합니다.
+     * ratingSum에서 평점을 빼고 reviewCount를 1 감소시킵니다.
+     *
+     * @param storeId 가게 ID
+     * @param rating  삭제된 리뷰의 평점 (1~5)
+     */
+    @Modifying
+    @Query("UPDATE StoreEntity s SET s.ratingSum = s.ratingSum - :rating, s.reviewCount = s.reviewCount - 1 WHERE s.id = :storeId")
+    void subtractReviewRating(@Param("storeId") Long storeId, @Param("rating") int rating);
 }

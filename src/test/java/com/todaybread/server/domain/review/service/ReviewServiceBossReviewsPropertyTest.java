@@ -4,7 +4,9 @@ import com.todaybread.server.domain.bread.entity.BreadEntity;
 import com.todaybread.server.domain.bread.repository.BreadRepository;
 import com.todaybread.server.domain.bread.service.BreadImageService;
 import com.todaybread.server.domain.order.dto.PurchaseCountProjection;
+import com.todaybread.server.domain.order.entity.OrderItemEntity;
 import com.todaybread.server.domain.order.entity.OrderStatus;
+import com.todaybread.server.domain.order.repository.OrderItemRepository;
 import com.todaybread.server.domain.order.repository.OrderRepository;
 import com.todaybread.server.domain.review.dto.BossReviewFilterType;
 import com.todaybread.server.domain.review.dto.BossReviewResponse;
@@ -57,6 +59,9 @@ class ReviewServiceBossReviewsPropertyTest {
     private OrderRepository orderRepository;
 
     @Mock
+    private OrderItemRepository orderItemRepository;
+
+    @Mock
     private StoreRepository storeRepository;
 
     @Mock
@@ -74,7 +79,7 @@ class ReviewServiceBossReviewsPropertyTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         reviewQueryService = new ReviewQueryService(reviewRepository, reviewImageService,
-                storeRepository, userRepository, breadRepository, breadImageService, orderRepository);
+                storeRepository, userRepository, breadRepository, breadImageService, orderRepository, orderItemRepository);
     }
 
     // ========================================================================
@@ -224,7 +229,7 @@ class ReviewServiceBossReviewsPropertyTest {
         // Arrange — fresh mocks per try to avoid cross-try invocation counts
         MockitoAnnotations.openMocks(this);
         reviewQueryService = new ReviewQueryService(reviewRepository, reviewImageService,
-                storeRepository, userRepository, breadRepository, breadImageService, orderRepository);
+                storeRepository, userRepository, breadRepository, breadImageService, orderRepository, orderItemRepository);
 
         StoreEntity store = TestFixtures.store(storeId, userId);
         given(storeRepository.findByUserIdAndIsActiveTrue(userId)).willReturn(Optional.of(store));
@@ -285,16 +290,17 @@ class ReviewServiceBossReviewsPropertyTest {
         List<Long> userIds = reviews.stream().map(ReviewEntity::getUserId).distinct().toList();
         List<Long> breadIds = reviews.stream().map(ReviewEntity::getBreadId).distinct().toList();
         List<Long> reviewIds = reviews.stream().map(ReviewEntity::getId).toList();
+        List<Long> orderItemIds = reviews.stream().map(ReviewEntity::getOrderItemId).distinct().toList();
 
         List<UserEntity> users = userIds.stream()
                 .map(uid -> TestFixtures.user(uid, false))
                 .toList();
         given(userRepository.findAllById(userIds)).willReturn(users);
 
-        List<BreadEntity> breads = breadIds.stream()
-                .map(bid -> TestFixtures.bread(bid, storeId, 10, 5000, 3000))
+        List<OrderItemEntity> orderItems = orderItemIds.stream()
+                .map(oiId -> TestFixtures.orderItem(oiId, 1000L, 200L + oiId, 3000, 1))
                 .toList();
-        given(breadRepository.findAllById(breadIds)).willReturn(breads);
+        given(orderItemRepository.findAllById(orderItemIds)).willReturn(orderItems);
 
         Map<Long, List<String>> imageMap = reviewIds.stream()
                 .collect(Collectors.toMap(id -> id, id -> Collections.emptyList()));
@@ -412,6 +418,7 @@ class ReviewServiceBossReviewsPropertyTest {
         List<Long> userIds = reviews.stream().map(ReviewEntity::getUserId).distinct().toList();
         List<Long> breadIds = reviews.stream().map(ReviewEntity::getBreadId).distinct().toList();
         List<Long> reviewIds = reviews.stream().map(ReviewEntity::getId).toList();
+        List<Long> orderItemIds = reviews.stream().map(ReviewEntity::getOrderItemId).distinct().toList();
 
         // Mock userRepository.findAllById
         List<UserEntity> users = userIds.stream()
@@ -419,11 +426,11 @@ class ReviewServiceBossReviewsPropertyTest {
                 .toList();
         given(userRepository.findAllById(userIds)).willReturn(users);
 
-        // Mock breadRepository.findAllById
-        List<BreadEntity> breads = breadIds.stream()
-                .map(bid -> TestFixtures.bread(bid, storeId, 10, 5000, 3000))
+        // Mock orderItemRepository.findAllById (breadName snapshot)
+        List<OrderItemEntity> orderItems = orderItemIds.stream()
+                .map(oiId -> TestFixtures.orderItem(oiId, 1000L, 200L + oiId, 3000, 1))
                 .toList();
-        given(breadRepository.findAllById(breadIds)).willReturn(breads);
+        given(orderItemRepository.findAllById(orderItemIds)).willReturn(orderItems);
 
         // Mock breadImageService.getImageUrls
         Map<Long, String> breadImageMap = breadIds.stream()
