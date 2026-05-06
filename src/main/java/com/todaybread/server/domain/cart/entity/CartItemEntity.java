@@ -43,18 +43,24 @@ public class CartItemEntity extends BaseEntity {
     /**
      * 수량을 증가시킵니다.
      *
-     * @param amount 증가할 수량
+     * @param amount 증가할 수량 (양수만 허용)
      */
     public void increaseQuantity(int amount) {
+        if (amount < 1) {
+            throw new IllegalArgumentException("증가 수량은 1 이상이어야 합니다");
+        }
         this.quantity += amount;
     }
 
     /**
      * 수량을 변경합니다.
      *
-     * @param quantity 새로운 수량
+     * @param quantity 새로운 수량 (1 이상만 허용)
      */
     public void updateQuantity(int quantity) {
+        if (quantity < 1) {
+            throw new IllegalArgumentException("수량은 1 이상이어야 합니다");
+        }
         this.quantity = quantity;
     }
 }

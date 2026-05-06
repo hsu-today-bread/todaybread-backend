@@ -168,7 +168,7 @@ class CartServiceTest {
 
         given(cartRepository.findByUserIdWithLock(1L)).willReturn(Optional.of(cart));
         given(cartItemRepository.findById(1L)).willReturn(Optional.of(item));
-        given(breadRepository.findById(10L)).willReturn(Optional.of(bread));
+        given(breadRepository.findByIdAndIsDeletedFalse(10L)).willReturn(Optional.of(bread));
 
         cartService.updateQuantity(1L, 1L, new CartUpdateRequest(4));
 
@@ -276,5 +276,65 @@ class CartServiceTest {
         assertThat(response.items()).isEmpty();
         assertThat(cart.getStoreId()).isNull();
         verify(cartItemRepository).deleteAll(List.of(deletedItem1, deletedItem2));
+    }
+
+    @Test
+    void updateQuantity_삭제된빵_BREAD_NOT_FOUND() {
+        CartEntity cart = TestFixtures.cart(50L, 1L, 100L);
+        CartItemEntity item = TestFixtures.cartItem(1L, 50L, 10L, 2);
+
+        given(cartRepository.findByUserIdWithLock(1L)).willReturn(Optional.of(cart));
+        given(cartItemRepository.findById(1L)).willReturn(Optional.of(item));
+        given(breadRepository.findByIdAndIsDeletedFalse(10L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> cartService.updateQuantity(1L, 1L, new CartUpdateRequest(3)))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.BREAD_NOT_FOUND);
+    }
+
+    @Test
+    void updateQuantity_재고초과_BREAD_INSUFFICIENT_QUANTITY() {
+        CartEntity cart = TestFixtures.cart(50L, 1L, 100L);
+        CartItemEntity item = TestFixtures.cartItem(1L, 50L, 10L, 2);
+        BreadEntity bread = TestFixtures.bread(10L, 100L, 5, 4_000, 2_000);
+
+        given(cartRepository.findByUserIdWithLock(1L)).willReturn(Optional.of(cart));
+        given(cartItemRepository.findById(1L)).willReturn(Optional.of(item));
+        given(breadRepository.findByIdAndIsDeletedFalse(10L)).willReturn(Optional.of(bread));
+
+        assertThatThrownBy(() -> cartService.updateQuantity(1L, 1L, new CartUpdateRequest(10)))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.BREAD_INSUFFICIENT_QUANTITY);
+    }
+
+    @Test
+    void addToCart_재고초과_BREAD_INSUFFICIENT_QUANTITY() {
+        BreadEntity bread = TestFixtures.bread(10L, 100L, 3, 4_000, 2_000);
+        CartEntity cart = TestFixtures.cart(50L, 1L, 100L);
+
+        given(breadRepository.findByIdAndIsDeletedFalse(10L)).willReturn(Optional.of(bread));
+        given(cartRepository.findByUserIdWithLock(1L)).willReturn(Optional.of(cart));
+        given(cartItemRepository.findByCartIdAndBreadId(50L, 10L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> cartService.addToCart(1L, new CartAddRequest(10L, 5)))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.BREAD_INSUFFICIENT_QUANTITY);
+    }
+
+    @Test
+    void getCartWithItemsForCheckout_정상경로_CartWithItems반환() {
+        CartEntity cart = TestFixtures.cart(50L, 1L, 100L);
+        CartItemEntity item = TestFixtures.cartItem(1L, 50L, 10L, 2);
+
+        given(cartRepository.findByUserIdWithLock(1L)).willReturn(Optional.of(cart));
+        given(cartItemRepository.findByCartIdWithLock(50L)).willReturn(List.of(item));
+
+        CartService.CartWithItems result = cartService.getCartWithItemsForCheckout(1L);
+
+        assertThat(result.cart()).isEqualTo(cart);
+        assertThat(result.items()).containsExactly(item);
     }
 }
