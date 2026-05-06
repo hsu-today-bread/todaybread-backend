@@ -26,11 +26,35 @@ public class StubPaymentProcessor implements PaymentProcessor {
         return new PaymentResult(PaymentStatus.APPROVED, "결제가 승인되었습니다");
     }
 
+    /**
+     * 토스 결제 승인을 스텁으로 처리합니다.
+     * 금액 검증만 수행하고 항상 APPROVED를 반환합니다.
+     *
+     * @param paymentKey     토스 페이먼츠 결제 고유 키
+     * @param orderId        주문 ID (문자열, 예: "order_123")
+     * @param amount         결제 금액
+     * @param idempotencyKey 멱등성 키
+     * @return 결제 처리 결과
+     */
+    @Override
+    public PaymentResult confirm(String paymentKey, String orderId, int amount, String idempotencyKey) {
+        if (amount <= 0) {
+            return new PaymentResult(PaymentStatus.FAILED, "결제 금액은 0보다 커야 합니다");
+        }
+        return new PaymentResult(
+                PaymentStatus.APPROVED,
+                "결제가 승인되었습니다",
+                paymentKey,
+                "카드",
+                OffsetDateTime.now().toString()
+        );
+    }
+
     @Override
     public CancelResult cancel(String paymentKey, String cancelReason, int cancelAmount) {
         return new CancelResult(
                 paymentKey,
-                null,
+                "stub_order",
                 PaymentStatus.CANCELLED.name(),
                 OffsetDateTime.now().toString()
         );

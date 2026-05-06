@@ -12,18 +12,24 @@ import java.util.List;
  * @param images    이미지 목록
  * @param breads    빵 목록
  * @param isSelling 현재 판매중 여부
+ * @param averageRating 가게 평균 평점
+ * @param reviewCount 가게 리뷰 수
  */
 public record StoreDetailResponse(
         StoreCommonResponse store,
         List<StoreImageResponse> images,
         List<BreadCommonResponse> breads,
-        boolean isSelling
+        boolean isSelling,
+        double averageRating,
+        int reviewCount
 ) {
     public static StoreDetailResponse of(
             StoreCommonResponse store,
             List<StoreImageResponse> images,
             List<BreadCommonResponse> breads,
-            boolean isSelling) {
-        return new StoreDetailResponse(store, images, breads, isSelling);
+            boolean isSelling,
+            double averageRating,
+            int reviewCount) {
+        return new StoreDetailResponse(store, images, breads, isSelling, averageRating, reviewCount);
     }
 }

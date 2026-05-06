@@ -49,14 +49,25 @@ public class GlobalExceptionHandler {
 
     /**
      * 토스 페이먼츠 API 에러 응답을 처리합니다.
-     * 토스 에러 코드와 메시지를 로그에 기록하고, 토스 에러 메시지를 클라이언트에 반환합니다.
+     * 토스 5xx → 502 Bad Gateway로 매핑하여 외부 서비스 장애를 명시합니다.
+     * 토스 4xx → 클라이언트에 토스 에러 메시지를 전달합니다 (카드 잔액 부족 등).
      *
      * @param ex 토스 결제 예외
-     * @return 토스 HTTP 상태 코드 + 토스 에러 코드/메시지
+     * @return 매핑된 HTTP 상태 코드 + 에러 코드/메시지
      */
     @ExceptionHandler(TossPaymentException.class)
     public ResponseEntity<ErrorResponse> handleTossPaymentException(TossPaymentException ex) {
-        log.error("토스 결제 에러: code={}, message={}", ex.getErrorCode(), ex.getErrorMessage());
+        log.error("토스 결제 에러: code={}, message={}, httpStatus={}",
+                ex.getErrorCode(), ex.getErrorMessage(), ex.getHttpStatus());
+
+        // 토스 5xx → 502 Bad Gateway (외부 서비스 장애 명시)
+        if (ex.getHttpStatus() >= 500) {
+            return ResponseEntity.status(502)
+                    .body(new ErrorResponse("PAYMENT_PROVIDER_ERROR",
+                            "결제 서비스에 일시적인 문제가 발생했습니다."));
+        }
+
+        // 토스 4xx → 클라이언트에 토스 메시지 전달 (카드 잔액 부족 등)
         return ResponseEntity
                 .status(ex.getHttpStatus())
                 .body(new ErrorResponse(ex.getErrorCode(), ex.getErrorMessage()));
@@ -184,7 +195,12 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
-        log.warn("데이터 무결성 위반 (중복 충돌 가능성): {}", ex.getMessage());
+        String message = ex.getMessage();
+        // C5: 리뷰 중복 UK 위반 시 REVIEW_ALREADY_EXISTS로 매핑
+        if (message != null && message.contains("uk_review_user_id_order_item_id")) {
+            return toResponse(ErrorCode.REVIEW_ALREADY_EXISTS);
+        }
+        log.warn("데이터 무결성 위반 (중복 충돌 가능성): {}", message);
         return toResponse(ErrorCode.COMMON_DUPLICATE_CONFLICT);
     }
 

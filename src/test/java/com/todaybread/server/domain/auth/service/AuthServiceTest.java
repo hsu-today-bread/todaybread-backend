@@ -18,7 +18,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,12 +46,20 @@ class AuthServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private Clock clock;
+
     @InjectMocks
     private AuthService authService;
+
+    private static final Instant FIXED_INSTANT = Instant.parse("2026-04-05T03:00:00Z");
+    private static final ZoneId ZONE = ZoneId.of("Asia/Seoul");
 
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(authService, "refreshTokenExpiration", 60_000L);
+        org.mockito.Mockito.lenient().when(clock.instant()).thenReturn(FIXED_INSTANT);
+        org.mockito.Mockito.lenient().when(clock.getZone()).thenReturn(ZONE);
     }
 
     @Test
@@ -85,8 +96,9 @@ class AuthServiceTest {
 
     @Test
     void reissue_deletesExpiredRefreshToken() {
+        LocalDateTime fixedNow = LocalDateTime.ofInstant(FIXED_INSTANT, ZONE);
         RefreshTokenEntity refreshToken = TestFixtures.refreshToken(
-                1L, 1L, "encoded-old", LocalDateTime.now().minusMinutes(1)
+                1L, 1L, "encoded-old", fixedNow.minusMinutes(1)
         );
         given(jwtTokenService.parseRefreshToken("refresh-token")).willReturn(1L);
         given(refreshTokenRepository.findByUserId(1L)).willReturn(Optional.of(refreshToken));
@@ -102,8 +114,9 @@ class AuthServiceTest {
 
     @Test
     void reissue_returnsNewTokensWhenRefreshTokenIsValid() {
+        LocalDateTime fixedNow = LocalDateTime.ofInstant(FIXED_INSTANT, ZONE);
         RefreshTokenEntity refreshToken = TestFixtures.refreshToken(
-                1L, 1L, "encoded-old", LocalDateTime.now().plusMinutes(10)
+                1L, 1L, "encoded-old", fixedNow.plusMinutes(10)
         );
         UserEntity user = TestFixtures.user(1L, true);
 

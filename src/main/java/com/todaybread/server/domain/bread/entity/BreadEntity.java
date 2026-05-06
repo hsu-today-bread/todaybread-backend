@@ -9,6 +9,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 /**
  * 빵 메뉴를 정의하는 엔티티입니다.
  */
@@ -39,6 +41,12 @@ public class BreadEntity extends BaseEntity {
 
     @Column(name = "description", nullable = false, length = 255)
     private String description;
+
+    @Column(name = "is_deleted", nullable = false)
+    private boolean isDeleted = false;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 
     @Builder
     private BreadEntity(Long storeId, String name, String description,
@@ -119,8 +127,22 @@ public class BreadEntity extends BaseEntity {
         if (originalPrice < 0 || salePrice < 0) {
             throw new CustomException(ErrorCode.BREAD_INVALID_PRICE);
         }
+        if (salePrice > originalPrice) {
+            throw new CustomException(ErrorCode.BREAD_INVALID_PRICE);
+        }
         if (remainingQuantity < 0) {
             throw new CustomException(ErrorCode.BREAD_INSUFFICIENT_QUANTITY);
         }
+    }
+
+    /**
+     * Soft Delete를 수행합니다.
+     * is_deleted를 true로, deleted_at을 현재 시각으로 설정합니다.
+     *
+     * @param now 현재 시각 (Clock에서 주입)
+     */
+    public void softDelete(LocalDateTime now) {
+        this.isDeleted = true;
+        this.deletedAt = now;
     }
 }

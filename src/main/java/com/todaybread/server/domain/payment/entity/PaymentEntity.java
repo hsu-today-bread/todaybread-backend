@@ -79,17 +79,6 @@ public class PaymentEntity extends BaseEntity {
     }
 
     /**
-     * 결제를 승인 처리합니다. (하위 호환용)
-     * paymentKey와 method 없이 승인 처리합니다.
-     *
-     * @param paidAt         결제 처리 시각
-     * @param idempotencyKey 멱등성 키
-     */
-    public void approve(LocalDateTime paidAt, String idempotencyKey) {
-        approve(paidAt, idempotencyKey, null, null);
-    }
-
-    /**
      * 결제를 취소 처리합니다.
      * 결제 상태를 CANCELLED로 변경하고 취소 사유와 취소 시각을 설정합니다.
      *

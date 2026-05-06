@@ -51,6 +51,12 @@ public class StoreEntity extends BaseEntity {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive;
 
+    @Column(name = "rating_sum", nullable = false)
+    private int ratingSum = 0;
+
+    @Column(name = "review_count", nullable = false)
+    private int reviewCount = 0;
+
     @Builder
     private StoreEntity(Long userId, String name, String phoneNumber,
                         String description, String addressLine1, String addressLine2,
@@ -87,5 +93,38 @@ public class StoreEntity extends BaseEntity {
         this.addressLine2 = addressLine2;
         this.latitude = latitude;
         this.longitude = longitude;
+    }
+
+    /**
+     * 리뷰 추가 시 평점 집계를 갱신합니다.
+     * ratingSum에 평점을 더하고 reviewCount를 1 증가시킵니다.
+     *
+     * @param rating 추가된 리뷰의 평점 (1~5)
+     */
+    public void addReviewRating(int rating) {
+        this.ratingSum += rating;
+        this.reviewCount += 1;
+    }
+
+    /**
+     * 리뷰 삭제 시 평점 집계를 차감합니다.
+     * ratingSum에서 평점을 빼고 reviewCount를 1 감소시킵니다.
+     *
+     * @param rating 삭제된 리뷰의 평점 (1~5)
+     */
+    public void subtractReviewRating(int rating) {
+        this.ratingSum -= rating;
+        this.reviewCount -= 1;
+    }
+
+    /**
+     * 평균 평점을 소수점 첫째 자리까지 반올림하여 반환합니다.
+     * 리뷰가 없는 경우 0.0을 반환합니다.
+     *
+     * @return 평균 평점 (리뷰가 없으면 0.0)
+     */
+    public double getAverageRating() {
+        if (this.reviewCount == 0) return 0.0;
+        return Math.round((double) this.ratingSum / this.reviewCount * 10.0) / 10.0;
     }
 }

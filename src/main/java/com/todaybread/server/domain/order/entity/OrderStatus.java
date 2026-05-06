@@ -6,6 +6,7 @@ package com.todaybread.server.domain.order.entity;
 public enum OrderStatus {
     PENDING,
     CONFIRMED,
+    CANCEL_PENDING,
     CANCELLED,
     PICKED_UP
 }

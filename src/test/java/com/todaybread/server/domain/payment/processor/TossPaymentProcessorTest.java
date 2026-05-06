@@ -37,10 +37,10 @@ class TossPaymentProcessorTest {
         TossConfirmResponse tossResponse = new TossConfirmResponse(
                 paymentKey, orderId, "DONE", amount, "카드", "2025-07-01T18:31:00+09:00"
         );
-        given(tossPaymentClient.confirmPayment(paymentKey, orderId, amount)).willReturn(tossResponse);
+        given(tossPaymentClient.confirmPayment(paymentKey, orderId, amount, "idem-key")).willReturn(tossResponse);
 
         // when
-        PaymentResult result = tossPaymentProcessor.confirm(paymentKey, orderId, amount);
+        PaymentResult result = tossPaymentProcessor.confirm(paymentKey, orderId, amount, "idem-key");
 
         // then
         assertThat(result.status()).isEqualTo(PaymentStatus.APPROVED);
@@ -57,11 +57,11 @@ class TossPaymentProcessorTest {
         String orderId = "42";
         int amount = 7_500;
 
-        given(tossPaymentClient.confirmPayment(paymentKey, orderId, amount))
+        given(tossPaymentClient.confirmPayment(paymentKey, orderId, amount, "idem-key"))
                 .willThrow(new TossPaymentException("INVALID_CARD_COMPANY", "유효하지 않은 카드사입니다.", 400));
 
         // when & then
-        assertThatThrownBy(() -> tossPaymentProcessor.confirm(paymentKey, orderId, amount))
+        assertThatThrownBy(() -> tossPaymentProcessor.confirm(paymentKey, orderId, amount, "idem-key"))
                 .isInstanceOf(TossPaymentException.class)
                 .satisfies(ex -> {
                     TossPaymentException tpe = (TossPaymentException) ex;

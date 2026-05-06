@@ -118,8 +118,8 @@ public class FavouriteStoreService {
                 .map(StoreEntity::getId)
                 .toList();
 
-        // 빵 일괄 조회 → 가게별 그룹핑
-        Map<Long, List<BreadEntity>> breadsByStore = breadRepository.findByStoreIdIn(activeStoreIds).stream()
+        // 빵 일괄 조회 → 가게별 그룹핑 (삭제된 빵 제외)
+        Map<Long, List<BreadEntity>> breadsByStore = breadRepository.findByStoreIdInAndIsDeletedFalse(activeStoreIds).stream()
                 .collect(Collectors.groupingBy(BreadEntity::getStoreId));
 
         // 영업시간 일괄 조회 → 가게별 그룹핑

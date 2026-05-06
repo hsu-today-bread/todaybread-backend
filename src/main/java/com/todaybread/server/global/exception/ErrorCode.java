@@ -55,6 +55,7 @@ public enum ErrorCode {
     USER_RECOVERY_NOT_FOUND("USER_005","가입 정보를 찾을 수 없습니다.",HttpStatus.NOT_FOUND),
     USER_BOSS_ALREADY_APPROVED("USER_006", "이미 사장님 등록이 완료된 상태입니다.", HttpStatus.CONFLICT),
     USER_BOSS_NUMBER_FORMAT_ERROR("USER_007","사업자 번호 형식이 맞지 않습니다.",HttpStatus.BAD_REQUEST),
+    USER_RESET_TOKEN_INVALID("USER_008", "유효하지 않은 비밀번호 재설정 토큰입니다.", HttpStatus.BAD_REQUEST),
 
     /**
      * ============================
@@ -138,13 +139,20 @@ public enum ErrorCode {
      * ============================
      */
     PAYMENT_AMOUNT_MISMATCH("PAYMENT_001", "결제 금액이 주문 금액과 일치하지 않습니다.", HttpStatus.BAD_REQUEST),
-    PAYMENT_AMOUNT_MUST_BE_POSITIVE("PAYMENT_002", "결제 금액은 0보다 커야 합니다.", HttpStatus.BAD_REQUEST),
     PAYMENT_ORDER_STATUS_INVALID("PAYMENT_003", "결제할 수 없는 주문 상태입니다.", HttpStatus.CONFLICT),
     PAYMENT_PROVIDER_ERROR("PAYMENT_004", "결제 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", HttpStatus.BAD_GATEWAY),
-    PAYMENT_CONFIRM_FAILED("PAYMENT_005", "결제 승인에 실패했습니다.", HttpStatus.BAD_REQUEST),
-    PAYMENT_ALREADY_PROCESSED("PAYMENT_006", "이미 처리된 결제입니다.", HttpStatus.CONFLICT),
     PAYMENT_CANCEL_FAILED("PAYMENT_007", "결제 취소 처리 중 오류가 발생했습니다.", HttpStatus.BAD_GATEWAY),
-    PAYMENT_IDEMPOTENCY_KEY_MISSING("PAYMENT_008", "Idempotency-Key 헤더가 필요합니다.", HttpStatus.BAD_REQUEST);
+    PAYMENT_IDEMPOTENCY_KEY_MISSING("PAYMENT_008", "Idempotency-Key 헤더가 필요합니다.", HttpStatus.BAD_REQUEST),
+
+    /**
+     * ============================
+     * 리뷰 오류
+     * ============================
+     */
+    REVIEW_PURCHASE_REQUIRED("REVIEW_001", "구매 이력이 없어 리뷰를 작성할 수 없습니다.", HttpStatus.BAD_REQUEST),
+    REVIEW_ALREADY_EXISTS("REVIEW_002", "이미 해당 주문 항목에 대한 리뷰를 작성했습니다.", HttpStatus.CONFLICT),
+    REVIEW_BREAD_NOT_AVAILABLE("REVIEW_003", "해당 상품이 삭제되어 리뷰를 작성할 수 없습니다.", HttpStatus.BAD_REQUEST),
+    REVIEW_IMAGE_LIMIT_EXCEEDED("REVIEW_005", "리뷰 이미지는 최대 2장까지 첨부할 수 있습니다.", HttpStatus.BAD_REQUEST);
 
     private final String code;
     private final String message;

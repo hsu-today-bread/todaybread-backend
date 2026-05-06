@@ -13,6 +13,7 @@ import com.todaybread.server.global.exception.ErrorCode;
 import com.todaybread.server.support.TestFixtures;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -54,6 +55,39 @@ class KeywordServiceTest {
     }
 
     @Test
+    void createKeyword_stripsLeadingTrailingSpacesFromDisplayText() {
+        KeywordEntity keyword = TestFixtures.keyword(10L, "크루아상");
+        given(keywordRepository.findByNormalisedText("크루아상")).willReturn(Optional.empty());
+        given(keywordRepository.save(any(KeywordEntity.class))).willReturn(keyword);
+        given(userKeywordRepository.existsByUserIdAndKeywordId(1L, 10L)).willReturn(false);
+        given(userKeywordRepository.countByUserIdWithLock(1L)).willReturn(0L);
+
+        keywordService.createKeyword(1L, new KeywordCreateRequest("  크루아상  "));
+
+        ArgumentCaptor<UserKeywordEntity> captor = ArgumentCaptor.forClass(UserKeywordEntity.class);
+        verify(userKeywordRepository).save(captor.capture());
+        assertThat(captor.getValue().getDisplayText()).isEqualTo("크루아상");
+    }
+
+    @Test
+    void createKeyword_normalisesInternalSpaces() {
+        // "크 루 아상" → normalised to "크루아상" (spaces removed)
+        KeywordEntity keyword = TestFixtures.keyword(10L, "크루아상");
+        given(keywordRepository.findByNormalisedText("크루아상")).willReturn(Optional.of(keyword));
+        given(userKeywordRepository.existsByUserIdAndKeywordId(1L, 10L)).willReturn(false);
+        given(userKeywordRepository.countByUserIdWithLock(1L)).willReturn(0L);
+
+        KeywordCreateResponse response = keywordService.createKeyword(1L, new KeywordCreateRequest("크 루 아상"));
+
+        assertThat(response.success()).isTrue();
+
+        ArgumentCaptor<UserKeywordEntity> captor = ArgumentCaptor.forClass(UserKeywordEntity.class);
+        verify(userKeywordRepository).save(captor.capture());
+        // displayText preserves internal spaces but strips leading/trailing
+        assertThat(captor.getValue().getDisplayText()).isEqualTo("크 루 아상");
+    }
+
+    @Test
     void createKeyword_rejectsDuplicateUserKeyword() {
         KeywordEntity keyword = TestFixtures.keyword(10L, "bagel");
         given(keywordRepository.findByNormalisedText("bagel")).willReturn(Optional.of(keyword));
@@ -81,6 +115,37 @@ class KeywordServiceTest {
     }
 
     @Test
+    void createKeyword_rejectsOverMaxLength() {
+        // 11 characters after normalisation (spaces removed)
+        assertThatThrownBy(() -> keywordService.createKeyword(1L, new KeywordCreateRequest("abcdefghijk")))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.KEYWORD_LENGTH_LIMIT);
+    }
+
+    @Test
+    void createKeyword_rejectsWhenLimitExceeded() {
+        KeywordEntity keyword = TestFixtures.keyword(10L, "bagel");
+        given(keywordRepository.findByNormalisedText("bagel")).willReturn(Optional.of(keyword));
+        given(userKeywordRepository.existsByUserIdAndKeywordId(1L, 10L)).willReturn(false);
+        given(userKeywordRepository.countByUserIdWithLock(1L)).willReturn(5L);
+
+        assertThatThrownBy(() -> keywordService.createKeyword(1L, new KeywordCreateRequest("bagel")))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.KEYWORD_LIMIT_EXCEEDED);
+    }
+
+    @Test
+    void createKeyword_rejectsEmptyAfterNormalisation() {
+        // All whitespace → strip → empty → error
+        assertThatThrownBy(() -> keywordService.createKeyword(1L, new KeywordCreateRequest("   ")))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.KEYWORD_LENGTH_LIMIT);
+    }
+
+    @Test
     void getMyKeywords_returnsDisplayTexts() {
         given(userKeywordRepository.findByUserId(1L)).willReturn(List.of(
                 TestFixtures.userKeyword(1L, 1L, 10L, "치아바타"),
@@ -91,6 +156,15 @@ class KeywordServiceTest {
 
         assertThat(responses).extracting(KeywordResponse::displayText)
                 .containsExactly("치아바타", "bagel");
+    }
+
+    @Test
+    void getMyKeywords_returnsEmptyListWhenNoKeywords() {
+        given(userKeywordRepository.findByUserId(1L)).willReturn(List.of());
+
+        List<KeywordResponse> responses = keywordService.getMyKeywords(1L);
+
+        assertThat(responses).isEmpty();
     }
 
     @Test

@@ -3,13 +3,7 @@ package com.todaybread.server.domain.order.controller;
 import com.todaybread.server.domain.order.dto.DirectOrderRequest;
 import com.todaybread.server.domain.order.dto.OrderDetailResponse;
 import com.todaybread.server.domain.order.dto.OrderResponse;
-import com.todaybread.server.domain.order.entity.OrderEntity;
-import com.todaybread.server.domain.order.entity.OrderStatus;
-import com.todaybread.server.domain.order.repository.OrderRepository;
 import com.todaybread.server.domain.order.service.OrderService;
-import com.todaybread.server.domain.payment.service.PaymentService;
-import com.todaybread.server.global.exception.CustomException;
-import com.todaybread.server.global.exception.ErrorCode;
 import com.todaybread.server.global.util.JwtRoleHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -37,8 +31,6 @@ import org.springframework.web.bind.annotation.*;
 public class OrderController {
 
     private final OrderService orderService;
-    private final PaymentService paymentService;
-    private final OrderRepository orderRepository;
 
     /**
      * 장바구니 기반 주문을 생성합니다.
@@ -74,8 +66,9 @@ public class OrderController {
 
     /**
      * 주문을 취소합니다.
-     * CONFIRMED 상태 주문은 결제 취소(토스 Cancel API)를 먼저 수행한 뒤 주문을 취소합니다.
-     * PENDING 상태 주문은 결제 취소 없이 기존 로직으로 주문만 취소합니다.
+     * 비관적 락 획득 후 상태를 확인하여 적절한 취소 경로를 선택합니다.
+     * - CONFIRMED 상태: 결제 취소(토스 Cancel API) 후 주문 취소
+     * - PENDING 상태: 결제 취소 없이 주문만 취소 + 재고 복원
      *
      * @param jwt     JWT 토큰
      * @param orderId 주문 ID
@@ -86,17 +79,7 @@ public class OrderController {
     public void cancelOrder(@AuthenticationPrincipal Jwt jwt,
                             @PathVariable Long orderId) {
         Long userId = JwtRoleHelper.getUserId(jwt);
-
-        OrderEntity order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
-
-        if (order.getStatus() == OrderStatus.CONFIRMED) {
-            // CONFIRMED 상태: 결제 취소 후 주문 취소 (PaymentService가 내부에서 OrderService.cancelOrder 호출)
-            paymentService.cancelPayment(userId, orderId);
-        } else {
-            // PENDING 상태: 기존 로직 유지 (결제 취소 불필요)
-            orderService.cancelOrder(userId, orderId);
-        }
+        orderService.cancelOrder(userId, orderId);
     }
 
     /**

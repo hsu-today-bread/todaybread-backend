@@ -14,6 +14,10 @@ import net.jqwik.api.*;
 import net.jqwik.api.lifecycle.BeforeProperty;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
@@ -86,8 +90,11 @@ class OrderBossServicePropertyTest {
                 .sorted(Comparator.comparing(OrderEntity::getCreatedAt).reversed())
                 .collect(Collectors.toList());
 
-        given(orderRepository.findByStoreIdAndStatusOrderByCreatedAtDesc(storeId, OrderStatus.CONFIRMED))
-                .willReturn(confirmedOrders);
+        Pageable pageable = PageRequest.of(0, 100);
+        Page<OrderEntity> confirmedPage = new PageImpl<>(confirmedOrders, pageable, confirmedOrders.size());
+
+        given(orderRepository.findByStoreIdAndStatusOrderByCreatedAtDesc(storeId, OrderStatus.CONFIRMED, pageable))
+                .willReturn(confirmedPage);
 
         // Mock order items for each confirmed order (batch)
         List<OrderItemEntity> allItems = confirmedOrders.stream().map(order -> {
@@ -108,22 +115,23 @@ class OrderBossServicePropertyTest {
         given(orderItemRepository.findByOrderIdIn(confirmedOrderIds)).willReturn(allItems);
 
         // Act
-        List<BossOrderResponse> result = orderBossService.getConfirmedOrders(userId);
+        Page<BossOrderResponse> result = orderBossService.getConfirmedOrders(userId, pageable);
 
         // Assert: all returned orders have required fields
-        assertThat(result).allSatisfy(response -> {
+        assertThat(result.getContent()).allSatisfy(response -> {
             assertThat(response.orderId()).isNotNull();
             assertThat(response.totalAmount()).isGreaterThanOrEqualTo(0);
             assertThat(response.items()).isNotEmpty();
         });
 
         // Assert: result count matches confirmed orders count
-        assertThat(result).hasSize(confirmedOrders.size());
+        assertThat(result.getContent()).hasSize(confirmedOrders.size());
 
         // Assert: createdAt is in descending order
-        for (int i = 1; i < result.size(); i++) {
-            assertThat(result.get(i).createdAt())
-                    .isBeforeOrEqualTo(result.get(i - 1).createdAt());
+        List<BossOrderResponse> content = result.getContent();
+        for (int i = 1; i < content.size(); i++) {
+            assertThat(content.get(i).createdAt())
+                    .isBeforeOrEqualTo(content.get(i - 1).createdAt());
         }
     }
 

@@ -72,7 +72,7 @@ class TossPaymentClientTest {
                 .setBody(responseBody));
 
         // when
-        TossConfirmResponse response = client.confirmPayment("tgen_20250101ABCDE", "order_42", 7500);
+        TossConfirmResponse response = client.confirmPayment("tgen_20250101ABCDE", "order_42", 7500, "idem-key-1");
 
         // then
         assertThat(response.paymentKey()).isEqualTo("tgen_20250101ABCDE");
@@ -104,7 +104,7 @@ class TossPaymentClientTest {
                 .setBody(errorBody));
 
         // when & then
-        assertThatThrownBy(() -> client.confirmPayment("tgen_key", "order_1", 5000))
+        assertThatThrownBy(() -> client.confirmPayment("tgen_key", "order_1", 5000, "idem-key-2"))
                 .isInstanceOf(TossPaymentException.class)
                 .satisfies(ex -> {
                     TossPaymentException tpe = (TossPaymentException) ex;
@@ -202,7 +202,7 @@ class TossPaymentClientTest {
                 .setBody(responseBody));
 
         // when
-        client.confirmPayment("key", "order_1", 1000);
+        client.confirmPayment("key", "order_1", 1000, "idem-key-3");
 
         // then
         RecordedRequest request = mockWebServer.takeRequest();
@@ -233,7 +233,7 @@ class TossPaymentClientTest {
                 .setBody(errorBody));
 
         // when & then
-        assertThatThrownBy(() -> client.confirmPayment("key", "order_1", 1000))
+        assertThatThrownBy(() -> client.confirmPayment("key", "order_1", 1000, "idem-key-4"))
                 .isInstanceOf(TossPaymentException.class)
                 .satisfies(ex -> {
                     TossPaymentException tpe = (TossPaymentException) ex;

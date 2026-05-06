@@ -19,6 +19,8 @@ import java.time.LocalTime;
  * @param isSelling         판매중 여부
  * @param distance          유저~가게 거리 (km)
  * @param lastOrderTime     라스트오더 시간 (null이면 영업 종료 시간이 마감)
+ * @param averageRating     가게 평균 평점
+ * @param reviewCount       가게 리뷰 수
  */
 public record NearbyStoreResponse(
         Long storeId,
@@ -31,6 +33,8 @@ public record NearbyStoreResponse(
         boolean isSelling,
         double distance,
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm:ss")
-        LocalTime lastOrderTime
+        LocalTime lastOrderTime,
+        double averageRating,
+        int reviewCount
 ) {
 }

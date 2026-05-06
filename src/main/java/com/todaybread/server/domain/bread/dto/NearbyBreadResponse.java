@@ -20,6 +20,8 @@ import java.time.LocalTime;
  * @param isSelling 판매 상태 (영업시간 내 + 라스트오더 이전 + 재고 있음)
  * @param lastOrderTime 마지막 주문 시간 (null이면 영업 종료 시간이 마감)
  * @param distance 유저~가게 거리 (km)
+ * @param averageRating 가게 평균 평점
+ * @param reviewCount 가게 리뷰 수
  */
 public record NearbyBreadResponse(
         Long id,
@@ -32,7 +34,9 @@ public record NearbyBreadResponse(
         boolean isSelling,
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm:ss")
         LocalTime lastOrderTime,
-        double distance
+        double distance,
+        double averageRating,
+        int reviewCount
 ) {
     public static NearbyBreadResponse of(
             BreadEntity bread, StoreEntity store,
@@ -47,7 +51,9 @@ public record NearbyBreadResponse(
                 store.getName(),
                 isSelling,
                 lastOrderTime,
-                distance
+                distance,
+                store.getAverageRating(),
+                store.getReviewCount()
         );
     }
 }

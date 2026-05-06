@@ -6,6 +6,7 @@ import com.todaybread.server.domain.payment.client.dto.TossCancelResponse;
 import com.todaybread.server.domain.payment.client.dto.TossConfirmRequest;
 import com.todaybread.server.domain.payment.client.dto.TossConfirmResponse;
 import com.todaybread.server.domain.payment.client.dto.TossErrorResponse;
+import com.todaybread.server.domain.payment.client.dto.TossPaymentResponse;
 import com.todaybread.server.domain.payment.config.TossPaymentProperties;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -94,18 +95,21 @@ public class TossPaymentClient {
      * 토스 페이먼츠 결제 승인 API를 호출합니다.
      * POST /v1/payments/confirm
      *
-     * @param paymentKey 토스 페이먼츠 결제 고유 키
-     * @param orderId    주문 ID
-     * @param amount     결제 금액
+     * @param paymentKey     토스 페이먼츠 결제 고유 키
+     * @param orderId        주문 ID
+     * @param amount         결제 금액
+     * @param idempotencyKey 멱등성 키 (Idempotency-Key 헤더로 전달)
      * @return 결제 승인 응답
      * @throws TossPaymentException 토스 API가 4xx/5xx 응답을 반환한 경우
      */
-    public TossConfirmResponse confirmPayment(String paymentKey, String orderId, int amount) {
+    public TossConfirmResponse confirmPayment(String paymentKey, String orderId, int amount,
+                                               String idempotencyKey) {
         TossConfirmRequest request = new TossConfirmRequest(paymentKey, orderId, amount);
 
         return restClient.post()
                 .uri("/v1/payments/confirm")
                 .contentType(MediaType.APPLICATION_JSON)
+                .header("Idempotency-Key", idempotencyKey)
                 .body(request)
                 .retrieve()
                 .body(TossConfirmResponse.class);
@@ -114,6 +118,7 @@ public class TossPaymentClient {
     /**
      * 토스 페이먼츠 결제 취소 API를 호출합니다.
      * POST /v1/payments/{paymentKey}/cancel
+     * paymentKey를 멱등성 키로 사용합니다.
      *
      * @param paymentKey   토스 페이먼츠 결제 고유 키
      * @param cancelReason 취소 사유
@@ -127,9 +132,25 @@ public class TossPaymentClient {
         return restClient.post()
                 .uri("/v1/payments/{paymentKey}/cancel", paymentKey)
                 .contentType(MediaType.APPLICATION_JSON)
+                .header("Idempotency-Key", paymentKey)
                 .body(request)
                 .retrieve()
                 .body(TossCancelResponse.class);
+    }
+
+    /**
+     * 토스 페이먼츠 결제 조회 API를 호출합니다.
+     * GET /v1/payments/{paymentKey}
+     *
+     * @param paymentKey 토스 페이먼츠 결제 고유 키
+     * @return 결제 조회 응답
+     * @throws TossPaymentException 토스 API가 4xx/5xx 응답을 반환한 경우
+     */
+    public TossPaymentResponse getPayment(String paymentKey) {
+        return restClient.get()
+                .uri("/v1/payments/{paymentKey}", paymentKey)
+                .retrieve()
+                .body(TossPaymentResponse.class);
     }
 
     /**

@@ -13,6 +13,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.util.Optional;
 
@@ -46,8 +48,9 @@ class OrderBossServiceTest {
     @Test
     void getConfirmedOrders_throwsStoreNotFound_whenNoStoreRegistered() {
         given(storeRepository.findByUserIdAndIsActiveTrue(1L)).willReturn(Optional.empty());
+        Pageable pageable = PageRequest.of(0, 20);
 
-        assertThatThrownBy(() -> orderBossService.getConfirmedOrders(1L))
+        assertThatThrownBy(() -> orderBossService.getConfirmedOrders(1L, pageable))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.STORE_NOT_FOUND);

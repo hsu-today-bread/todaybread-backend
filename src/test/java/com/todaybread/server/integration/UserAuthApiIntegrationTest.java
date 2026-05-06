@@ -133,21 +133,26 @@ class UserAuthApiIntegrationTest extends ApiIntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.maskedEmail").value("r*****r@example.com"));
 
-        mockMvc.perform(get("/api/user/verify-identity")
+        MvcResult verifyResult = mockMvc.perform(get("/api/user/verify-identity")
                         .param("phone", "010-3333-3333")
                         .param("email", "recover@example.com"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.verified").value(true))
-                .andExpect(jsonPath("$.email").value("recover@example.com"));
+                .andExpect(jsonPath("$.email").value("recover@example.com"))
+                .andExpect(jsonPath("$.resetToken").isNotEmpty())
+                .andReturn();
+
+        String resetToken = json(verifyResult).get("resetToken").asText();
 
         mockMvc.perform(post("/api/user/reset-password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "email": "recover@example.com",
-                                  "newPassword": "newpassword123"
+                                  "newPassword": "newpassword123",
+                                  "resetToken": "%s"
                                 }
-                                """))
+                                """.formatted(resetToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
 

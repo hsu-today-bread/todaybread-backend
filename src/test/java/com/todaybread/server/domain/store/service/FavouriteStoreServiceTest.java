@@ -128,7 +128,7 @@ class FavouriteStoreServiceTest {
 
         given(favouriteStoreRepository.findByUserId(1L)).willReturn(List.of(favourite1, favourite2));
         given(storeRepository.findByIdInAndIsActiveTrue(List.of(100L, 200L))).willReturn(List.of(activeStore));
-        given(breadRepository.findByStoreIdIn(List.of(100L))).willReturn(List.of(bread));
+        given(breadRepository.findByStoreIdInAndIsDeletedFalse(List.of(100L))).willReturn(List.of(bread));
         given(storeBusinessHoursRepository.findByStoreIdIn(List.of(100L))).willReturn(List.of(sundayHours));
         given(storeImageRepository.findByStoreIdInOrderByStoreIdAscDisplayOrderAsc(List.of(100L)))
                 .willReturn(List.of(TestFixtures.storeImage(1L, 100L, "store.jpg", 0)));

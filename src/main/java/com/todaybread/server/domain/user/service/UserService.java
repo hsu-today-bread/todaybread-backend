@@ -12,8 +12,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
-
 /**
  * 유저 도메인의 서비스 계층입니다.
  * 각종 비즈니스 로직을 처리합니다.
@@ -104,12 +102,8 @@ public class UserService {
     @Transactional
     public UserLoginResponse login(UserLoginRequest request) {
 
-        Optional<UserEntity> userEntityOptional = userRepository.findByEmail(request.email());
-        if (userEntityOptional.isEmpty()) {
-            throw new CustomException(ErrorCode.USER_NOT_FOUND);
-        }
-
-        UserEntity userEntity = userEntityOptional.get();
+        UserEntity userEntity = userRepository.findByEmail(request.email())
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         if (!passwordEncoder.matches(request.password(), userEntity.getPasswordHash())) {
             throw new CustomException(ErrorCode.USER_NOT_FOUND);
         }
@@ -135,13 +129,7 @@ public class UserService {
      */
     @Transactional
     public UserUpdateResponse updateProfile(Long userId, UserUpdateRequest request) {
-        Optional<UserEntity> userEntityOptional = userRepository.findById(userId);
-
-        if (userEntityOptional.isEmpty()) {
-            throw new CustomException(ErrorCode.USER_NOT_FOUND);
-        }
-
-        UserEntity userEntity = userEntityOptional.get();
+        UserEntity userEntity = getUserOrThrow(userId);
 
         String nickname = request.nickname();
         String name = request.name();
@@ -170,12 +158,7 @@ public class UserService {
     // TODO 사업자 등록 서비스 로직 수행
     @Transactional
     public UserBossResponse approveBoss(Long userId, UserBossRequest request) {
-        Optional<UserEntity> userEntityOptional = userRepository.findById(userId);
-
-        if (userEntityOptional.isEmpty()) {
-            throw new CustomException(ErrorCode.USER_NOT_FOUND);
-        }
-        UserEntity userEntity = userEntityOptional.get();
+        UserEntity userEntity = getUserOrThrow(userId);
 
         if (userEntity.getIsBoss()){
             throw new CustomException(ErrorCode.USER_BOSS_ALREADY_APPROVED);
@@ -199,5 +182,14 @@ public class UserService {
         return UserBossResponse.ok(accessToken, refreshToken);
     }
 
-
+    /**
+     * userId로 유저를 조회하고, 없으면 USER_NOT_FOUND 예외를 던집니다.
+     *
+     * @param userId 유저 ID
+     * @return 유저 엔티티
+     */
+    private UserEntity getUserOrThrow(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    }
 }

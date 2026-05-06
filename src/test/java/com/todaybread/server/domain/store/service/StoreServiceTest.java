@@ -253,7 +253,7 @@ class StoreServiceTest {
         ));
         given(storeRepository.findByIdInAndIsActiveTrue(List.of(100L, 200L))).willReturn(List.of(store1, store2));
         given(storeBusinessHoursRepository.findByStoreIdIn(List.of(100L, 200L))).willReturn(List.of(hours1, hours2));
-        given(breadRepository.findByStoreIdIn(List.of(100L, 200L))).willReturn(List.of(bread1, bread2));
+        given(breadRepository.findByStoreIdInAndIsDeletedFalse(List.of(100L, 200L))).willReturn(List.of(bread1, bread2));
         given(storeImageRepository.findByStoreIdInOrderByStoreIdAscDisplayOrderAsc(List.of(100L, 200L)))
                 .willReturn(List.of(TestFixtures.storeImage(1L, 100L, "store1.jpg", 0)));
         given(fileStorage.getFileUrl("store1.jpg")).willReturn("https://cdn/store1.jpg");

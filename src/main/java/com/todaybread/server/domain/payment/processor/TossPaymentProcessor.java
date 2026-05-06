@@ -4,6 +4,7 @@ import com.todaybread.server.domain.payment.client.TossPaymentClient;
 import com.todaybread.server.domain.payment.client.dto.TossCancelDetail;
 import com.todaybread.server.domain.payment.client.dto.TossCancelResponse;
 import com.todaybread.server.domain.payment.client.dto.TossConfirmResponse;
+import com.todaybread.server.domain.payment.client.dto.TossPaymentResponse;
 import com.todaybread.server.domain.payment.entity.PaymentStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
@@ -44,14 +45,15 @@ public class TossPaymentProcessor implements PaymentProcessor {
      * <p>토스 API가 에러 응답을 반환하면 {@link com.todaybread.server.domain.payment.client.TossPaymentException}이
      * 그대로 전파됩니다.</p>
      *
-     * @param paymentKey 토스 페이먼츠 결제 고유 키
-     * @param orderId    주문 ID (문자열)
-     * @param amount     결제 금액
+     * @param paymentKey     토스 페이먼츠 결제 고유 키
+     * @param orderId        주문 ID (문자열)
+     * @param amount         결제 금액
+     * @param idempotencyKey 멱등성 키 (토스 Idempotency-Key 헤더로 전달)
      * @return 결제 승인 결과
      */
     @Override
-    public PaymentResult confirm(String paymentKey, String orderId, int amount) {
-        TossConfirmResponse response = tossPaymentClient.confirmPayment(paymentKey, orderId, amount);
+    public PaymentResult confirm(String paymentKey, String orderId, int amount, String idempotencyKey) {
+        TossConfirmResponse response = tossPaymentClient.confirmPayment(paymentKey, orderId, amount, idempotencyKey);
 
         return new PaymentResult(
                 PaymentStatus.APPROVED,
@@ -60,6 +62,17 @@ public class TossPaymentProcessor implements PaymentProcessor {
                 response.method(),
                 response.approvedAt()
         );
+    }
+
+    /**
+     * 토스 페이먼츠 결제 조회 API를 호출하여 결제 상태를 확인합니다.
+     *
+     * @param paymentKey 토스 페이먼츠 결제 고유 키
+     * @return 결제 조회 응답
+     */
+    @Override
+    public TossPaymentResponse getPayment(String paymentKey) {
+        return tossPaymentClient.getPayment(paymentKey);
     }
 
     /**

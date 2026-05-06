@@ -84,44 +84,6 @@ public class OrderBossService {
     }
 
     /**
-     * 픽업 대기 주문 목록을 전체 조회합니다 (하위 호환용).
-     * CONFIRMED 상태의 주문만 생성 시각 내림차순으로 반환합니다.
-     *
-     * @param userId 사장님 유저 ID
-     * @return 사장님 주문내역 응답 목록
-     */
-    public List<BossOrderResponse> getConfirmedOrders(Long userId) {
-        Long storeId = getStoreIdByUserId(userId);
-
-        List<OrderEntity> orders = orderRepository.findByStoreIdAndStatusOrderByCreatedAtDesc(
-                storeId, OrderStatus.CONFIRMED);
-
-        List<Long> orderIds = orders.stream()
-                .map(OrderEntity::getId)
-                .toList();
-
-        Map<Long, List<OrderItemEntity>> itemsByOrderId = orderIds.isEmpty()
-                ? Collections.emptyMap()
-                : orderItemRepository.findByOrderIdIn(orderIds).stream()
-                        .collect(Collectors.groupingBy(OrderItemEntity::getOrderId));
-
-        return orders.stream().map(order -> {
-            List<OrderItemResponse> itemResponses = itemsByOrderId
-                    .getOrDefault(order.getId(), Collections.emptyList())
-                    .stream()
-                    .map(OrderItemResponse::of)
-                    .toList();
-            return new BossOrderResponse(
-                    order.getId(),
-                    order.getOrderNumber(),
-                    order.getTotalAmount(),
-                    order.getCreatedAt(),
-                    itemResponses
-            );
-        }).toList();
-    }
-
-    /**
      * 픽업 완료 처리를 수행합니다.
      * CONFIRMED 상태의 주문을 PICKED_UP으로 변경합니다.
      *
