@@ -24,6 +24,7 @@ import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
 import com.todaybread.server.global.storage.FileStorage;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -147,7 +148,11 @@ public class StoreService {
                 .longitude(request.longitude())
                 .build();
 
-        storeRepository.save(storeEntity);
+        try {
+            storeRepository.save(storeEntity);
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(ErrorCode.STORE_ALREADY_EXISTS);
+        }
 
         // 영업시간 검증 및 저장
         List<StoreBusinessHoursEntity> businessHours = validateAndSaveBusinessHours(
@@ -183,6 +188,12 @@ public class StoreService {
                 request.addressLine1(), request.addressLine2(), request.latitude(),
                 request.longitude());
 
+        try {
+            storeRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(ErrorCode.STORE_PHONE_EXISTS);
+        }
+
         // 기존 영업시간 삭제 후 새로운 영업시간 저장
         storeBusinessHoursRepository.deleteByStoreId(storeEntity.getId());
         List<StoreBusinessHoursEntity> businessHours = validateAndSaveBusinessHours(
@@ -212,11 +223,22 @@ public class StoreService {
 
         List<StoreBusinessHoursEntity> entities = new ArrayList<>();
         for (BusinessHoursRequest bh : businessHours) {
-            if (!bh.isClosed()) {
-                // 영업일인데 startTime 또는 endTime이 null이면 에러
-                if (bh.startTime() == null || bh.endTime() == null) {
+            if (bh.isClosed()) {
+                // 휴무일: 모든 시간값이 null이어야 함
+                if (bh.startTime() != null || bh.endTime() != null || bh.lastOrderTime() != null) {
                     throw new CustomException(ErrorCode.STORE_BUSINESS_HOURS_INVALID);
                 }
+            } else {
+                // 영업일: startTime, endTime, lastOrderTime 모두 필수
+                if (bh.startTime() == null || bh.endTime() == null || bh.lastOrderTime() == null) {
+                    throw new CustomException(ErrorCode.STORE_BUSINESS_HOURS_INVALID);
+                }
+                // startTime == endTime 금지
+                if (bh.startTime().equals(bh.endTime())) {
+                    throw new CustomException(ErrorCode.STORE_BUSINESS_HOURS_INVALID);
+                }
+                // lastOrderTime 범위 검증
+                validateLastOrderTime(bh.startTime(), bh.endTime(), bh.lastOrderTime());
             }
 
             StoreBusinessHoursEntity entity = StoreBusinessHoursEntity.builder()
@@ -232,6 +254,30 @@ public class StoreService {
         }
 
         return storeBusinessHoursRepository.saveAll(entities);
+    }
+
+    /**
+     * lastOrderTime이 영업시간 범위 내에 있는지 검증합니다.
+     * 자정 넘김 영업(startTime > endTime)도 지원합니다.
+     *
+     * @param startTime     영업 시작 시간
+     * @param endTime       영업 종료 시간
+     * @param lastOrderTime 마지막 주문 시간
+     */
+    private void validateLastOrderTime(LocalTime startTime, LocalTime endTime, LocalTime lastOrderTime) {
+        if (startTime.isBefore(endTime)) {
+            // 일반 영업: lastOrderTime은 startTime 이상, endTime 이하
+            if (lastOrderTime.isBefore(startTime) || lastOrderTime.isAfter(endTime)) {
+                throw new CustomException(ErrorCode.STORE_BUSINESS_HOURS_INVALID);
+            }
+        } else {
+            // 자정 넘김 영업 (startTime > endTime): lastOrderTime이 startTime 이상이거나 endTime 이하
+            boolean afterStart = !lastOrderTime.isBefore(startTime);
+            boolean beforeEnd = !lastOrderTime.isAfter(endTime);
+            if (!afterStart && !beforeEnd) {
+                throw new CustomException(ErrorCode.STORE_BUSINESS_HOURS_INVALID);
+            }
+        }
     }
 
     /**

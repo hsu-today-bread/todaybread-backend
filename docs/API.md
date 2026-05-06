@@ -225,7 +225,7 @@ false
 
 ```json
 {
-  "bossNumber": "123-45-67890"
+  "bossNumber": "1234567890"
 }
 ```
 
@@ -284,7 +284,8 @@ false
 ```json
 {
   "verified": true,
-  "email": "demo-user@todaybread.com"
+  "email": "demo-user@todaybread.com",
+  "resetToken": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
 
@@ -303,7 +304,8 @@ false
 ```json
 {
   "email": "demo-user@todaybread.com",
-  "newPassword": "newpassword123"
+  "newPassword": "newpassword123",
+  "resetToken": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
 
@@ -318,7 +320,7 @@ false
 
 > 비밀번호 재설정 시 기존 세션(Refresh Token)이 모두 무효화됩니다.
 
-**에러 응답:** `USER_005`, `COMMON_001`
+**에러 응답:** `USER_005`, `USER_008`, `COMMON_001`
 
 ---
 
@@ -622,7 +624,9 @@ false
     "primaryImageUrl": "/images/store/1_0.jpg",
     "isSelling": true,
     "distance": 0.35,
-    "lastOrderTime": "22:30:00"
+    "lastOrderTime": "22:30:00",
+    "averageRating": 4.5,
+    "reviewCount": 12
   }
 ]
 ```
@@ -688,7 +692,9 @@ false
       "imageUrl": "/images/bread/1.jpg"
     }
   ],
-  "isSelling": true
+  "isSelling": true,
+  "averageRating": 4.5,
+  "reviewCount": 12
 }
 ```
 
@@ -1880,6 +1886,7 @@ false
 | `USER_005` | 404 | 가입 정보를 찾을 수 없습니다. |
 | `USER_006` | 409 | 이미 사장님 등록이 완료된 상태입니다. |
 | `USER_007` | 400 | 사업자 번호 형식이 맞지 않습니다. |
+| `USER_008` | 400 | 유효하지 않은 비밀번호 재설정 토큰입니다. |
 
 ### 키워드 (KEYWORD)
 

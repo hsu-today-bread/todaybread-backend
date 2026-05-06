@@ -20,7 +20,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * 가게 이미지 서비스 계층입니다.
@@ -47,12 +46,8 @@ public class StoreImageService {
     @Transactional
     public List<StoreImageResponse> replaceImages(Long userId, List<MultipartFile> files) {
         // 1. userId로 가게 조회
-        Optional<StoreEntity> storeOptional = storeRepository.findByUserIdAndIsActiveTrue(userId);
-
-        if (storeOptional.isEmpty()) {
-            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
-        }
-        StoreEntity store = storeOptional.get();
+        StoreEntity store = storeRepository.findByUserIdAndIsActiveTrue(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
 
         // 2. 파일 검증
         ImageValidationHelper.validateFiles(files, 5, ErrorCode.STORE_IMAGE_LIMIT_EXCEEDED, ErrorCode.COMMON_IMAGE_INVALID_TYPE, ErrorCode.COMMON_FILE_SIZE_EXCEEDED);

@@ -33,14 +33,6 @@ public interface FavouriteStoreRepository extends JpaRepository<FavouriteStoreEn
     List<FavouriteStoreEntity> findByUserId(Long userId);
 
     /**
-     * 특정 사용자의 단골 가게 등록 수를 조회합니다.
-     *
-     * @param userId 유저 ID
-     * @return 단골 가게 수
-     */
-    long countByUserId(Long userId);
-
-    /**
      * 특정 사용자의 단골 가게 등록 수를 비관적 락으로 조회합니다.
      * 동시 요청 시 개수 제한을 정확히 보장하기 위해 사용합니다.
      *

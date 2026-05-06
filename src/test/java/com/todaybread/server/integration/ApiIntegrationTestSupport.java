@@ -28,6 +28,7 @@ import com.todaybread.server.domain.store.repository.StoreBusinessHoursRepositor
 import com.todaybread.server.domain.store.repository.StoreImageRepository;
 import com.todaybread.server.domain.store.repository.StoreRepository;
 import com.todaybread.server.domain.user.entity.UserEntity;
+import com.todaybread.server.domain.user.repository.PasswordResetTokenRepository;
 import com.todaybread.server.domain.user.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -84,6 +85,9 @@ abstract class ApiIntegrationTestSupport {
 
     @Autowired
     protected UserRepository userRepository;
+
+    @Autowired
+    protected PasswordResetTokenRepository passwordResetTokenRepository;
 
     @Autowired
     protected RefreshTokenRepository refreshTokenRepository;
@@ -148,6 +152,7 @@ abstract class ApiIntegrationTestSupport {
         userKeywordRepository.deleteAllInBatch();
         keywordRepository.deleteAllInBatch();
         refreshTokenRepository.deleteAllInBatch();
+        passwordResetTokenRepository.deleteAllInBatch();
         userRepository.deleteAllInBatch();
 
         FileSystemUtils.deleteRecursively(UPLOAD_DIR);

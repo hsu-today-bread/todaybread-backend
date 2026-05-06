@@ -7,11 +7,13 @@ import jakarta.validation.constraints.Size;
 /**
  * 비밀번호 재설정 요청 DTO입니다.
  *
- * @param email 이메일
+ * @param email      이메일
  * @param newPassword 새 비밀번호 (최소 10자)
+ * @param resetToken 본인 확인 시 발급받은 재설정 토큰
  */
 public record ResetPasswordRequest(
         @NotBlank @Email String email,
-        @NotBlank @Size(min = 10, message = "비밀번호는 최소 10자 이상이어야 합니다.") String newPassword
+        @NotBlank @Size(min = 10, message = "비밀번호는 최소 10자 이상이어야 합니다.") String newPassword,
+        @NotBlank String resetToken
 ) {
 }

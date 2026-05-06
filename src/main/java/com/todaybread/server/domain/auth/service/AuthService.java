@@ -14,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -28,6 +29,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final JwtTokenService jwtTokenService;
     private final PasswordEncoder passwordEncoder;
+    private final Clock clock;
 
     @Value("${jwt.refresh-token-expiration}")
     private long refreshTokenExpiration;
@@ -42,7 +44,7 @@ public class AuthService {
     @Transactional
     public void saveRefreshToken(Long userId, String token) {
         String tokenHash = passwordEncoder.encode(token);
-        LocalDateTime expiresAt = LocalDateTime.now().plusNanos(refreshTokenExpiration * 1_000_000);
+        LocalDateTime expiresAt = LocalDateTime.now(clock).plusNanos(refreshTokenExpiration * 1_000_000);
         Optional<RefreshTokenEntity> refreshTokenOptional = refreshTokenRepository.findByUserId(userId);
 
         if (refreshTokenOptional.isPresent()) {
@@ -86,7 +88,7 @@ public class AuthService {
             throw new CustomException(ErrorCode.AUTH_REFRESH_TOKEN_INVALID);
         }
 
-        if (refreshTokenEntity.getExpiresAt().isBefore(LocalDateTime.now())) {
+        if (refreshTokenEntity.getExpiresAt().isBefore(LocalDateTime.now(clock))) {
             refreshTokenRepository.delete(refreshTokenEntity);
             throw new CustomException(ErrorCode.AUTH_REFRESH_TOKEN_INVALID);
         }

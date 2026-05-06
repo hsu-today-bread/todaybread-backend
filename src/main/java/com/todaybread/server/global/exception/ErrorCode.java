@@ -55,6 +55,7 @@ public enum ErrorCode {
     USER_RECOVERY_NOT_FOUND("USER_005","가입 정보를 찾을 수 없습니다.",HttpStatus.NOT_FOUND),
     USER_BOSS_ALREADY_APPROVED("USER_006", "이미 사장님 등록이 완료된 상태입니다.", HttpStatus.CONFLICT),
     USER_BOSS_NUMBER_FORMAT_ERROR("USER_007","사업자 번호 형식이 맞지 않습니다.",HttpStatus.BAD_REQUEST),
+    USER_RESET_TOKEN_INVALID("USER_008", "유효하지 않은 비밀번호 재설정 토큰입니다.", HttpStatus.BAD_REQUEST),
 
     /**
      * ============================
