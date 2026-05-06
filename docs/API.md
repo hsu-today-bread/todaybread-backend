@@ -337,7 +337,7 @@ false
 | `lat` | BigDecimal | O | — | 위도 (-90 ~ 90) |
 | `lng` | BigDecimal | O | — | 경도 (-180 ~ 180) |
 | `radius` | int | X | 1 | 검색 반경 km (1 ~ 10) |
-| `sort` | String | X | none | 정렬: `none`, `distance`, `price`, `discount` |
+| `sort` | String | X | none | 정렬: `none`(랜덤 셔플), `distance`, `price`, `discount` |
 
 **응답 형식:**
 
@@ -353,10 +353,14 @@ false
     "storeName": "투데이브레드 데모 강남점",
     "isSelling": true,
     "lastOrderTime": "22:30:00",
-    "distance": 0.35
+    "distance": 0.35,
+    "averageRating": 4.5,
+    "reviewCount": 12
   }
 ]
 ```
+
+> `sort=none`(기본값)은 의도적으로 랜덤 셔플합니다. 품절된 빵은 목록에서 제외됩니다.
 
 **에러 응답:** `COMMON_001`
 
@@ -383,7 +387,9 @@ false
   "imageUrl": "/images/bread/1.jpg",
   "storeId": 1,
   "storeName": "투데이브레드 데모 강남점",
-  "isSelling": true
+  "isSelling": true,
+  "averageRating": 4.5,
+  "reviewCount": 12
 }
 ```
 

@@ -127,6 +127,9 @@ public class BreadEntity extends BaseEntity {
         if (originalPrice < 0 || salePrice < 0) {
             throw new CustomException(ErrorCode.BREAD_INVALID_PRICE);
         }
+        if (salePrice > originalPrice) {
+            throw new CustomException(ErrorCode.BREAD_INVALID_PRICE);
+        }
         if (remainingQuantity < 0) {
             throw new CustomException(ErrorCode.BREAD_INSUFFICIENT_QUANTITY);
         }

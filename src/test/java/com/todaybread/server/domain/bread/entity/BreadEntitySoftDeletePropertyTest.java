@@ -67,7 +67,7 @@ class BreadEntitySoftDeletePropertyTest {
                                 .name(name)
                                 .description(description)
                                 .originalPrice(originalPrice)
-                                .salePrice(salePrice)
+                                .salePrice(Math.min(salePrice, originalPrice))
                                 .remainingQuantity(quantity)
                                 .build()
                 );

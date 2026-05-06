@@ -303,9 +303,14 @@ public class BreadService {
                 .collect(Collectors.toList());
         Map<Long, String> imageUrlMap = breadImageService.getImageUrls(breadIds);
 
-        // 7. NearbyBreadResponse 변환 (영업중인 가게의 빵만, 개별 재고로 isSelling 판별)
+        // 7. NearbyBreadResponse 변환 (영업중인 가게의 빵만, 품절 빵 제외)
         List<NearbyBreadResponse> responses = new ArrayList<>();
         for (BreadEntity bread : openStoreBreads) {
+            // 품절 빵은 목록에서 제외
+            if (bread.getRemainingQuantity() <= 0) {
+                continue;
+            }
+
             StoreEntity store = storeMap.get(bread.getStoreId());
             double distance = storeDistanceMap.getOrDefault(store.getId(), 0.0);
             String imageUrl = imageUrlMap.get(bread.getId());

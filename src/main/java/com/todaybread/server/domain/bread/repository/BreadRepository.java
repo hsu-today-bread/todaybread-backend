@@ -41,26 +41,6 @@ public interface BreadRepository extends JpaRepository<BreadEntity, Long> {
      */
     Optional<BreadEntity> findByIdAndIsDeletedFalse(Long id);
 
-    // === 과거 데이터 경로용 (기존 메서드 유지, 필터 없음) ===
-
-    /**
-     * 가게 ID로 해당 가게의 빵 목록을 조회합니다 (삭제 여부 무관).
-     * 과거 데이터 접근 경로에서 사용합니다.
-     *
-     * @param storeId 가게 ID
-     * @return 빵 엔티티 목록
-     */
-    List<BreadEntity> findByStoreId(Long storeId);
-
-    /**
-     * 여러 가게 ID에 해당하는 빵을 일괄 조회합니다 (삭제 여부 무관).
-     * 과거 데이터 접근 경로에서 사용합니다.
-     *
-     * @param storeIds 가게 ID 목록
-     * @return 빵 엔티티 목록
-     */
-    List<BreadEntity> findByStoreIdIn(List<Long> storeIds);
-
     /**
      * 비관적 락으로 빵 엔티티를 일괄 조회합니다 (삭제 여부 무관).
      * 주문 생성 시 동시성 제어를 위해 사용합니다.

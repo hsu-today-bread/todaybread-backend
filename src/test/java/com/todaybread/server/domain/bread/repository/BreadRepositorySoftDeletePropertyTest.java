@@ -162,7 +162,10 @@ class BreadRepositorySoftDeletePropertyTest {
                 Arbitraries.integers().between(100, 50000),
                 Arbitraries.integers().between(0, 100),
                 Arbitraries.of(true, false)
-        ).as(BreadSpec::new);
+        ).as((name, origPrice, salePrice, qty, deleted) -> {
+            int adjustedSalePrice = Math.min(salePrice, origPrice);
+            return new BreadSpec(name, origPrice, adjustedSalePrice, qty, deleted);
+        });
 
         return breadSpecArbitrary.list().ofMinSize(1).ofMaxSize(10);
     }
