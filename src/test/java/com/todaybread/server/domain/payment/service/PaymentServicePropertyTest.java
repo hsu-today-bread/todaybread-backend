@@ -2,9 +2,7 @@ package com.todaybread.server.domain.payment.service;
 
 import com.todaybread.server.domain.order.entity.OrderEntity;
 import com.todaybread.server.domain.order.entity.OrderStatus;
-import com.todaybread.server.domain.order.repository.OrderItemRepository;
 import com.todaybread.server.domain.order.repository.OrderRepository;
-import com.todaybread.server.domain.order.service.InventoryRestorer;
 import com.todaybread.server.domain.order.service.OrderService;
 import com.todaybread.server.domain.payment.client.TossPaymentException;
 import com.todaybread.server.domain.payment.entity.PaymentEntity;
@@ -35,23 +33,21 @@ import static org.mockito.Mockito.*;
 class PaymentServicePropertyTest {
 
     private OrderRepository orderRepository;
-    private OrderItemRepository orderItemRepository;
     private PaymentRepository paymentRepository;
     private PaymentProcessor paymentProcessor;
     private OrderService orderService;
-    private InventoryRestorer inventoryRestorer;
+    private PaymentCancelExecutor paymentCancelExecutor;
     private Clock clock;
     private PaymentService paymentService;
 
     private void setupMocks() {
         orderRepository = Mockito.mock(OrderRepository.class);
-        orderItemRepository = Mockito.mock(OrderItemRepository.class);
         paymentRepository = Mockito.mock(PaymentRepository.class);
         paymentProcessor = Mockito.mock(PaymentProcessor.class);
         orderService = Mockito.mock(OrderService.class);
-        inventoryRestorer = Mockito.mock(InventoryRestorer.class);
+        paymentCancelExecutor = Mockito.mock(PaymentCancelExecutor.class);
         clock = TestFixtures.FIXED_CLOCK;
-        paymentService = new PaymentService(orderRepository, orderItemRepository, paymentRepository, paymentProcessor, orderService, inventoryRestorer, clock);
+        paymentService = new PaymentService(orderRepository, paymentRepository, paymentProcessor, orderService, paymentCancelExecutor, clock);
     }
 
     // ========================================================================

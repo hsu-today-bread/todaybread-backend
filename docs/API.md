@@ -1617,40 +1617,6 @@ false
 
 ---
 
-#### ~~`POST /api/payments` — 결제 요청~~ (Deprecated)
-
-> **⚠️ Deprecated:** 이 엔드포인트는 `POST /api/payments/confirm`으로 대체되었습니다. 토스 페이먼츠 연동에 따라 새 엔드포인트를 사용하세요.
-
-| 항목 | 값 |
-|------|-----|
-| 인증 | O |
-| 필수 헤더 | `Idempotency-Key` |
-
-**요청 바디:**
-
-```json
-{
-  "orderId": 42,
-  "amount": 7500
-}
-```
-
-**응답 형식:**
-
-```json
-{
-  "paymentId": 1,
-  "orderId": 42,
-  "amount": 7500,
-  "status": "APPROVED",
-  "paidAt": "2026-04-15T18:31:00"
-}
-```
-
-**에러 응답:** `PAYMENT_001`, `PAYMENT_002`, `PAYMENT_003`, `ORDER_001`, `COMMON_008`
-
----
-
 ### 16. 시스템 (System)
 
 #### `GET /api/system/health` — 서버 상태 확인
@@ -1805,10 +1771,7 @@ false
 | 코드 | HTTP | 메시지 |
 |------|------|--------|
 | `PAYMENT_001` | 400 | 결제 금액이 주문 금액과 일치하지 않습니다. |
-| `PAYMENT_002` | 400 | 결제 금액은 0보다 커야 합니다. |
 | `PAYMENT_003` | 409 | 결제할 수 없는 주문 상태입니다. |
 | `PAYMENT_004` | 502 | 결제 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요. |
-| `PAYMENT_005` | 400 | 결제 승인에 실패했습니다. |
-| `PAYMENT_006` | 409 | 이미 처리된 결제입니다. |
 | `PAYMENT_007` | 502 | 결제 취소 처리 중 오류가 발생했습니다. |
 | `PAYMENT_008` | 400 | Idempotency-Key 헤더가 필요합니다. |

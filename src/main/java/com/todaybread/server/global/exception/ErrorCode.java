@@ -138,11 +138,8 @@ public enum ErrorCode {
      * ============================
      */
     PAYMENT_AMOUNT_MISMATCH("PAYMENT_001", "결제 금액이 주문 금액과 일치하지 않습니다.", HttpStatus.BAD_REQUEST),
-    PAYMENT_AMOUNT_MUST_BE_POSITIVE("PAYMENT_002", "결제 금액은 0보다 커야 합니다.", HttpStatus.BAD_REQUEST),
     PAYMENT_ORDER_STATUS_INVALID("PAYMENT_003", "결제할 수 없는 주문 상태입니다.", HttpStatus.CONFLICT),
     PAYMENT_PROVIDER_ERROR("PAYMENT_004", "결제 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", HttpStatus.BAD_GATEWAY),
-    PAYMENT_CONFIRM_FAILED("PAYMENT_005", "결제 승인에 실패했습니다.", HttpStatus.BAD_REQUEST),
-    PAYMENT_ALREADY_PROCESSED("PAYMENT_006", "이미 처리된 결제입니다.", HttpStatus.CONFLICT),
     PAYMENT_CANCEL_FAILED("PAYMENT_007", "결제 취소 처리 중 오류가 발생했습니다.", HttpStatus.BAD_GATEWAY),
     PAYMENT_IDEMPOTENCY_KEY_MISSING("PAYMENT_008", "Idempotency-Key 헤더가 필요합니다.", HttpStatus.BAD_REQUEST),
 

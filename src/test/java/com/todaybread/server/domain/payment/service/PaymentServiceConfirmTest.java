@@ -2,9 +2,7 @@ package com.todaybread.server.domain.payment.service;
 
 import com.todaybread.server.domain.order.entity.OrderEntity;
 import com.todaybread.server.domain.order.entity.OrderStatus;
-import com.todaybread.server.domain.order.repository.OrderItemRepository;
 import com.todaybread.server.domain.order.repository.OrderRepository;
-import com.todaybread.server.domain.order.service.InventoryRestorer;
 import com.todaybread.server.domain.order.service.OrderService;
 import com.todaybread.server.domain.payment.client.TossPaymentException;
 import com.todaybread.server.domain.payment.entity.PaymentEntity;
@@ -26,7 +24,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -48,9 +45,6 @@ class PaymentServiceConfirmTest {
     private OrderRepository orderRepository;
 
     @Mock
-    private OrderItemRepository orderItemRepository;
-
-    @Mock
     private PaymentRepository paymentRepository;
 
     @Mock
@@ -60,7 +54,7 @@ class PaymentServiceConfirmTest {
     private OrderService orderService;
 
     @Mock
-    private InventoryRestorer inventoryRestorer;
+    private PaymentCancelExecutor paymentCancelExecutor;
 
     @Mock
     private Clock clock;
@@ -201,59 +195,33 @@ class PaymentServiceConfirmTest {
     class CancelPayment {
 
         @Test
-        @DisplayName("성공: 토스 취소 성공 시 Payment=CANCELLED, 주문 CANCELLED, 재고 복원")
+        @DisplayName("성공: 토스 취소 성공 시 PaymentCancelExecutor를 통해 취소 완료")
         void success() {
             // Arrange
-            PaymentEntity payment = TestFixtures.payment(10L, 1L, 5_000, PaymentStatus.APPROVED,
-                    LocalDateTime.of(2026, 4, 5, 12, 0), "idem-1");
-            // paymentKey 설정
-            payment.approve(LocalDateTime.of(2026, 4, 5, 12, 0), "idem-1", "tgen_abc123", "카드");
+            PaymentCancelExecutor.CancelPreparation prep =
+                    new PaymentCancelExecutor.CancelPreparation(10L, "tgen_abc123", 5_000);
+            given(paymentCancelExecutor.prepareCancelPayment(1L, 1L)).willReturn(prep);
 
-            OrderEntity order = TestFixtures.order(1L, 1L, 100L, OrderStatus.CONFIRMED, 5_000, "order-key");
-
-            // prepareCancelPayment: 1단계
-            given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
-            given(paymentRepository.findByOrderIdAndStatus(1L, PaymentStatus.APPROVED))
-                    .willReturn(Optional.of(payment));
-
-            // 2단계: 토스 Cancel API
             CancelResult cancelResult = new CancelResult(
                     "tgen_abc123", "1", "CANCELED", "2025-07-01T19:00:00+09:00");
             given(paymentProcessor.cancel("tgen_abc123", "고객 요청", 5_000))
                     .willReturn(cancelResult);
 
-            // completeCancelPayment: 3단계
-            given(paymentRepository.findById(10L)).willReturn(Optional.of(payment));
-            given(orderItemRepository.findByOrderId(1L)).willReturn(Collections.emptyList());
-            given(clock.getZone()).willReturn(TestFixtures.FIXED_CLOCK.getZone());
-
             // Act
             paymentService.cancelPayment(1L, 1L);
 
             // Assert
-            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.CANCELLED);
-            assertThat(payment.getCancelReason()).isEqualTo("고객 요청");
-            assertThat(payment.getCancelledAt()).isNotNull();
-            assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
-            verify(inventoryRestorer).restoreInventory(eq(1L), any());
+            verify(paymentCancelExecutor).completeCancelPayment(1L, 10L, cancelResult);
         }
 
         @Test
-        @DisplayName("실패: 토스 취소 API 에러 시 PAYMENT_CANCEL_FAILED 에러, 주문 CONFIRMED 복원")
+        @DisplayName("실패: 토스 취소 API 에러 시 PAYMENT_CANCEL_FAILED 에러, rollback 호출")
         void failure_tossError() {
             // Arrange
-            PaymentEntity payment = TestFixtures.payment(10L, 1L, 5_000, PaymentStatus.APPROVED,
-                    LocalDateTime.of(2026, 4, 5, 12, 0), "idem-1");
-            payment.approve(LocalDateTime.of(2026, 4, 5, 12, 0), "idem-1", "tgen_abc123", "카드");
+            PaymentCancelExecutor.CancelPreparation prep =
+                    new PaymentCancelExecutor.CancelPreparation(10L, "tgen_abc123", 5_000);
+            given(paymentCancelExecutor.prepareCancelPayment(1L, 1L)).willReturn(prep);
 
-            OrderEntity order = TestFixtures.order(1L, 1L, 100L, OrderStatus.CONFIRMED, 5_000, "order-key");
-
-            // prepareCancelPayment: 1단계
-            given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
-            given(paymentRepository.findByOrderIdAndStatus(1L, PaymentStatus.APPROVED))
-                    .willReturn(Optional.of(payment));
-
-            // 2단계: 토스 Cancel API 실패
             given(paymentProcessor.cancel("tgen_abc123", "고객 요청", 5_000))
                     .willThrow(new TossPaymentException("CANCEL_FAILED", "취소 실패", 500));
 
@@ -263,15 +231,15 @@ class PaymentServiceConfirmTest {
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.PAYMENT_CANCEL_FAILED);
 
-            // C4: 실패 시 CONFIRMED로 복원됨
-            assertThat(order.getStatus()).isEqualTo(OrderStatus.CONFIRMED);
+            verify(paymentCancelExecutor).rollbackCancelPayment(1L);
         }
 
         @Test
-        @DisplayName("주문 미존재: findByIdWithLock이 빈 결과면 ORDER_NOT_FOUND 에러")
+        @DisplayName("주문 미존재: prepareCancelPayment에서 ORDER_NOT_FOUND 에러")
         void orderNotFound() {
             // Arrange
-            given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.empty());
+            given(paymentCancelExecutor.prepareCancelPayment(1L, 1L))
+                    .willThrow(new CustomException(ErrorCode.ORDER_NOT_FOUND));
 
             // Act & Assert
             assertThatThrownBy(() -> paymentService.cancelPayment(1L, 1L))
@@ -281,11 +249,11 @@ class PaymentServiceConfirmTest {
         }
 
         @Test
-        @DisplayName("CONFIRMED가 아닌 주문: ORDER_STATUS_CANNOT_CHANGE 에러")
+        @DisplayName("CONFIRMED가 아닌 주문: prepareCancelPayment에서 ORDER_STATUS_CANNOT_CHANGE 에러")
         void orderNotConfirmed() {
             // Arrange
-            OrderEntity order = TestFixtures.order(1L, 1L, 100L, OrderStatus.PENDING, 5_000, "order-key");
-            given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
+            given(paymentCancelExecutor.prepareCancelPayment(1L, 1L))
+                    .willThrow(new CustomException(ErrorCode.ORDER_STATUS_CANNOT_CHANGE));
 
             // Act & Assert
             assertThatThrownBy(() -> paymentService.cancelPayment(1L, 1L))

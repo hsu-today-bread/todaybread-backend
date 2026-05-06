@@ -54,7 +54,7 @@ public class StubPaymentProcessor implements PaymentProcessor {
     public CancelResult cancel(String paymentKey, String cancelReason, int cancelAmount) {
         return new CancelResult(
                 paymentKey,
-                null,
+                "stub_order",
                 PaymentStatus.CANCELLED.name(),
                 OffsetDateTime.now().toString()
         );

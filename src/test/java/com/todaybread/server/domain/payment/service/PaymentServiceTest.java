@@ -2,9 +2,7 @@ package com.todaybread.server.domain.payment.service;
 
 import com.todaybread.server.domain.order.entity.OrderEntity;
 import com.todaybread.server.domain.order.entity.OrderStatus;
-import com.todaybread.server.domain.order.repository.OrderItemRepository;
 import com.todaybread.server.domain.order.repository.OrderRepository;
-import com.todaybread.server.domain.order.service.InventoryRestorer;
 import com.todaybread.server.domain.order.service.OrderService;
 import com.todaybread.server.domain.payment.entity.PaymentEntity;
 import com.todaybread.server.domain.payment.entity.PaymentStatus;
@@ -44,9 +42,6 @@ class PaymentServiceTest {
     private OrderRepository orderRepository;
 
     @Mock
-    private OrderItemRepository orderItemRepository;
-
-    @Mock
     private PaymentRepository paymentRepository;
 
     @Mock
@@ -56,7 +51,7 @@ class PaymentServiceTest {
     private OrderService orderService;
 
     @Mock
-    private InventoryRestorer inventoryRestorer;
+    private PaymentCancelExecutor paymentCancelExecutor;
 
     @Mock
     private Clock clock;
