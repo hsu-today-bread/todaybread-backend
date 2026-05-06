@@ -44,7 +44,7 @@ public class AuthService {
     @Transactional
     public void saveRefreshToken(Long userId, String token) {
         String tokenHash = passwordEncoder.encode(token);
-        LocalDateTime expiresAt = LocalDateTime.now(clock).plusNanos(refreshTokenExpiration * 1_000_000);
+        LocalDateTime expiresAt = LocalDateTime.now(clock).plus(refreshTokenExpiration, java.time.temporal.ChronoUnit.MILLIS);
         Optional<RefreshTokenEntity> refreshTokenOptional = refreshTokenRepository.findByUserId(userId);
 
         if (refreshTokenOptional.isPresent()) {
