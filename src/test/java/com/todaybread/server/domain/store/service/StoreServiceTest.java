@@ -14,6 +14,7 @@ import com.todaybread.server.domain.store.dto.StoreInfoResponse;
 import com.todaybread.server.domain.store.dto.StoreStatusResponse;
 import com.todaybread.server.domain.store.entity.StoreBusinessHoursEntity;
 import com.todaybread.server.domain.store.entity.StoreEntity;
+import com.todaybread.server.domain.store.util.SellingStatus;
 import com.todaybread.server.domain.store.repository.StoreBusinessHoursRepository;
 import com.todaybread.server.domain.store.repository.StoreImageRepository;
 import com.todaybread.server.domain.store.repository.StoreRepository;
@@ -123,6 +124,7 @@ class StoreServiceTest {
 
         StoreDetailResponse response = storeService.getStoreDetail(100L);
 
+        assertThat(response.sellingStatus()).isEqualTo(SellingStatus.SELLING);
         assertThat(response.isSelling()).isTrue();
         assertThat(response.breads()).hasSize(1);
     }
@@ -261,7 +263,12 @@ class StoreServiceTest {
         List<NearbyStoreResponse> responses = storeService.getNearbyStores(lat, lng, 1);
 
         assertThat(responses).extracting(NearbyStoreResponse::storeId).containsExactly(200L, 100L);
+        // store 200: 재고 없음 → OPEN_SOLD_OUT
+        assertThat(responses.getFirst().sellingStatus()).isEqualTo(SellingStatus.OPEN_SOLD_OUT);
         assertThat(responses.getFirst().isSelling()).isFalse();
+        // store 100: 재고 있음 → SELLING
+        assertThat(responses.getLast().sellingStatus()).isEqualTo(SellingStatus.SELLING);
+        assertThat(responses.getLast().isSelling()).isTrue();
         assertThat(responses.getLast().primaryImageUrl()).isEqualTo("https://cdn/store1.jpg");
     }
 

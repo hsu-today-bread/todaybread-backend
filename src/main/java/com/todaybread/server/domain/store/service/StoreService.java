@@ -19,6 +19,7 @@ import com.todaybread.server.domain.store.repository.StoreBusinessHoursRepositor
 import com.todaybread.server.domain.store.repository.StoreDistanceProjection;
 import com.todaybread.server.domain.store.repository.StoreImageRepository;
 import com.todaybread.server.domain.store.repository.StoreRepository;
+import com.todaybread.server.domain.store.util.SellingStatus;
 import com.todaybread.server.domain.store.util.SellingStatusUtil;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
@@ -111,10 +112,10 @@ public class StoreService {
         // 재고 존재 여부 확인
         boolean hasStock = breads.stream().anyMatch(b -> b.remainingQuantity() > 0);
 
-        boolean isSelling = SellingStatusUtil.isSelling(
+        SellingStatus sellingStatus = SellingStatusUtil.getSellingStatus(
                 storeEntity.getIsActive(), businessHours, hasStock, clock);
 
-        return StoreDetailResponse.of(storeResponse, images, breads, isSelling,
+        return StoreDetailResponse.of(storeResponse, images, breads, sellingStatus,
                 storeEntity.getAverageRating(), storeEntity.getReviewCount());
     }
 
@@ -361,7 +362,9 @@ public class StoreService {
             boolean hasStock = breads.stream().anyMatch(b -> b.getRemainingQuantity() > 0);
 
             // 판매 상태 판별
-            boolean isSelling = SellingStatusUtil.isSelling(store.getIsActive(), todayHours, hasStock, now);
+            SellingStatus sellingStatus = SellingStatusUtil.getSellingStatus(
+                    store.getIsActive(), todayHours, hasStock, now);
+            boolean isSelling = sellingStatus == SellingStatus.SELLING;
 
             // lastOrderTime 추출
             LocalTime lastOrderTime = (todayHours != null) ? todayHours.getLastOrderTime() : null;
@@ -375,6 +378,7 @@ public class StoreService {
                     store.getLongitude(),
                     primaryImageMap.get(store.getId()),
                     isSelling,
+                    sellingStatus,
                     projection.getDistance(),
                     lastOrderTime,
                     store.getAverageRating(),

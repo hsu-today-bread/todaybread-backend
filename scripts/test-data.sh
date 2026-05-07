@@ -120,7 +120,6 @@ create_per_store_images() {
 create_per_bread_images() {
   echo "Creating per-bread image files..."
 
-  # DB에서 bread_image 테이블의 stored_filename 목록을 가져옴
   local filenames
   filenames=$(docker exec "${CONTAINER_NAME}" \
     mysql --batch --skip-column-names \
@@ -154,7 +153,7 @@ create_per_review_images() {
     -u"${MYSQL_USER_NAME}" \
     "${PASSWORD_ARG[@]}" \
     -D "${DATABASE_NAME}" \
-    -e "SELECT ri.stored_filename, SUBSTRING_INDEX(ri.original_filename, '.', 1) AS source_key FROM review_image ri JOIN review r ON ri.review_id = r.id JOIN users u ON r.user_id = u.id WHERE u.email = 'demo-user@todaybread.com';" 2>/dev/null || true)
+    -e "SELECT ri.stored_filename, SUBSTRING_INDEX(ri.original_filename, '.', 1) AS source_key FROM review_image ri JOIN review r ON ri.review_id = r.id JOIN users u ON r.user_id = u.id WHERE u.email = 'demo-user01@todaybread.com';" 2>/dev/null || true)
 
   if [[ -z "${filenames}" ]]; then
     echo "Warning: Could not fetch review image filenames from DB. Skipping per-review images."
@@ -235,13 +234,13 @@ Token note
 - Run /api/user/login with a sample account; the app will issue tokens and save refresh_token.
 
 Sample accounts
-- demo-user@todaybread.com / todaybread123
-- demo-boss1@todaybread.com ~ demo-boss100@todaybread.com / todaybread123
+- demo-user01@todaybread.com / todaybread123
+- demo-boss1@todaybread.com ~ demo-boss120@todaybread.com / todaybread123
 
 Recommended nearby query
+- Hansung Univ: lat=37.5826000, lng=127.0106000, radius=1
 - Hansung Univ: lat=37.5826000, lng=127.0106000, radius=3
 - Hansung Univ: lat=37.5826000, lng=127.0106000, radius=5
-- Hansung Univ: lat=37.5826000, lng=127.0106000, radius=10
 
 Image replacement
 - Place real images in scripts/seed-images/ with names like:

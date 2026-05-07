@@ -1,6 +1,7 @@
 package com.todaybread.server.domain.store.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.todaybread.server.domain.store.util.SellingStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalTime;
@@ -17,6 +18,7 @@ import java.time.LocalTime;
  * @param longitude         경도
  * @param primaryImageUrl   대표 이미지 URL (없으면 null)
  * @param isSelling         판매중 여부
+ * @param sellingStatus     판매 상태 (SELLING, OPEN_SOLD_OUT, CLOSED)
  * @param distance          유저~가게 거리 (km)
  * @param lastOrderTime     라스트오더 시간 (null이면 영업 종료 시간이 마감)
  * @param averageRating     가게 평균 평점
@@ -31,6 +33,7 @@ public record NearbyStoreResponse(
         BigDecimal longitude,
         String primaryImageUrl,
         boolean isSelling,
+        SellingStatus sellingStatus,
         double distance,
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm:ss")
         LocalTime lastOrderTime,
