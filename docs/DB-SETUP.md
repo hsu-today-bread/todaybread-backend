@@ -557,7 +557,7 @@ SELECT * FROM flyway_schema_history;  -- Flyway 마이그레이션 이력 확인
 삽입되는 샘플 계정:
 
 - `demo-user01@todaybread.com` / `todaybread123`
-- `demo-boss1@todaybread.com` ~ `demo-boss10@todaybread.com` / `todaybread123`
+- `demo-boss1@todaybread.com` ~ `demo-boss120@todaybread.com` / `todaybread123`
 
 추천 근처 조회 좌표:
 

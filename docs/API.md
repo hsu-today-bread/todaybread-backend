@@ -15,7 +15,7 @@
 샘플 계정:
 
 - `demo-user01@todaybread.com` / `todaybread123`
-- `demo-boss1@todaybread.com` ~ `demo-boss20@todaybread.com` / `todaybread123`
+- `demo-boss1@todaybread.com` ~ `demo-boss120@todaybread.com` / `todaybread123`
 
 근처 매장/빵 조회 추천 좌표:
 
