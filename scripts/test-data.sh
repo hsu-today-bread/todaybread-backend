@@ -120,6 +120,34 @@ create_seed_images() {
   echo "(Base seed images created. Per-bread images will be linked after SQL execution.)"
 }
 
+# ── 매장별 이미지 파일 생성 (SQL 실행 후) ──
+
+create_per_store_images() {
+  echo "Creating per-store image files..."
+
+  local filenames
+  filenames=$(docker exec "${CONTAINER_NAME}" \
+    mysql --batch --skip-column-names \
+    -h"${MYSQL_HOST}" \
+    -u"${MYSQL_USER_NAME}" \
+    "${PASSWORD_ARG[@]}" \
+    -D "${DATABASE_NAME}" \
+    -e "SELECT si.stored_filename, CONCAT('seed_store_', SUBSTRING(si.original_filename, 12, 2), '.svg') AS source_name FROM store_image si JOIN store s ON si.store_id = s.id JOIN users u ON s.user_id = u.id WHERE u.email LIKE 'demo-boss%@todaybread.com';" 2>/dev/null || true)
+
+  if [[ -z "${filenames}" ]]; then
+    echo "Warning: Could not fetch store image filenames from DB. Skipping per-store images."
+    return
+  fi
+
+  while IFS=$'\t' read -r target_file source_file; do
+    if [[ -f "${UPLOAD_DIR_PATH}/${source_file}" && ! -f "${UPLOAD_DIR_PATH}/${target_file}" ]]; then
+      cp "${UPLOAD_DIR_PATH}/${source_file}" "${UPLOAD_DIR_PATH}/${target_file}"
+    fi
+  done <<< "${filenames}"
+
+  echo "Per-store image files created."
+}
+
 # ── 빵별 이미지 파일 생성 (SQL 실행 후) ──
 
 create_per_bread_images() {
@@ -204,6 +232,7 @@ docker exec -i "${CONTAINER_NAME}" \
   -D "${DATABASE_NAME}" \
   < "${SQL_FILE}"
 
+create_per_store_images
 create_per_bread_images
 
 cat <<'EOF'
@@ -215,12 +244,11 @@ Token note
 
 Sample accounts
 - demo-user@todaybread.com / todaybread123
-- demo-boss1@todaybread.com ~ demo-boss10@todaybread.com / todaybread123
+- demo-boss1@todaybread.com ~ demo-boss20@todaybread.com / todaybread123
 
 Recommended nearby query
-- lat=37.4980950
-- lng=127.0276100
-- radius=5
+- Gangnam: lat=37.4980950, lng=127.0276100, radius=5
+- Hansung Univ: lat=37.5826000, lng=127.0106000, radius=2
 
 Image replacement
 - Place real images in scripts/seed-images/ with names like:

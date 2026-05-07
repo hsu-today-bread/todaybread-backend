@@ -52,14 +52,13 @@ MySQL CLI 접속은 아래 스크립트를 사용합니다.
 | 역할 | 계정 | 비밀번호 |
 |------|------|----------|
 | 일반 유저 | `demo-user@todaybread.com` | `todaybread123` |
-| 사장님 | `demo-boss1@todaybread.com` ~ `demo-boss10@todaybread.com` | `todaybread123` |
+| 사장님 | `demo-boss1@todaybread.com` ~ `demo-boss20@todaybread.com` | `todaybread123` |
 
 근처 매장/빵 조회 추천 좌표:
 
 ```text
-lat=37.4980950
-lng=127.0276100
-radius=5
+Gangnam: lat=37.4980950, lng=127.0276100, radius=5
+Hansung Univ: lat=37.5826000, lng=127.0106000, radius=2
 ```
 
 토큰은 seed하지 않습니다. 로그인 API가 access token과 refresh token을 발급하고, refresh token은 DB에 해시로 저장합니다.
