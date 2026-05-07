@@ -263,11 +263,9 @@ class StoreServiceTest {
         List<NearbyStoreResponse> responses = storeService.getNearbyStores(lat, lng, 1);
 
         assertThat(responses).extracting(NearbyStoreResponse::storeId).containsExactly(200L, 100L);
-        // store 200: 재고 없음 → OPEN_SOLD_OUT
-        assertThat(responses.getFirst().sellingStatus()).isEqualTo(SellingStatus.OPEN_SOLD_OUT);
+        // store 200: 재고 없음 → isSelling false
         assertThat(responses.getFirst().isSelling()).isFalse();
-        // store 100: 재고 있음 → SELLING
-        assertThat(responses.getLast().sellingStatus()).isEqualTo(SellingStatus.SELLING);
+        // store 100: 재고 있음 → isSelling true
         assertThat(responses.getLast().isSelling()).isTrue();
         assertThat(responses.getLast().primaryImageUrl()).isEqualTo("https://cdn/store1.jpg");
     }

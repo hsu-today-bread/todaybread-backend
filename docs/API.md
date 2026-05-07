@@ -666,7 +666,6 @@ false
     "longitude": 127.0276100,
     "primaryImageUrl": "/images/store/1_0.jpg",
     "isSelling": true,
-    "sellingStatus": "SELLING",
     "distance": 0.35,
     "lastOrderTime": "22:30:00",
     "averageRating": 4.5,
@@ -674,11 +673,6 @@ false
   }
 ]
 ```
-
-> `sellingStatus` (string): 매장 판매 상태. 가능한 값:
-> - `SELLING`: 영업시간 내 + 주문마감 전 + 재고 있음
-> - `OPEN_SOLD_OUT`: 영업시간 내 + 주문마감 전 + 재고 없음
-> - `CLOSED`: 영업시간 밖, 휴무, 비활성, 주문마감 이후
 
 **에러 응답:** `COMMON_001`
 

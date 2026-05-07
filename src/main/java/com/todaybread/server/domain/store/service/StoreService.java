@@ -357,9 +357,8 @@ public class StoreService {
             boolean hasStock = breads.stream().anyMatch(b -> b.getRemainingQuantity() > 0);
 
             // 판매 상태 판별 (전날 자정 넘김 영업도 고려)
-            SellingStatus sellingStatus = SellingStatusUtil.getSellingStatus(
+            boolean isSelling = SellingStatusUtil.isSelling(
                     store.getIsActive(), storeHours, hasStock, clock);
-            boolean isSelling = sellingStatus == SellingStatus.SELLING;
 
             // lastOrderTime 추출 (오늘 row 기준)
             StoreBusinessHoursEntity todayHours = storeHours.stream()
@@ -377,7 +376,6 @@ public class StoreService {
                     store.getLongitude(),
                     primaryImageMap.get(store.getId()),
                     isSelling,
-                    sellingStatus,
                     projection.getDistance(),
                     lastOrderTime,
                     store.getAverageRating(),
