@@ -8,6 +8,7 @@ import com.todaybread.server.domain.user.repository.UserRepository;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -88,7 +89,12 @@ public class UserService {
                 .phoneNumber(request.phoneNumber())
                 .build();
 
-        userRepository.save(userEntity);
+        try {
+            userRepository.save(userEntity);
+            userRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw duplicateUserException(request.email(), request.phoneNumber(), request.nickname());
+        }
         return UserRegisterResponse.ok();
     }
 
@@ -143,6 +149,11 @@ public class UserService {
         }
 
         userEntity.updateProfile(name, nickname, phoneNumber);
+        try {
+            userRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw duplicateProfileException(phoneNumber, nickname);
+        }
 
         return UserUpdateResponse.ok(nickname, name, phoneNumber);
     }
@@ -191,5 +202,34 @@ public class UserService {
     private UserEntity getUserOrThrow(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    /**
+     * 동시 회원가입 요청으로 DB unique 제약이 먼저 터진 경우에도 user 도메인 에러로 변환합니다.
+     */
+    private CustomException duplicateUserException(String email, String phoneNumber, String nickname) {
+        if (userRepository.existsByEmail(email)) {
+            return new CustomException(ErrorCode.USER_REGISTER_EMAIL_ALREADY_EXISTS);
+        }
+        if (userRepository.existsByPhoneNumber(phoneNumber)) {
+            return new CustomException(ErrorCode.USER_REGISTER_PHONE_ALREADY_EXISTS);
+        }
+        if (userRepository.existsByNickname(nickname)) {
+            return new CustomException(ErrorCode.USER_REGISTER_NICKNAME_ALREADY_EXISTS);
+        }
+        return new CustomException(ErrorCode.COMMON_DUPLICATE_CONFLICT);
+    }
+
+    /**
+     * 동시 프로필 수정 요청으로 DB unique 제약이 먼저 터진 경우에도 user 도메인 에러로 변환합니다.
+     */
+    private CustomException duplicateProfileException(String phoneNumber, String nickname) {
+        if (userRepository.existsByPhoneNumber(phoneNumber)) {
+            return new CustomException(ErrorCode.USER_REGISTER_PHONE_ALREADY_EXISTS);
+        }
+        if (userRepository.existsByNickname(nickname)) {
+            return new CustomException(ErrorCode.USER_REGISTER_NICKNAME_ALREADY_EXISTS);
+        }
+        return new CustomException(ErrorCode.COMMON_DUPLICATE_CONFLICT);
     }
 }

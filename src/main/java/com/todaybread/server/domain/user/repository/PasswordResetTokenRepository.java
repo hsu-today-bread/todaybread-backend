@@ -2,7 +2,11 @@ package com.todaybread.server.domain.user.repository;
 
 import com.todaybread.server.domain.user.entity.PasswordResetTokenEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 /**
@@ -19,12 +23,14 @@ public interface PasswordResetTokenRepository extends JpaRepository<PasswordRese
     Optional<PasswordResetTokenEntity> findByUserId(Long userId);
 
     /**
-     * 토큰 문자열로 비밀번호 재설정 토큰을 조회합니다.
+     * 만료된 비밀번호 재설정 토큰을 삭제합니다.
      *
-     * @param token 토큰 문자열
-     * @return 토큰 엔티티 (없으면 빈 Optional)
+     * @param now 현재 시각
+     * @return 삭제된 토큰 수
      */
-    Optional<PasswordResetTokenEntity> findByToken(String token);
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("DELETE FROM PasswordResetTokenEntity t WHERE t.expiresAt < :now")
+    int deleteByExpiresAtBefore(@Param("now") LocalDateTime now);
 
     /**
      * 유저 ID로 비밀번호 재설정 토큰을 삭제합니다.

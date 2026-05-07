@@ -85,11 +85,12 @@ public class UserRecoveryService {
 
         // 새 토큰 발급 (10분 유효)
         String token = UUID.randomUUID().toString();
+        String tokenHash = passwordEncoder.encode(token);
         LocalDateTime expiresAt = LocalDateTime.now(clock).plusMinutes(10);
 
         PasswordResetTokenEntity resetToken = PasswordResetTokenEntity.builder()
                 .userId(userEntity.getId())
-                .token(token)
+                .token(tokenHash)
                 .expiresAt(expiresAt)
                 .build();
         passwordResetTokenRepository.save(resetToken);
@@ -106,8 +107,12 @@ public class UserRecoveryService {
      */
     @Transactional
     public ResetPasswordResponse resetPassword(ResetPasswordRequest request) {
-        // 토큰 검증
-        PasswordResetTokenEntity resetToken = passwordResetTokenRepository.findByToken(request.resetToken())
+        // 이메일로 유저 조회
+        UserEntity userEntity = userRepository.findByEmail(request.email())
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_RECOVERY_NOT_FOUND));
+
+        // 유저별 재설정 토큰 조회
+        PasswordResetTokenEntity resetToken = passwordResetTokenRepository.findByUserId(userEntity.getId())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_RESET_TOKEN_INVALID));
 
         // 만료 확인
@@ -116,12 +121,8 @@ public class UserRecoveryService {
             throw new CustomException(ErrorCode.USER_RESET_TOKEN_INVALID);
         }
 
-        // 이메일로 유저 조회
-        UserEntity userEntity = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_RECOVERY_NOT_FOUND));
-
-        // 토큰의 userId와 이메일의 userId 일치 확인
-        if (!resetToken.getUserId().equals(userEntity.getId())) {
+        // 원문 토큰은 저장하지 않고, 저장된 해시와 비교합니다.
+        if (!passwordEncoder.matches(request.resetToken(), resetToken.getToken())) {
             throw new CustomException(ErrorCode.USER_RESET_TOKEN_INVALID);
         }
 
@@ -134,5 +135,15 @@ public class UserRecoveryService {
         passwordResetTokenRepository.delete(resetToken);
 
         return ResetPasswordResponse.ok();
+    }
+
+    /**
+     * 만료된 비밀번호 재설정 토큰을 정리합니다.
+     *
+     * @return 삭제된 토큰 수
+     */
+    @Transactional
+    public int cleanupExpiredResetTokens() {
+        return passwordResetTokenRepository.deleteByExpiresAtBefore(LocalDateTime.now(clock));
     }
 }

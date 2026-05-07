@@ -20,6 +20,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
@@ -28,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -62,6 +64,7 @@ class UserServiceTest {
 
         assertThat(response.success()).isTrue();
         verify(userRepository).save(any(UserEntity.class));
+        verify(userRepository).flush();
     }
 
     @Test
@@ -75,6 +78,24 @@ class UserServiceTest {
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.USER_REGISTER_EMAIL_ALREADY_EXISTS);
+    }
+
+    @Test
+    void register_mapsDuplicatePhoneRaceToUserError() {
+        UserRegisterRequest request = new UserRegisterRequest(
+                "new@example.com", "nick", "name", "password1234", "010-1234-5678"
+        );
+        given(userRepository.existsByEmail(request.email())).willReturn(false, false);
+        given(userRepository.existsByPhoneNumber(request.phoneNumber())).willReturn(false, true);
+        given(userRepository.existsByNickname(request.nickname())).willReturn(false);
+        given(passwordEncoder.encode("password1234")).willReturn("encoded");
+        doThrow(new DataIntegrityViolationException("uk_users_phone"))
+                .when(userRepository).flush();
+
+        assertThatThrownBy(() -> userService.register(request))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.USER_REGISTER_PHONE_ALREADY_EXISTS);
     }
 
     @Test
@@ -116,6 +137,23 @@ class UserServiceTest {
         assertThat(response.nickname()).isEqualTo("new-nick");
         assertThat(user.getName()).isEqualTo("new-name");
         assertThat(user.getPhoneNumber()).isEqualTo("010-9999-8888");
+        verify(userRepository).flush();
+    }
+
+    @Test
+    void updateProfile_mapsDuplicateNicknameRaceToUserError() {
+        UserEntity user = TestFixtures.user(1L, false);
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(userRepository.existsByNickname("new-nick")).willReturn(false, true);
+        given(userRepository.existsByPhoneNumber("010-9999-8888")).willReturn(false);
+        doThrow(new DataIntegrityViolationException("uk_users_nickname"))
+                .when(userRepository).flush();
+
+        assertThatThrownBy(() -> userService.updateProfile(
+                1L, new UserUpdateRequest("new-nick", "new-name", "010-9999-8888")))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.USER_REGISTER_NICKNAME_ALREADY_EXISTS);
     }
 
     @Test

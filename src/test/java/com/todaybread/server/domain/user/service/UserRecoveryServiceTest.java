@@ -89,6 +89,7 @@ class UserRecoveryServiceTest {
         UserEntity user = TestFixtures.user(1L, false);
         given(userRepository.findByPhoneNumberAndEmail(user.getPhoneNumber(), user.getEmail()))
                 .willReturn(Optional.of(user));
+        given(passwordEncoder.encode(any(String.class))).willReturn("hashed-reset-token");
         given(passwordResetTokenRepository.save(any(PasswordResetTokenEntity.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
@@ -102,7 +103,8 @@ class UserRecoveryServiceTest {
         verify(passwordResetTokenRepository).save(captor.capture());
         PasswordResetTokenEntity saved = captor.getValue();
         assertThat(saved.getUserId()).isEqualTo(1L);
-        assertThat(saved.getToken()).isEqualTo(response.resetToken());
+        assertThat(saved.getToken()).isEqualTo("hashed-reset-token");
+        assertThat(saved.getToken()).isNotEqualTo(response.resetToken());
         assertThat(saved.getExpiresAt()).isEqualTo(LocalDateTime.now(clock).plusMinutes(10));
     }
 
@@ -111,12 +113,13 @@ class UserRecoveryServiceTest {
         UserEntity user = TestFixtures.user(1L, false);
         PasswordResetTokenEntity resetToken = PasswordResetTokenEntity.builder()
                 .userId(1L)
-                .token("valid-token")
+                .token("hashed-valid-token")
                 .expiresAt(LocalDateTime.now(clock).plusMinutes(5))
                 .build();
 
-        given(passwordResetTokenRepository.findByToken("valid-token")).willReturn(Optional.of(resetToken));
         given(userRepository.findByEmail(user.getEmail())).willReturn(Optional.of(user));
+        given(passwordResetTokenRepository.findByUserId(1L)).willReturn(Optional.of(resetToken));
+        given(passwordEncoder.matches("valid-token", "hashed-valid-token")).willReturn(true);
         given(passwordEncoder.encode("new-password")).willReturn("encoded-new-password");
 
         ResetPasswordResponse response = userRecoveryService.resetPassword(
@@ -131,10 +134,19 @@ class UserRecoveryServiceTest {
 
     @Test
     void resetPassword_rejectsInvalidToken() {
-        given(passwordResetTokenRepository.findByToken("invalid-token")).willReturn(Optional.empty());
+        UserEntity user = TestFixtures.user(1L, false);
+        PasswordResetTokenEntity resetToken = PasswordResetTokenEntity.builder()
+                .userId(1L)
+                .token("hashed-valid-token")
+                .expiresAt(LocalDateTime.now(clock).plusMinutes(5))
+                .build();
+
+        given(userRepository.findByEmail(user.getEmail())).willReturn(Optional.of(user));
+        given(passwordResetTokenRepository.findByUserId(1L)).willReturn(Optional.of(resetToken));
+        given(passwordEncoder.matches("invalid-token", "hashed-valid-token")).willReturn(false);
 
         assertThatThrownBy(() -> userRecoveryService.resetPassword(
-                new ResetPasswordRequest("user1@example.com", "new-password", "invalid-token")
+                new ResetPasswordRequest(user.getEmail(), "new-password", "invalid-token")
         ))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
@@ -145,14 +157,16 @@ class UserRecoveryServiceTest {
     void resetPassword_rejectsExpiredToken() {
         PasswordResetTokenEntity resetToken = PasswordResetTokenEntity.builder()
                 .userId(1L)
-                .token("expired-token")
+                .token("hashed-expired-token")
                 .expiresAt(LocalDateTime.now(clock).minusMinutes(1))
                 .build();
 
-        given(passwordResetTokenRepository.findByToken("expired-token")).willReturn(Optional.of(resetToken));
+        UserEntity user = TestFixtures.user(1L, false);
+        given(userRepository.findByEmail(user.getEmail())).willReturn(Optional.of(user));
+        given(passwordResetTokenRepository.findByUserId(1L)).willReturn(Optional.of(resetToken));
 
         assertThatThrownBy(() -> userRecoveryService.resetPassword(
-                new ResetPasswordRequest("user1@example.com", "new-password", "expired-token")
+                new ResetPasswordRequest(user.getEmail(), "new-password", "expired-token")
         ))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
@@ -162,16 +176,17 @@ class UserRecoveryServiceTest {
     }
 
     @Test
-    void resetPassword_rejectsTokenUserIdMismatch() {
+    void resetPassword_rejectsTokenHashMismatch() {
         UserEntity user = TestFixtures.user(1L, false);
         PasswordResetTokenEntity resetToken = PasswordResetTokenEntity.builder()
-                .userId(999L)
-                .token("mismatched-token")
+                .userId(1L)
+                .token("hashed-other-token")
                 .expiresAt(LocalDateTime.now(clock).plusMinutes(5))
                 .build();
 
-        given(passwordResetTokenRepository.findByToken("mismatched-token")).willReturn(Optional.of(resetToken));
         given(userRepository.findByEmail(user.getEmail())).willReturn(Optional.of(user));
+        given(passwordResetTokenRepository.findByUserId(1L)).willReturn(Optional.of(resetToken));
+        given(passwordEncoder.matches("mismatched-token", "hashed-other-token")).willReturn(false);
 
         assertThatThrownBy(() -> userRecoveryService.resetPassword(
                 new ResetPasswordRequest(user.getEmail(), "new-password", "mismatched-token")
@@ -179,5 +194,16 @@ class UserRecoveryServiceTest {
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.USER_RESET_TOKEN_INVALID);
+    }
+
+    @Test
+    void cleanupExpiredResetTokens_deletesExpiredTokens() {
+        LocalDateTime now = LocalDateTime.now(clock);
+        given(passwordResetTokenRepository.deleteByExpiresAtBefore(now)).willReturn(2);
+
+        int deletedCount = userRecoveryService.cleanupExpiredResetTokens();
+
+        assertThat(deletedCount).isEqualTo(2);
+        verify(passwordResetTokenRepository).deleteByExpiresAtBefore(now);
     }
 }
