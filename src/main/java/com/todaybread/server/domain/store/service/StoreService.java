@@ -19,6 +19,7 @@ import com.todaybread.server.domain.store.repository.StoreBusinessHoursRepositor
 import com.todaybread.server.domain.store.repository.StoreDistanceProjection;
 import com.todaybread.server.domain.store.repository.StoreImageRepository;
 import com.todaybread.server.domain.store.repository.StoreRepository;
+import com.todaybread.server.domain.store.util.SellingStatus;
 import com.todaybread.server.domain.store.util.SellingStatusUtil;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
@@ -111,10 +112,10 @@ public class StoreService {
         // 재고 존재 여부 확인
         boolean hasStock = breads.stream().anyMatch(b -> b.remainingQuantity() > 0);
 
-        boolean isSelling = SellingStatusUtil.isSelling(
+        SellingStatus sellingStatus = SellingStatusUtil.getSellingStatus(
                 storeEntity.getIsActive(), businessHours, hasStock, clock);
 
-        return StoreDetailResponse.of(storeResponse, images, breads, isSelling,
+        return StoreDetailResponse.of(storeResponse, images, breads, sellingStatus,
                 storeEntity.getAverageRating(), storeEntity.getReviewCount());
     }
 
@@ -337,9 +338,8 @@ public class StoreService {
         // 7. 대표 이미지 일괄 조회
         Map<Long, String> primaryImageMap = buildPrimaryImageMap(storeIds);
 
-        // 8. 오늘 요일 및 현재 시간
+        // 8. 오늘 요일
         int todayDayOfWeek = LocalDate.now(clock).getDayOfWeek().getValue();
-        LocalTime now = LocalTime.now(clock);
 
         // 9. 응답 조립
         List<NearbyStoreResponse> responses = new ArrayList<>();
@@ -349,21 +349,22 @@ public class StoreService {
                 continue;
             }
 
-            // 오늘 요일의 영업시간 추출
+            // 가게별 영업시간 목록
             List<StoreBusinessHoursEntity> storeHours = businessHoursMap.getOrDefault(store.getId(), List.of());
-            StoreBusinessHoursEntity todayHours = storeHours.stream()
-                    .filter(h -> h.getDayOfWeek().equals(todayDayOfWeek))
-                    .findFirst()
-                    .orElse(null);
 
             // 가게별 재고 존재 여부
             List<BreadEntity> breads = breadsByStore.getOrDefault(store.getId(), List.of());
             boolean hasStock = breads.stream().anyMatch(b -> b.getRemainingQuantity() > 0);
 
-            // 판매 상태 판별
-            boolean isSelling = SellingStatusUtil.isSelling(store.getIsActive(), todayHours, hasStock, now);
+            // 판매 상태 판별 (전날 자정 넘김 영업도 고려)
+            boolean isSelling = SellingStatusUtil.isSelling(
+                    store.getIsActive(), storeHours, hasStock, clock);
 
-            // lastOrderTime 추출
+            // lastOrderTime 추출 (오늘 row 기준)
+            StoreBusinessHoursEntity todayHours = storeHours.stream()
+                    .filter(h -> h.getDayOfWeek().equals(todayDayOfWeek))
+                    .findFirst()
+                    .orElse(null);
             LocalTime lastOrderTime = (todayHours != null) ? todayHours.getLastOrderTime() : null;
 
             responses.add(new NearbyStoreResponse(

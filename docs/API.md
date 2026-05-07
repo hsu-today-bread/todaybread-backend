@@ -14,8 +14,8 @@
 
 샘플 계정:
 
-- `demo-user@todaybread.com` / `todaybread123`
-- `demo-boss1@todaybread.com` ~ `demo-boss20@todaybread.com` / `todaybread123`
+- `demo-user01@todaybread.com` / `todaybread123`
+- `demo-boss1@todaybread.com` ~ `demo-boss120@todaybread.com` / `todaybread123`
 
 근처 매장/빵 조회 추천 좌표:
 
@@ -143,7 +143,7 @@
 
 ```json
 {
-  "email": "demo-user@todaybread.com",
+  "email": "demo-user01@todaybread.com",
   "password": "todaybread123"
 }
 ```
@@ -317,7 +317,7 @@ false
 ```json
 {
   "verified": true,
-  "email": "demo-user@todaybread.com",
+  "email": "demo-user01@todaybread.com",
   "resetToken": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
@@ -336,7 +336,7 @@ false
 
 ```json
 {
-  "email": "demo-user@todaybread.com",
+  "email": "demo-user01@todaybread.com",
   "newPassword": "newpassword123",
   "resetToken": "550e8400-e29b-41d4-a716-446655440000"
 }
@@ -736,10 +736,16 @@ false
     }
   ],
   "isSelling": true,
+  "sellingStatus": "SELLING",
   "averageRating": 4.5,
   "reviewCount": 12
 }
 ```
+
+> `sellingStatus` (string): 매장 판매 상태. 가능한 값:
+> - `SELLING`: 영업시간 내 + 주문마감 전 + 재고 있음
+> - `OPEN_SOLD_OUT`: 영업시간 내 + 주문마감 전 + 재고 없음
+> - `CLOSED`: 영업시간 밖, 휴무, 비활성, 주문마감 이후
 
 **에러 응답:** `STORE_004`
 

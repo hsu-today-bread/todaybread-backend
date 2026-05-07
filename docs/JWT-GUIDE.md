@@ -118,7 +118,7 @@ public UserLoginResponse login(@RequestBody @Valid UserLoginRequest request) {
 프론트:
 ```dart
 final response = await dio.post('/api/user/login',
-    data: {'email': 'demo-user@todaybread.com', 'password': 'todaybread123'},
+    data: {'email': 'demo-user01@todaybread.com', 'password': 'todaybread123'},
 );
 // 응답에서 accessToken, refreshToken 저장
 ```
