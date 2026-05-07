@@ -56,68 +56,37 @@ SVG
 
 # ── 이미지 생성/복사 ──
 
+find_seed_image() {
+  local source_key="$1"
+
+  for ext in jpg jpeg png webp svg; do
+    if [[ -f "${SEED_IMAGES_DIR}/${source_key}.${ext}" ]]; then
+      echo "${SEED_IMAGES_DIR}/${source_key}.${ext}"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+copy_or_write_seed_image() {
+  local target_file="$1"
+  local source_key="$2"
+  local title="$3"
+  local subtitle="$4"
+  local source_path
+
+  if source_path="$(find_seed_image "${source_key}")"; then
+    cp "${source_path}" "${UPLOAD_DIR_PATH}/${target_file}"
+  else
+    write_seed_svg "${target_file}" "${title}" "${subtitle}" "#6f5b4a" "#e7b76d"
+  fi
+}
+
 create_seed_images() {
   mkdir -p "${UPLOAD_DIR_PATH}"
 
-  # 매장 이미지 10장
-  local store_colors=(
-    "#99624f:#f2b279" "#5f7161:#d1b36a" "#4e6f87:#f0c36d" "#715a83:#e8b56a" "#7a6651:#a7c882"
-    "#8b5e3c:#f4d186" "#5a6b4f:#c8e6a0" "#6d4c7a:#d4a5e8" "#4a6e8a:#a8d4f0" "#8c6b4a:#e8c87a"
-  )
-
-  for i in $(seq 1 10); do
-    local padded
-    padded=$(printf "%02d" "$i")
-    local base_svg="seed_store_${padded}.svg"
-
-    # scripts/seed-images/ 에 실제 이미지가 있으면 그걸 복사
-    local found_real=""
-    for ext in jpg jpeg png webp; do
-      if [[ -f "${SEED_IMAGES_DIR}/seed_store_${padded}.${ext}" ]]; then
-        cp "${SEED_IMAGES_DIR}/seed_store_${padded}.${ext}" "${UPLOAD_DIR_PATH}/${base_svg}"
-        found_real="yes"
-        break
-      fi
-    done
-
-    if [[ -z "${found_real}" ]]; then
-      IFS=':' read -r bg accent <<< "${store_colors[$((i-1))]}"
-      write_seed_svg "${base_svg}" "Store ${padded}" "store image" "${bg}" "${accent}"
-    fi
-  done
-
-  # 빵 이미지 10장 (기본 원본)
-  local bread_colors=(
-    "#b97745:#f4d186" "#698353:#f0c56a" "#7b5547:#e8ad65" "#876057:#f3cfa8" "#5a3d38:#d8895b"
-    "#b47a3f:#f1c96a" "#8b684d:#e4bd76" "#73624e:#d2ad76" "#6d6577:#cbb6db" "#5b5145:#c2a47a"
-  )
-
-  for i in $(seq 1 10); do
-    local padded
-    padded=$(printf "%02d" "$i")
-    local base_svg="seed_bread_${padded}.svg"
-
-    local found_real=""
-    for ext in jpg jpeg png webp; do
-      if [[ -f "${SEED_IMAGES_DIR}/seed_bread_${padded}.${ext}" ]]; then
-        found_real="yes"
-        break
-      fi
-    done
-
-    if [[ -n "${found_real}" ]]; then
-      # 실제 이미지가 있으면 — SQL에서 bread_id별로 고유 파일명을 만들므로
-      # 여기서는 원본만 복사해두고, 아래에서 bread별 파일을 심볼릭 링크 또는 복사
-      cp "${SEED_IMAGES_DIR}/seed_bread_${padded}.${ext}" "${UPLOAD_DIR_PATH}/${base_svg}"
-    else
-      IFS=':' read -r bg accent <<< "${bread_colors[$((i-1))]}"
-      write_seed_svg "${base_svg}" "Bread ${padded}" "bread image" "${bg}" "${accent}"
-    fi
-  done
-
-  # SQL에서 bread_image.stored_filename = seed_bread_XX_{bread_id}.svg 형태로 생성하므로
-  # 해당 파일들도 만들어야 합니다. DB에서 bread_id를 알아야 하므로 SQL 실행 후에 처리합니다.
-  echo "(Base seed images created. Per-bread images will be linked after SQL execution.)"
+  echo "(Upload directory prepared. Seed image files will be copied after SQL execution.)"
 }
 
 # ── 매장별 이미지 파일 생성 (SQL 실행 후) ──
@@ -132,17 +101,15 @@ create_per_store_images() {
     -u"${MYSQL_USER_NAME}" \
     "${PASSWORD_ARG[@]}" \
     -D "${DATABASE_NAME}" \
-    -e "SELECT si.stored_filename, CONCAT('seed_store_', SUBSTRING(si.original_filename, 12, 2), '.svg') AS source_name FROM store_image si JOIN store s ON si.store_id = s.id JOIN users u ON s.user_id = u.id WHERE u.email LIKE 'demo-boss%@todaybread.com';" 2>/dev/null || true)
+    -e "SELECT si.stored_filename, SUBSTRING_INDEX(si.original_filename, '.', 1) AS source_key FROM store_image si JOIN store s ON si.store_id = s.id JOIN users u ON s.user_id = u.id WHERE u.email LIKE 'demo-boss%@todaybread.com';" 2>/dev/null || true)
 
   if [[ -z "${filenames}" ]]; then
     echo "Warning: Could not fetch store image filenames from DB. Skipping per-store images."
     return
   fi
 
-  while IFS=$'\t' read -r target_file source_file; do
-    if [[ -f "${UPLOAD_DIR_PATH}/${source_file}" && ! -f "${UPLOAD_DIR_PATH}/${target_file}" ]]; then
-      cp "${UPLOAD_DIR_PATH}/${source_file}" "${UPLOAD_DIR_PATH}/${target_file}"
-    fi
+  while IFS=$'\t' read -r target_file source_key; do
+    copy_or_write_seed_image "${target_file}" "${source_key}" "Store Image" "store image"
   done <<< "${filenames}"
 
   echo "Per-store image files created."
@@ -161,20 +128,44 @@ create_per_bread_images() {
     -u"${MYSQL_USER_NAME}" \
     "${PASSWORD_ARG[@]}" \
     -D "${DATABASE_NAME}" \
-    -e "SELECT bi.stored_filename, CONCAT('seed_bread_', LPAD(((ROW_NUMBER() OVER (ORDER BY bi.id) - 1) % 10) + 1, 2, '0'), '.svg') AS source_name FROM bread_image bi JOIN bread b ON bi.bread_id = b.id JOIN store s ON b.store_id = s.id WHERE s.user_id IN (SELECT id FROM users WHERE email LIKE 'demo-boss%@todaybread.com');" 2>/dev/null || true)
+    -e "SELECT bi.stored_filename, SUBSTRING_INDEX(bi.original_filename, '.', 1) AS source_key FROM bread_image bi JOIN bread b ON bi.bread_id = b.id JOIN store s ON b.store_id = s.id JOIN users u ON s.user_id = u.id WHERE u.email LIKE 'demo-boss%@todaybread.com';" 2>/dev/null || true)
 
   if [[ -z "${filenames}" ]]; then
     echo "Warning: Could not fetch bread image filenames from DB. Skipping per-bread images."
     return
   fi
 
-  while IFS=$'\t' read -r target_file source_file; do
-    if [[ -f "${UPLOAD_DIR_PATH}/${source_file}" && ! -f "${UPLOAD_DIR_PATH}/${target_file}" ]]; then
-      cp "${UPLOAD_DIR_PATH}/${source_file}" "${UPLOAD_DIR_PATH}/${target_file}"
-    fi
+  while IFS=$'\t' read -r target_file source_key; do
+    copy_or_write_seed_image "${target_file}" "${source_key}" "Bread Image" "bread image"
   done <<< "${filenames}"
 
   echo "Per-bread image files created."
+}
+
+# ── 리뷰별 이미지 파일 생성 (SQL 실행 후) ──
+
+create_per_review_images() {
+  echo "Creating per-review image files..."
+
+  local filenames
+  filenames=$(docker exec "${CONTAINER_NAME}" \
+    mysql --batch --skip-column-names \
+    -h"${MYSQL_HOST}" \
+    -u"${MYSQL_USER_NAME}" \
+    "${PASSWORD_ARG[@]}" \
+    -D "${DATABASE_NAME}" \
+    -e "SELECT ri.stored_filename, SUBSTRING_INDEX(ri.original_filename, '.', 1) AS source_key FROM review_image ri JOIN review r ON ri.review_id = r.id JOIN users u ON r.user_id = u.id WHERE u.email = 'demo-user@todaybread.com';" 2>/dev/null || true)
+
+  if [[ -z "${filenames}" ]]; then
+    echo "Warning: Could not fetch review image filenames from DB. Skipping per-review images."
+    return
+  fi
+
+  while IFS=$'\t' read -r target_file source_key; do
+    copy_or_write_seed_image "${target_file}" "${source_key}" "Review Image" "review image"
+  done <<< "${filenames}"
+
+  echo "Per-review image files created."
 }
 
 # ── 메인 실행 ──
@@ -234,6 +225,7 @@ docker exec -i "${CONTAINER_NAME}" \
 
 create_per_store_images
 create_per_bread_images
+create_per_review_images
 
 cat <<'EOF'
 Test data applied.
@@ -244,14 +236,15 @@ Token note
 
 Sample accounts
 - demo-user@todaybread.com / todaybread123
-- demo-boss1@todaybread.com ~ demo-boss20@todaybread.com / todaybread123
+- demo-boss1@todaybread.com ~ demo-boss100@todaybread.com / todaybread123
 
 Recommended nearby query
-- Gangnam: lat=37.4980950, lng=127.0276100, radius=5
-- Hansung Univ: lat=37.5826000, lng=127.0106000, radius=2
+- Hansung Univ: lat=37.5826000, lng=127.0106000, radius=3
+- Hansung Univ: lat=37.5826000, lng=127.0106000, radius=5
+- Hansung Univ: lat=37.5826000, lng=127.0106000, radius=10
 
 Image replacement
 - Place real images in scripts/seed-images/ with names like:
-  seed_store_01.jpg, seed_bread_01.jpg, etc.
+  seed_store_01.jpg, seed_bread_01.jpg, seed_review_01.jpg, etc.
 - Re-run this script to replace SVG placeholders.
 EOF

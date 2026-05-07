@@ -45,21 +45,24 @@ MySQL CLI 접속은 아래 스크립트를 사용합니다.
 
 ## 테스트 데이터
 
-`./scripts/test-data.sh`는 `scripts/test-data.sql`을 적용하고 `uploads/`에 seed 이미지를 준비합니다. `scripts/seed-images/`에 실제 이미지가 있으면 해당 파일을 사용하고, 없으면 SVG placeholder를 생성합니다.
+`./scripts/test-data.sh`는 `scripts/test-data.sql`을 적용하고 `uploads/`에 seed 이미지를 준비합니다. 기본 seed는 서울 전역 100개 매장을 만들며, 한성대학교 기준 근처 조회 데모에 맞춰져 있습니다. `scripts/seed-images/`에 실제 이미지가 있으면 해당 파일을 사용하고, 없으면 SVG placeholder를 생성합니다.
 
 샘플 계정:
 
 | 역할 | 계정 | 비밀번호 |
 |------|------|----------|
 | 일반 유저 | `demo-user@todaybread.com` | `todaybread123` |
-| 사장님 | `demo-boss1@todaybread.com` ~ `demo-boss20@todaybread.com` | `todaybread123` |
+| 사장님 | `demo-boss1@todaybread.com` ~ `demo-boss100@todaybread.com` | `todaybread123` |
 
 근처 매장/빵 조회 추천 좌표:
 
 ```text
-Gangnam: lat=37.4980950, lng=127.0276100, radius=5
-Hansung Univ: lat=37.5826000, lng=127.0106000, radius=2
+Hansung Univ: lat=37.5826000, lng=127.0106000, radius=3
+Hansung Univ: lat=37.5826000, lng=127.0106000, radius=5
+Hansung Univ: lat=37.5826000, lng=127.0106000, radius=10
 ```
+
+한성대 3km 이내에는 영업 제한 매장 10개와 전체 품절 매장 5개가 배치됩니다. seed 주문은 픽업 완료(`PICKED_UP`)와 취소(`CANCELLED`)만 포함하며, 픽업 대기(`CONFIRMED`) 주문은 데모데이용 별도 스크립트에서 생성하는 전제로 제외합니다.
 
 토큰은 seed하지 않습니다. 로그인 API가 access token과 refresh token을 발급하고, refresh token은 DB에 해시로 저장합니다.
 
