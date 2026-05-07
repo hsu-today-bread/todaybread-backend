@@ -15,13 +15,41 @@
 샘플 계정:
 
 - `demo-user@todaybread.com` / `todaybread123`
-- `demo-boss1@todaybread.com` ~ `demo-boss10@todaybread.com` / `todaybread123`
+- `demo-boss1@todaybread.com` ~ `demo-boss20@todaybread.com` / `todaybread123`
 
-근처 매장/빵 조회 추천 좌표: `lat=37.4980950`, `lng=127.0276100`, `radius=5`
+근처 매장/빵 조회 추천 좌표:
+
+- 강남역: `lat=37.4980950`, `lng=127.0276100`, `radius=5`
+- 한성대학교: `lat=37.5826000`, `lng=127.0106000`, `radius=2`
+
+## 빠른 이동
+
+- [인증](#auth)
+- [사용자](#user)
+- [계정 복구](#user-recovery)
+- [빵 — 일반 유저](#bread)
+- [빵 — 사장님](#bread-boss)
+- [매장 — 일반 유저](#store)
+- [매장 — 사장님](#store-boss)
+- [주문 — 사장님](#boss-orders)
+- [매출 — 사장님](#boss-sales)
+- [키워드](#keyword)
+- [단골 가게](#favourite-store)
+- [찜목록](#wishlist)
+- [장바구니](#cart)
+- [주문](#order)
+- [결제](#payment)
+- [리뷰](#review)
+- [시스템](#system)
+- [인증 구조](#auth-structure)
+- [공통 에러 응답 형식](#common-error-response)
+- [에러 코드](#error-codes)
 
 ---
 
 ## API 목록
+
+<a id="auth"></a>
 
 ### 1. 인증 (Auth)
 
@@ -69,6 +97,8 @@
 **에러 응답:** `AUTH_001`, `AUTH_002`
 
 ---
+
+<a id="user"></a>
 
 ### 2. 사용자 (User)
 
@@ -246,6 +276,8 @@ false
 
 ---
 
+<a id="user-recovery"></a>
+
 ### 3. 계정 복구 (User Recovery)
 
 > 아래 API는 인증 없이 접근 가능합니다. `verify-identity` 성공 시 10분 유효 일회용 `resetToken`이 발급되고,
@@ -324,6 +356,8 @@ false
 **에러 응답:** `USER_005`, `USER_008`, `COMMON_001`
 
 ---
+
+<a id="bread"></a>
 
 ### 4. 빵 — 일반 유저 (Bread)
 
@@ -428,6 +462,8 @@ false
 **에러 응답:** `STORE_004`
 
 ---
+
+<a id="bread-boss"></a>
 
 ### 5. 빵 — 사장님 (Bread Boss)
 
@@ -599,6 +635,8 @@ false
 
 ---
 
+<a id="store"></a>
+
 ### 6. 매장 — 일반 유저 (Store)
 
 #### `GET /api/store/nearby?lat=&lng=&radius=` — 근처 가게 목록
@@ -706,6 +744,8 @@ false
 **에러 응답:** `STORE_004`
 
 ---
+
+<a id="store-boss"></a>
 
 ### 7. 매장 — 사장님 (Store Boss)
 
@@ -985,6 +1025,8 @@ false
 
 ---
 
+<a id="boss-orders"></a>
+
 ### 8. 주문 — 사장님 (Boss Orders)
 
 #### `GET /api/boss/orders?page=&size=` — 픽업 대기 주문 목록
@@ -1053,6 +1095,8 @@ false
 **에러 응답:** `STORE_001`, `STORE_004`, `ORDER_001`, `ORDER_002`, `ORDER_003`
 
 ---
+
+<a id="boss-sales"></a>
 
 ### 9. 매출 — 사장님 (Boss Sales)
 
@@ -1149,6 +1193,8 @@ false
 
 ---
 
+<a id="keyword"></a>
+
 ### 10. 키워드 (Keyword)
 
 #### `POST /api/keywords` — 키워드 등록
@@ -1220,6 +1266,8 @@ false
 
 ---
 
+<a id="favourite-store"></a>
+
 ### 11. 단골 가게 (Favourite Store)
 
 #### `POST /api/favourite-stores` — 단골 가게 토글 (추가/해제)
@@ -1272,6 +1320,8 @@ false
 
 ---
 
+<a id="wishlist"></a>
+
 ### 12. 찜목록 (Wishlist)
 
 #### `GET /api/wishlist` — 찜목록 통합 조회
@@ -1307,6 +1357,8 @@ false
 ```
 
 ---
+
+<a id="cart"></a>
 
 ### 13. 장바구니 (Cart)
 
@@ -1412,6 +1464,8 @@ false
 **응답 형식:** 응답 바디 없음 (HTTP 204)
 
 ---
+
+<a id="order"></a>
 
 ### 14. 주문 (Order)
 
@@ -1582,6 +1636,8 @@ false
 
 ---
 
+<a id="payment"></a>
+
 ### 15. 결제 (Payment)
 
 > 결제 승인 확정 API(`POST /api/payments/confirm`)는 `Idempotency-Key` 헤더가 필수입니다.
@@ -1643,6 +1699,8 @@ false
 > 프론트엔드에서 토스 결제 위젯을 초기화할 때 사용합니다. Client Key는 공개 키이므로 인증 없이 접근 가능합니다.
 
 ---
+
+<a id="review"></a>
 
 ### 16. 리뷰 (Review)
 
@@ -1834,6 +1892,8 @@ false
 
 ---
 
+<a id="system"></a>
+
 ### 17. 시스템 (System)
 
 #### `GET /api/system/health` — 서버 상태 확인
@@ -1849,6 +1909,8 @@ false
 ```
 
 ---
+
+<a id="auth-structure"></a>
 
 ## 인증 구조
 
@@ -1873,6 +1935,8 @@ false
 
 ---
 
+<a id="common-error-response"></a>
+
 ## 공통 에러 응답 형식
 
 모든 에러는 아래 형식으로 반환됩니다:
@@ -1885,6 +1949,8 @@ false
 ```
 
 ---
+
+<a id="error-codes"></a>
 
 ## 에러 코드
 
