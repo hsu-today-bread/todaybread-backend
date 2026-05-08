@@ -4,6 +4,7 @@ import com.todaybread.server.config.jwt.JwtTokenService;
 import com.todaybread.server.domain.auth.dto.TokenResponse;
 import com.todaybread.server.domain.auth.entity.RefreshTokenEntity;
 import com.todaybread.server.domain.auth.repository.RefreshTokenRepository;
+import com.todaybread.server.domain.notification.service.FcmTokenService;
 import com.todaybread.server.domain.user.entity.UserEntity;
 import com.todaybread.server.domain.user.repository.UserRepository;
 import com.todaybread.server.global.exception.CustomException;
@@ -45,6 +46,9 @@ class AuthServiceTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private FcmTokenService fcmTokenService;
 
     @Mock
     private Clock clock;
@@ -140,5 +144,6 @@ class AuthServiceTest {
         authService.logout(1L);
 
         verify(refreshTokenRepository).deleteByUserId(1L);
+        verify(fcmTokenService).deactivateToken(1L);
     }
 }

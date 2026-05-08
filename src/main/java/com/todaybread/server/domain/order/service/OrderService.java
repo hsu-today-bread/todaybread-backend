@@ -6,6 +6,7 @@ import com.todaybread.server.domain.bread.service.BreadImageService;
 import com.todaybread.server.domain.cart.entity.CartEntity;
 import com.todaybread.server.domain.cart.entity.CartItemEntity;
 import com.todaybread.server.domain.cart.service.CartService;
+import com.todaybread.server.domain.notification.event.OrderConfirmedNotificationEvent;
 import com.todaybread.server.domain.order.dto.DirectOrderRequest;
 import com.todaybread.server.domain.order.dto.OrderDetailResponse;
 import com.todaybread.server.domain.order.dto.OrderItemResponse;
@@ -21,6 +22,7 @@ import com.todaybread.server.domain.store.repository.StoreRepository;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -54,6 +56,7 @@ public class OrderService {
     private final BreadImageService breadImageService;
     private final Clock clock;
     private final PaymentService paymentService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public OrderService(OrderRepository orderRepository,
                         OrderItemRepository orderItemRepository,
@@ -64,7 +67,8 @@ public class OrderService {
                         OrderNumberGenerator orderNumberGenerator,
                         BreadImageService breadImageService,
                         Clock clock,
-                        @Lazy PaymentService paymentService) {
+                        @Lazy PaymentService paymentService,
+                        ApplicationEventPublisher eventPublisher) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.cartService = cartService;
@@ -75,6 +79,7 @@ public class OrderService {
         this.breadImageService = breadImageService;
         this.clock = clock;
         this.paymentService = paymentService;
+        this.eventPublisher = eventPublisher;
     }
 
     /**
@@ -363,6 +368,7 @@ public class OrderService {
         OrderEntity order = orderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
         order.updateStatus(OrderStatus.CONFIRMED);
+        eventPublisher.publishEvent(new OrderConfirmedNotificationEvent(order.getId()));
         log.info("주문 확정: orderId={}", orderId);
     }
 

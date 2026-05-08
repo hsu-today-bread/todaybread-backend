@@ -9,6 +9,8 @@ import com.todaybread.server.domain.bread.dto.BreadSuccessResponse;
 import com.todaybread.server.domain.bread.dto.NearbyBreadResponse;
 import com.todaybread.server.domain.bread.entity.BreadEntity;
 import com.todaybread.server.domain.bread.repository.BreadRepository;
+import com.todaybread.server.domain.notification.event.StockEventType;
+import com.todaybread.server.domain.notification.event.StockNotificationEvent;
 import com.todaybread.server.domain.store.entity.StoreBusinessHoursEntity;
 import com.todaybread.server.domain.store.entity.StoreEntity;
 import com.todaybread.server.domain.store.repository.StoreBusinessHoursRepository;
@@ -18,8 +20,10 @@ import com.todaybread.server.global.exception.ErrorCode;
 import com.todaybread.server.support.TestFixtures;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -51,6 +55,9 @@ class BreadServiceTest {
     @Mock
     private StoreBusinessHoursRepository storeBusinessHoursRepository;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private BreadService breadService;
 
     @BeforeEach
@@ -61,7 +68,8 @@ class BreadServiceTest {
                 breadImageService,
                 storeRepository,
                 storeBusinessHoursRepository,
-                TestFixtures.FIXED_CLOCK
+                TestFixtures.FIXED_CLOCK,
+                eventPublisher
         );
     }
 
@@ -84,6 +92,11 @@ class BreadServiceTest {
         assertThat(response.id()).isEqualTo(10L);
         assertThat(response.storeId()).isEqualTo(100L);
         assertThat(response.imageUrl()).isEqualTo("https://cdn/bread.jpg");
+
+        ArgumentCaptor<StockNotificationEvent> eventCaptor = ArgumentCaptor.forClass(StockNotificationEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().breadId()).isEqualTo(10L);
+        assertThat(eventCaptor.getValue().eventType()).isEqualTo(StockEventType.BREAD_CREATED);
     }
 
     @Test
@@ -115,6 +128,25 @@ class BreadServiceTest {
 
         assertThat(response.success()).isTrue();
         assertThat(bread.getRemainingQuantity()).isEqualTo(7);
+        verify(eventPublisher, never()).publishEvent(any(StockNotificationEvent.class));
+    }
+
+    @Test
+    void changeQuantity_fromSoldOutToPositive_publishesRestockEvent() {
+        StoreEntity store = TestFixtures.store(100L, 1L);
+        BreadEntity bread = TestFixtures.bread(10L, 100L, 0, 4_000, 2_000);
+        given(storeRepository.findByUserIdAndIsActiveTrue(1L)).willReturn(Optional.of(store));
+        given(breadRepository.findByIdAndIsDeletedFalse(10L)).willReturn(Optional.of(bread));
+
+        BreadSuccessResponse response = breadService.changeQuantity(1L, 10L, new BreadStockUpdateRequest(3));
+
+        assertThat(response.success()).isTrue();
+        assertThat(bread.getRemainingQuantity()).isEqualTo(3);
+
+        ArgumentCaptor<StockNotificationEvent> eventCaptor = ArgumentCaptor.forClass(StockNotificationEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().breadId()).isEqualTo(10L);
+        assertThat(eventCaptor.getValue().eventType()).isEqualTo(StockEventType.BREAD_RESTOCK);
     }
 
     @Test

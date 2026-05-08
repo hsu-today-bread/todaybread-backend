@@ -8,6 +8,8 @@ import com.todaybread.server.domain.bread.dto.BreadSuccessResponse;
 import com.todaybread.server.domain.bread.dto.NearbyBreadResponse;
 import com.todaybread.server.domain.bread.entity.BreadEntity;
 import com.todaybread.server.domain.bread.repository.BreadRepository;
+import com.todaybread.server.domain.notification.event.StockEventType;
+import com.todaybread.server.domain.notification.event.StockNotificationEvent;
 import com.todaybread.server.domain.store.entity.StoreBusinessHoursEntity;
 import com.todaybread.server.domain.store.entity.StoreEntity;
 import com.todaybread.server.domain.store.repository.StoreBusinessHoursRepository;
@@ -17,6 +19,7 @@ import com.todaybread.server.domain.store.util.SellingStatusUtil;
 import com.todaybread.server.global.exception.CustomException;
 import com.todaybread.server.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -50,6 +53,7 @@ public class BreadService {
     private final StoreRepository storeRepository;
     private final StoreBusinessHoursRepository storeBusinessHoursRepository;
     private final Clock clock;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 요청자의 ID를 검증하고, 빵을 추가합니다.
@@ -74,6 +78,7 @@ public class BreadService {
                 build();
 
         breadRepository.save(breadEntity);
+        publishStockNotificationIfNeeded(breadEntity, StockEventType.BREAD_CREATED);
 
         // 이미지가 있으면 저장
         String imageUrl = null;
@@ -95,6 +100,7 @@ public class BreadService {
     @Transactional
     public BreadCommonResponse updateBread(Long userId, Long breadId, BreadCommonRequest request, MultipartFile image) {
         BreadEntity breadEntity = getOwnedBread(userId, breadId);
+        int previousQuantity = breadEntity.getRemainingQuantity();
 
         // 정보 업데이트
         breadEntity.updateInfo(request.name(),
@@ -102,6 +108,7 @@ public class BreadService {
                 request.salePrice(),
                 request.remainingQuantity(),
                 request.description());
+        publishRestockNotificationIfNeeded(breadEntity, previousQuantity, breadEntity.getRemainingQuantity());
 
         // 이미지가 있으면 교체
         String imageUrl;
@@ -126,8 +133,10 @@ public class BreadService {
     public BreadSuccessResponse changeQuantity(Long userId, Long breadId,
                                                    BreadStockUpdateRequest request) {
         BreadEntity breadEntity = getOwnedBread(userId, breadId);
+        int previousQuantity = breadEntity.getRemainingQuantity();
         int numberOfBread = request.remainingQuantity();
         breadEntity.changeQuantity(numberOfBread);
+        publishRestockNotificationIfNeeded(breadEntity, previousQuantity, numberOfBread);
 
         return BreadSuccessResponse.ok();
     }
@@ -404,5 +413,24 @@ public class BreadService {
             breadCommonResponseList.add(BreadCommonResponse.fromEntity(breadEntity, imageUrl));
         }
         return breadCommonResponseList;
+    }
+
+    private void publishStockNotificationIfNeeded(BreadEntity breadEntity, StockEventType eventType) {
+        if (breadEntity.getRemainingQuantity() <= 0) {
+            return;
+        }
+        eventPublisher.publishEvent(new StockNotificationEvent(
+                breadEntity.getId(),
+                eventType,
+                LocalDateTime.now(clock)
+        ));
+    }
+
+    private void publishRestockNotificationIfNeeded(BreadEntity breadEntity,
+                                                    int previousQuantity,
+                                                    int newQuantity) {
+        if (previousQuantity == 0 && newQuantity >= 1) {
+            publishStockNotificationIfNeeded(breadEntity, StockEventType.BREAD_RESTOCK);
+        }
     }
 }

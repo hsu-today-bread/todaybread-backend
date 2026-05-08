@@ -55,6 +55,9 @@ dependencies {
 	testRuntimeOnly 'com.h2database:h2'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
+	// Firebase Admin SDK (FCM 푸시 알림)
+	implementation 'com.google.firebase:firebase-admin:9.4.3'
+
 	// 비밀번호 해쉬화 (Argon2)
 	implementation 'org.bouncycastle:bcprov-jdk18on:1.78.1'                     // Argon2 알고리즘 구현체
 }

@@ -6,6 +6,7 @@ import com.todaybread.server.domain.bread.service.BreadImageService;
 import com.todaybread.server.domain.cart.entity.CartEntity;
 import com.todaybread.server.domain.cart.entity.CartItemEntity;
 import com.todaybread.server.domain.cart.service.CartService;
+import com.todaybread.server.domain.notification.event.OrderConfirmedNotificationEvent;
 import com.todaybread.server.domain.order.dto.DirectOrderRequest;
 import com.todaybread.server.domain.order.dto.OrderDetailResponse;
 import com.todaybread.server.domain.order.dto.OrderResponse;
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -69,6 +71,9 @@ class OrderServiceTest {
     @Mock
     private PaymentService paymentService;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private OrderService orderService;
 
     @BeforeEach
@@ -86,7 +91,8 @@ class OrderServiceTest {
                 orderNumberGenerator,
                 breadImageService,
                 clock,
-                paymentService
+                paymentService,
+                eventPublisher
         );
     }
 
@@ -224,6 +230,7 @@ class OrderServiceTest {
         orderService.confirmOrder(1L);
 
         assertThat(order.getStatus()).isEqualTo(OrderStatus.CONFIRMED);
+        verify(eventPublisher).publishEvent(any(OrderConfirmedNotificationEvent.class));
     }
 
     @Test

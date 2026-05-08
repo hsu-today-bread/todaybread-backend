@@ -133,6 +133,7 @@ public class NotificationTargetCalculator {
 
             targets.add(new NotificationTarget(
                     userId,
+                    interestArea.getName(),
                     keywords,
                     new StoreInfo(store.getId(), store.getName()),
                     new BreadInfo(bread.getId(), bread.getName()),

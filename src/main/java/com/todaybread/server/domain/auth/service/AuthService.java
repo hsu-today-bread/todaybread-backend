@@ -4,6 +4,7 @@ import com.todaybread.server.config.jwt.JwtTokenService;
 import com.todaybread.server.domain.auth.dto.TokenResponse;
 import com.todaybread.server.domain.auth.entity.RefreshTokenEntity;
 import com.todaybread.server.domain.auth.repository.RefreshTokenRepository;
+import com.todaybread.server.domain.notification.service.FcmTokenService;
 import com.todaybread.server.domain.user.entity.UserEntity;
 import com.todaybread.server.domain.user.repository.UserRepository;
 import com.todaybread.server.global.exception.CustomException;
@@ -30,6 +31,7 @@ public class AuthService {
     private final JwtTokenService jwtTokenService;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
+    private final FcmTokenService fcmTokenService;
 
     @Value("${jwt.refresh-token-expiration}")
     private long refreshTokenExpiration;
@@ -115,5 +117,6 @@ public class AuthService {
     @Transactional
     public void logout(Long userId) {
         refreshTokenRepository.deleteByUserId(userId);
+        fcmTokenService.deactivateToken(userId);
     }
 }
