@@ -5,12 +5,14 @@ import com.todaybread.server.domain.order.entity.OrderItemEntity;
 /**
  * 주문 항목 응답 DTO
  *
+ * @param orderItemId 주문 항목 ID
  * @param breadName 빵 이름
  * @param breadPrice 빵 가격 (스냅샷)
  * @param quantity 수량
  * @param breadImageUrl 빵 대표 이미지 URL (nullable, 이미지가 없을 수 있음)
  */
 public record OrderItemResponse(
+        Long orderItemId,
         String breadName,
         int breadPrice,
         int quantity,
@@ -25,6 +27,7 @@ public record OrderItemResponse(
      */
     public static OrderItemResponse of(OrderItemEntity orderItem) {
         return new OrderItemResponse(
+                orderItem.getId(),
                 orderItem.getBreadName(),
                 orderItem.getBreadPrice(),
                 orderItem.getQuantity(),
@@ -41,6 +44,7 @@ public record OrderItemResponse(
      */
     public static OrderItemResponse of(OrderItemEntity orderItem, String breadImageUrl) {
         return new OrderItemResponse(
+                orderItem.getId(),
                 orderItem.getBreadName(),
                 orderItem.getBreadPrice(),
                 orderItem.getQuantity(),

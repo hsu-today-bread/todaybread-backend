@@ -126,6 +126,11 @@ class OrderServiceTest {
             ReflectionTestUtils.setField(order, "id", 500L);
             return order;
         });
+        given(orderItemRepository.saveAll(any())).willAnswer(invocation -> {
+            List<OrderItemEntity> items = invocation.getArgument(0);
+            ReflectionTestUtils.setField(items.get(0), "id", 600L);
+            return items;
+        });
         given(orderNumberGenerator.generate(any(), any())).willReturn("A2B3");
         given(storeRepository.findById(100L)).willReturn(Optional.of(store));
         given(breadImageService.getImageUrls(List.of(10L))).willReturn(Collections.emptyMap());
@@ -133,6 +138,7 @@ class OrderServiceTest {
         OrderDetailResponse response = orderService.createOrderFromCart(1L, "order-key");
 
         assertThat(response.orderId()).isEqualTo(500L);
+        assertThat(response.items().get(0).orderItemId()).isEqualTo(600L);
         assertThat(response.totalAmount()).isEqualTo(4_000);
         assertThat(response.orderNumber()).isEqualTo("A2B3");
         assertThat(bread.getRemainingQuantity()).isEqualTo(3);
@@ -174,6 +180,11 @@ class OrderServiceTest {
             ReflectionTestUtils.setField(order, "id", 500L);
             return order;
         });
+        given(orderItemRepository.save(any(OrderItemEntity.class))).willAnswer(invocation -> {
+            OrderItemEntity orderItem = invocation.getArgument(0);
+            ReflectionTestUtils.setField(orderItem, "id", 700L);
+            return orderItem;
+        });
         given(orderNumberGenerator.generate(any(), any())).willReturn("A2B3");
         given(storeRepository.findById(100L)).willReturn(Optional.of(store));
         given(breadImageService.getImageUrl(10L)).willReturn("http://example.com/bread10.jpg");
@@ -181,6 +192,7 @@ class OrderServiceTest {
         OrderDetailResponse response = orderService.createDirectOrder(1L, new DirectOrderRequest(10L, 2), "direct-key");
 
         assertThat(response.orderId()).isEqualTo(500L);
+        assertThat(response.items().get(0).orderItemId()).isEqualTo(700L);
         assertThat(response.totalAmount()).isEqualTo(4_000);
         assertThat(response.orderNumber()).isEqualTo("A2B3");
         assertThat(response.items().get(0).breadImageUrl()).isEqualTo("http://example.com/bread10.jpg");
@@ -311,6 +323,7 @@ class OrderServiceTest {
 
         // Assert: 스냅샷 데이터가 정상적으로 반환됨
         assertThat(response.items()).hasSize(1);
+        assertThat(response.items().get(0).orderItemId()).isEqualTo(1L);
         assertThat(response.items().get(0).breadName()).isEqualTo(expectedBreadName);
         assertThat(response.items().get(0).breadPrice()).isEqualTo(expectedBreadPrice);
         assertThat(response.items().get(0).breadImageUrl()).isEqualTo(expectedImageUrl);

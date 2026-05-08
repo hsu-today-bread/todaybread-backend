@@ -1055,6 +1055,7 @@ false
       "createdAt": "2026-04-15T18:30:00",
       "items": [
         {
+          "orderItemId": 2000,
           "breadName": "시그니처 소금빵",
           "breadPrice": 2500,
           "quantity": 3,
@@ -1492,6 +1493,7 @@ false
   "createdAt": "2026-04-15T18:30:00",
   "items": [
     {
+      "orderItemId": 2000,
       "breadName": "시그니처 소금빵",
       "breadPrice": 2500,
       "quantity": 3,
@@ -1533,6 +1535,7 @@ false
   "createdAt": "2026-04-15T19:00:00",
   "items": [
     {
+      "orderItemId": 2001,
       "breadName": "시그니처 소금빵",
       "breadPrice": 2500,
       "quantity": 2,
@@ -1600,6 +1603,7 @@ false
 ```
 
 > 주문 상태: `PENDING`, `CONFIRMED`, `CANCEL_PENDING`, `CANCELLED`, `PICKED_UP`
+> 주문 항목의 `orderItemId`는 리뷰 작성(`POST /api/review`) 시 사용합니다.
 
 ---
 
@@ -1623,6 +1627,7 @@ false
   "createdAt": "2026-04-15T18:30:00",
   "items": [
     {
+      "orderItemId": 2000,
       "breadName": "시그니처 소금빵",
       "breadPrice": 2500,
       "quantity": 3,

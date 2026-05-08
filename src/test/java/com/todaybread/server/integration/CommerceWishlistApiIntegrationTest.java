@@ -101,9 +101,12 @@ class CommerceWishlistApiIntegrationTest extends ApiIntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PENDING"))
                 .andExpect(jsonPath("$.totalAmount").value(5000))
+                .andExpect(jsonPath("$.items[0].orderItemId").isNumber())
                 .andReturn();
 
         long orderId = json(orderResult).get("orderId").asLong();
+        long orderItemId = json(orderResult).get("items").get(0).get("orderItemId").asLong();
+        assertThat(orderItemId).isPositive();
 
         mockMvc.perform(get("/api/orders")
                         .header("Authorization", "Bearer " + userToken))
@@ -130,6 +133,7 @@ class CommerceWishlistApiIntegrationTest extends ApiIntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.orderId").value(orderId))
                 .andExpect(jsonPath("$.status").value("CONFIRMED"))
+                .andExpect(jsonPath("$.items[0].orderItemId").value(orderItemId))
                 .andExpect(jsonPath("$.items[0].quantity").value(2));
 
         assertThat(orderRepository.findById(orderId).orElseThrow().getStatus()).isEqualTo(OrderStatus.CONFIRMED);
