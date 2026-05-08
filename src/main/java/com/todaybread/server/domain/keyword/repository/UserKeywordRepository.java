@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -32,6 +33,14 @@ public interface UserKeywordRepository extends JpaRepository<UserKeywordEntity, 
     List<UserKeywordEntity> findByKeywordId(Long keywordId);
 
     /**
+     * 여러 키워드를 구독한 사용자 연결 목록을 한 번에 조회합니다.
+     *
+     * @param keywordIds 키워드 ID 목록
+     * @return 사용자-키워드 연결 목록
+     */
+    List<UserKeywordEntity> findByKeywordIdIn(Collection<Long> keywordIds);
+
+    /**
      * 사용자-키워드 중복 등록 여부를 확인합니다.
      *
      * @param userId 유저 ID
@@ -50,4 +59,12 @@ public interface UserKeywordRepository extends JpaRepository<UserKeywordEntity, 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT COUNT(uk) FROM UserKeywordEntity uk WHERE uk.userId = :userId")
     long countByUserIdWithLock(@Param("userId") Long userId);
+
+    /**
+     * 특정 사용자의 키워드 존재 여부를 확인합니다.
+     *
+     * @param userId 유저 ID
+     * @return 키워드 존재 여부
+     */
+    boolean existsByUserId(Long userId);
 }

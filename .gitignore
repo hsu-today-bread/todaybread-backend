@@ -45,6 +45,7 @@ bin/
 uploads/
 custom/
 .kiro/
+docs/changelog-*.md
 
 # OS and misc local artifacts
 .DS_Store

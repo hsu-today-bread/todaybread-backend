@@ -1,5 +1,6 @@
 package com.todaybread.server.domain.keyword.service;
 
+import com.todaybread.server.domain.interestarea.repository.InterestAreaRepository;
 import com.todaybread.server.domain.keyword.dto.KeywordCreateRequest;
 import com.todaybread.server.domain.keyword.dto.KeywordCreateResponse;
 import com.todaybread.server.domain.keyword.dto.KeywordDeleteResponse;
@@ -30,6 +31,7 @@ public class KeywordService {
 
     private final KeywordRepository keywordRepository;
     private final UserKeywordRepository userKeywordRepository;
+    private final InterestAreaRepository interestAreaRepository;
 
     /**
      * 키워드 텍스트를 정규화합니다.
@@ -67,6 +69,10 @@ public class KeywordService {
      */
     @Transactional
     public KeywordCreateResponse createKeyword(Long userId, KeywordCreateRequest request) {
+        if (!interestAreaRepository.existsByUserId(userId)) {
+            throw new CustomException(ErrorCode.INTEREST_AREA_REQUIRED);
+        }
+
         String normalisedText = normalise(request.keyword());
 
         if (normalisedText.length() > MAX_KEYWORD_LENGTH) {

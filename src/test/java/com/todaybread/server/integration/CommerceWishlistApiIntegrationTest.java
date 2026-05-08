@@ -45,6 +45,9 @@ class CommerceWishlistApiIntegrationTest extends ApiIntegrationTestSupport {
 
         String userToken = bearerToken(user);
 
+        // 키워드 등록 전 관심지역 설정 필요 (Requirement 5)
+        saveInterestArea(user.getId(), "집 근처", "서울시 강남구", BigDecimal.valueOf(37.5), BigDecimal.valueOf(127.0));
+
         mockMvc.perform(post("/api/keywords")
                         .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)

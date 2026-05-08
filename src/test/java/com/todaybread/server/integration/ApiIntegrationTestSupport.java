@@ -11,6 +11,8 @@ import com.todaybread.server.domain.bread.repository.BreadImageRepository;
 import com.todaybread.server.domain.bread.repository.BreadRepository;
 import com.todaybread.server.domain.cart.repository.CartItemRepository;
 import com.todaybread.server.domain.cart.repository.CartRepository;
+import com.todaybread.server.domain.interestarea.entity.InterestAreaEntity;
+import com.todaybread.server.domain.interestarea.repository.InterestAreaRepository;
 import com.todaybread.server.domain.keyword.entity.KeywordEntity;
 import com.todaybread.server.domain.keyword.entity.UserKeywordEntity;
 import com.todaybread.server.domain.keyword.repository.KeywordRepository;
@@ -99,6 +101,9 @@ abstract class ApiIntegrationTestSupport {
     protected UserKeywordRepository userKeywordRepository;
 
     @Autowired
+    protected InterestAreaRepository interestAreaRepository;
+
+    @Autowired
     protected FavouriteStoreRepository favouriteStoreRepository;
 
     @Autowired
@@ -151,6 +156,7 @@ abstract class ApiIntegrationTestSupport {
         storeRepository.deleteAllInBatch();
         userKeywordRepository.deleteAllInBatch();
         keywordRepository.deleteAllInBatch();
+        interestAreaRepository.deleteAllInBatch();
         refreshTokenRepository.deleteAllInBatch();
         passwordResetTokenRepository.deleteAllInBatch();
         userRepository.deleteAllInBatch();
@@ -242,6 +248,17 @@ abstract class ApiIntegrationTestSupport {
         return favouriteStoreRepository.save(FavouriteStoreEntity.builder()
                 .userId(userId)
                 .storeId(storeId)
+                .build());
+    }
+
+    protected InterestAreaEntity saveInterestArea(Long userId, String name, String address, BigDecimal lat, BigDecimal lng) {
+        return interestAreaRepository.save(InterestAreaEntity.builder()
+                .userId(userId)
+                .name(name)
+                .address(address)
+                .latitude(lat)
+                .longitude(lng)
+                .radiusKm(3.0)
                 .build());
     }
 

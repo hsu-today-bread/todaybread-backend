@@ -6,7 +6,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 import java.time.Clock;
 
@@ -14,7 +13,6 @@ import java.time.Clock;
  * TodayBread 서버 애플리케이션 진입점입니다.
  */
 @SpringBootApplication
-@EnableJpaAuditing
 @EnableConfigurationProperties({OrderExpiryProperties.class, TossPaymentProperties.class})
 public class ServerApplication {
 

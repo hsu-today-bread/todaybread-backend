@@ -70,6 +70,15 @@ public enum ErrorCode {
 
     /**
      * ============================
+     * 관심지역 오류
+     * ============================
+     */
+    INTEREST_AREA_ALREADY_EXISTS("INTEREST_AREA_001", "이미 관심지역이 등록되어 있습니다.", HttpStatus.CONFLICT),
+    INTEREST_AREA_NOT_FOUND("INTEREST_AREA_002", "관심지역을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    INTEREST_AREA_REQUIRED("INTEREST_AREA_003", "키워드 알림을 위해 관심지역 설정이 필요합니다.", HttpStatus.BAD_REQUEST),
+
+    /**
+     * ============================
      * 가게 오류
      * ============================
      */
@@ -158,7 +167,7 @@ public enum ErrorCode {
     private final String message;
     private final HttpStatus status;
 
-    private ErrorCode(String code, String message, HttpStatus status) {
+    ErrorCode(String code, String message, HttpStatus status) {
         this.code = code;
         this.message = message;
         this.status = status;
