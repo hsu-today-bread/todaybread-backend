@@ -34,7 +34,6 @@
 - [주문 — 사장님](#boss-orders)
 - [매출 — 사장님](#boss-sales)
 - [키워드](#keyword)
-- [관심지역](#interest-area)
 - [단골 가게](#favourite-store)
 - [찜목록](#wishlist)
 - [장바구니](#cart)
@@ -737,16 +736,10 @@ false
     }
   ],
   "isSelling": true,
-  "sellingStatus": "SELLING",
   "averageRating": 4.5,
   "reviewCount": 12
 }
 ```
-
-> `sellingStatus` (string): 매장 판매 상태. 가능한 값:
-> - `SELLING`: 영업시간 내 + 주문마감 전 + 재고 있음
-> - `OPEN_SOLD_OUT`: 영업시간 내 + 주문마감 전 + 재고 없음
-> - `CLOSED`: 영업시간 밖, 휴무, 비활성, 주문마감 이후
 
 **에러 응답:** `STORE_004`
 
@@ -1226,9 +1219,7 @@ false
 }
 ```
 
-**에러 응답:** `KEYWORD_001`, `KEYWORD_002`, `KEYWORD_003`, `INTEREST_AREA_003`, `COMMON_001`
-
-> 관심지역이 설정되지 않은 유저는 키워드를 등록할 수 없습니다. 관심지역을 먼저 등록해야 합니다.
+**에러 응답:** `KEYWORD_001`, `KEYWORD_002`, `KEYWORD_003`, `COMMON_001`
 
 ---
 
@@ -1275,154 +1266,9 @@ false
 
 ---
 
-<a id="interest-area"></a>
-
-### 11. 관심지역 (Interest Area)
-
-#### `GET /api/interest-area` — 관심지역 조회
-
-| 항목 | 값 |
-|------|-----|
-| 인증 | O |
-
-**응답 형식 (관심지역 존재 시):**
-
-```json
-{
-  "interestArea": {
-    "id": 1,
-    "name": "강남역",
-    "address": "서울특별시 강남구 강남대로 396",
-    "latitude": 37.4980950,
-    "longitude": 127.0276100,
-    "radiusKm": 3.0
-  }
-}
-```
-
-**응답 형식 (관심지역 미존재 시):**
-
-```json
-{
-  "interestArea": null
-}
-```
-
-**에러 응답:** `AUTH_001`, `AUTH_002`
-
----
-
-#### `POST /api/interest-area` — 관심지역 등록
-
-| 항목 | 값 |
-|------|-----|
-| 인증 | O |
-
-**요청 바디:**
-
-```json
-{
-  "name": "강남역",
-  "address": "서울특별시 강남구 강남대로 396",
-  "latitude": 37.4980950,
-  "longitude": 127.0276100
-}
-```
-
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|------|------|
-| `name` | String | O | 관심지역 이름 (1~50자) |
-| `address` | String | O | 관심지역 주소 (1~200자) |
-| `latitude` | BigDecimal | O | 위도 (-90 ~ 90) |
-| `longitude` | BigDecimal | O | 경도 (-180 ~ 180) |
-
-**응답 형식:**
-
-```json
-{
-  "id": 1,
-  "name": "강남역",
-  "address": "서울특별시 강남구 강남대로 396",
-  "latitude": 37.4980950,
-  "longitude": 127.0276100,
-  "radiusKm": 3.0
-}
-```
-
-> `radiusKm`은 서버에서 3.0으로 고정 설정됩니다. 유저가 1개의 관심지역만 등록할 수 있습니다.
-
-**에러 응답:** `INTEREST_AREA_001`, `COMMON_001`
-
----
-
-#### `PUT /api/interest-area` — 관심지역 수정
-
-| 항목 | 값 |
-|------|-----|
-| 인증 | O |
-
-**요청 바디:**
-
-```json
-{
-  "name": "한성대학교",
-  "address": "서울특별시 성북구 삼선교로 16길 116",
-  "latitude": 37.5826000,
-  "longitude": 127.0106000
-}
-```
-
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|------|------|
-| `name` | String | O | 관심지역 이름 (1~50자) |
-| `address` | String | O | 관심지역 주소 (1~200자) |
-| `latitude` | BigDecimal | O | 위도 (-90 ~ 90) |
-| `longitude` | BigDecimal | O | 경도 (-180 ~ 180) |
-
-**응답 형식:**
-
-```json
-{
-  "id": 1,
-  "name": "한성대학교",
-  "address": "서울특별시 성북구 삼선교로 16길 116",
-  "latitude": 37.5826000,
-  "longitude": 127.0106000,
-  "radiusKm": 3.0
-}
-```
-
-> `radiusKm`은 수정 시에도 3.0으로 유지됩니다.
-
-**에러 응답:** `INTEREST_AREA_002`, `COMMON_001`
-
----
-
-#### `DELETE /api/interest-area` — 관심지역 삭제
-
-| 항목 | 값 |
-|------|-----|
-| 인증 | O |
-
-**응답 형식:**
-
-```json
-{
-  "success": true,
-  "keywordNotificationDisabled": true
-}
-```
-
-> `keywordNotificationDisabled`: 삭제 시 해당 유저에게 등록된 키워드가 1개 이상이면 `true`, 없으면 `false`.
-> 관심지역 삭제 시 기존 키워드는 유지되지만, 관심지역이 없으면 키워드 알림 대상에서 제외됩니다.
-
-**에러 응답:** `INTEREST_AREA_002`
-
----
-
 <a id="favourite-store"></a>
 
-### 12. 단골 가게 (Favourite Store)
+### 11. 단골 가게 (Favourite Store)
 
 #### `POST /api/favourite-stores` — 단골 가게 토글 (추가/해제)
 
@@ -1476,7 +1322,7 @@ false
 
 <a id="wishlist"></a>
 
-### 13. 찜목록 (Wishlist)
+### 12. 찜목록 (Wishlist)
 
 #### `GET /api/wishlist` — 찜목록 통합 조회
 
@@ -1514,7 +1360,7 @@ false
 
 <a id="cart"></a>
 
-### 14. 장바구니 (Cart)
+### 13. 장바구니 (Cart)
 
 #### `POST /api/cart` — 장바구니에 빵 추가
 
@@ -1621,7 +1467,7 @@ false
 
 <a id="order"></a>
 
-### 15. 주문 (Order)
+### 14. 주문 (Order)
 
 > 주문 생성 API(`POST /api/orders/cart`, `POST /api/orders/direct`)는 `Idempotency-Key` 헤더가 필수입니다.
 > 네트워크 오류 등으로 응답을 받지 못했을 때 같은 key로 재요청하면 동일한 주문 결과를 반환합니다.
@@ -1792,7 +1638,7 @@ false
 
 <a id="payment"></a>
 
-### 16. 결제 (Payment)
+### 15. 결제 (Payment)
 
 > 결제 승인 확정 API(`POST /api/payments/confirm`)는 `Idempotency-Key` 헤더가 필수입니다.
 > 같은 key로 재요청하면 토스 Confirm API를 중복 호출하지 않고 기존 결제 결과를 반환합니다.
@@ -1856,7 +1702,7 @@ false
 
 <a id="review"></a>
 
-### 17. 리뷰 (Review)
+### 16. 리뷰 (Review)
 
 #### `POST /api/review` — 리뷰 작성 (multipart)
 
@@ -2048,7 +1894,7 @@ false
 
 <a id="system"></a>
 
-### 18. 시스템 (System)
+### 17. 시스템 (System)
 
 #### `GET /api/system/health` — 서버 상태 확인
 
@@ -2143,14 +1989,6 @@ false
 | `KEYWORD_003` | 400 | 키워드는 최대 10자까지 입력할 수 있습니다. |
 | `KEYWORD_004` | 404 | 키워드를 찾을 수 없습니다. |
 | `KEYWORD_005` | 403 | 해당 키워드에 대한 권한이 없습니다. |
-
-### 관심지역 (INTEREST_AREA)
-
-| 코드 | HTTP | 메시지 |
-|------|------|--------|
-| `INTEREST_AREA_001` | 409 | 이미 관심지역이 등록되어 있습니다. |
-| `INTEREST_AREA_002` | 404 | 관심지역을 찾을 수 없습니다. |
-| `INTEREST_AREA_003` | 400 | 키워드 알림을 위해 관심지역 설정이 필요합니다. |
 
 ### 매장 (STORE)
 
