@@ -148,6 +148,9 @@ BEGIN
     DELETE uk FROM user_keyword uk
     JOIN tmp_cleanup_users cu ON uk.user_id = cu.id;
 
+    DELETE ia FROM interest_area ia
+    JOIN tmp_cleanup_users cu ON ia.user_id = cu.id;
+
     DELETE p FROM payment p
     JOIN orders o ON p.order_id = o.id
     LEFT JOIN tmp_cleanup_users cu ON o.user_id = cu.id
@@ -340,6 +343,9 @@ BEGIN
     INSERT INTO users (email, name, password_hash, nickname, phone_number, is_boss)
     VALUES ('demo-user01@todaybread.com', '데모 유저', @pw, 'demo-user01', '010-9000-0001', FALSE);
     SET v_user_id = LAST_INSERT_ID();
+
+    INSERT INTO interest_area (user_id, name, address, latitude, longitude, radius_km)
+    VALUES (v_user_id, '한성대학교', '서울특별시 성북구 삼선교로16길 116', 37.5826000, 127.0106000, 3.0);
 
     SET v_i = 1;
     WHILE v_i <= 120 DO

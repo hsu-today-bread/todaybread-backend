@@ -1,5 +1,6 @@
 package com.todaybread.server.domain.keyword.service;
 
+import com.todaybread.server.domain.interestarea.repository.InterestAreaRepository;
 import com.todaybread.server.domain.keyword.dto.KeywordCreateRequest;
 import com.todaybread.server.domain.keyword.dto.KeywordCreateResponse;
 import com.todaybread.server.domain.keyword.dto.KeywordDeleteResponse;
@@ -26,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,11 +39,15 @@ class KeywordServiceTest {
     @Mock
     private UserKeywordRepository userKeywordRepository;
 
+    @Mock
+    private InterestAreaRepository interestAreaRepository;
+
     @InjectMocks
     private KeywordService keywordService;
 
     @Test
     void createKeyword_savesNewNormalisedKeyword() {
+        given(interestAreaRepository.existsByUserId(1L)).willReturn(true);
         KeywordEntity keyword = TestFixtures.keyword(10L, "sourdough");
         given(keywordRepository.findByNormalisedText("sourdough")).willReturn(Optional.empty());
         given(keywordRepository.save(any(KeywordEntity.class))).willReturn(keyword);
@@ -56,6 +62,7 @@ class KeywordServiceTest {
 
     @Test
     void createKeyword_stripsLeadingTrailingSpacesFromDisplayText() {
+        given(interestAreaRepository.existsByUserId(1L)).willReturn(true);
         KeywordEntity keyword = TestFixtures.keyword(10L, "크루아상");
         given(keywordRepository.findByNormalisedText("크루아상")).willReturn(Optional.empty());
         given(keywordRepository.save(any(KeywordEntity.class))).willReturn(keyword);
@@ -71,6 +78,7 @@ class KeywordServiceTest {
 
     @Test
     void createKeyword_normalisesInternalSpaces() {
+        given(interestAreaRepository.existsByUserId(1L)).willReturn(true);
         // "크 루 아상" → normalised to "크루아상" (spaces removed)
         KeywordEntity keyword = TestFixtures.keyword(10L, "크루아상");
         given(keywordRepository.findByNormalisedText("크루아상")).willReturn(Optional.of(keyword));
@@ -89,6 +97,7 @@ class KeywordServiceTest {
 
     @Test
     void createKeyword_rejectsDuplicateUserKeyword() {
+        given(interestAreaRepository.existsByUserId(1L)).willReturn(true);
         KeywordEntity keyword = TestFixtures.keyword(10L, "bagel");
         given(keywordRepository.findByNormalisedText("bagel")).willReturn(Optional.of(keyword));
         given(userKeywordRepository.existsByUserIdAndKeywordId(1L, 10L)).willReturn(true);
@@ -101,6 +110,7 @@ class KeywordServiceTest {
 
     @Test
     void createKeyword_retriesLookupOnIntegrityViolation() {
+        given(interestAreaRepository.existsByUserId(1L)).willReturn(true);
         KeywordEntity keyword = TestFixtures.keyword(10L, "croissant");
         given(keywordRepository.findByNormalisedText("croissant"))
                 .willReturn(Optional.empty(), Optional.of(keyword));
@@ -116,6 +126,7 @@ class KeywordServiceTest {
 
     @Test
     void createKeyword_rejectsOverMaxLength() {
+        given(interestAreaRepository.existsByUserId(1L)).willReturn(true);
         // 11 characters after normalisation (spaces removed)
         assertThatThrownBy(() -> keywordService.createKeyword(1L, new KeywordCreateRequest("abcdefghijk")))
                 .isInstanceOf(CustomException.class)
@@ -125,6 +136,7 @@ class KeywordServiceTest {
 
     @Test
     void createKeyword_rejectsWhenLimitExceeded() {
+        given(interestAreaRepository.existsByUserId(1L)).willReturn(true);
         KeywordEntity keyword = TestFixtures.keyword(10L, "bagel");
         given(keywordRepository.findByNormalisedText("bagel")).willReturn(Optional.of(keyword));
         given(userKeywordRepository.existsByUserIdAndKeywordId(1L, 10L)).willReturn(false);
@@ -138,6 +150,7 @@ class KeywordServiceTest {
 
     @Test
     void createKeyword_rejectsEmptyAfterNormalisation() {
+        given(interestAreaRepository.existsByUserId(1L)).willReturn(true);
         // All whitespace → strip → empty → error
         assertThatThrownBy(() -> keywordService.createKeyword(1L, new KeywordCreateRequest("   ")))
                 .isInstanceOf(CustomException.class)
@@ -187,5 +200,42 @@ class KeywordServiceTest {
 
         assertThat(response.success()).isTrue();
         verify(userKeywordRepository).delete(userKeyword);
+    }
+
+    @Test
+    void createKeyword_rejectsWhenNoInterestArea() {
+        given(interestAreaRepository.existsByUserId(1L)).willReturn(false);
+
+        assertThatThrownBy(() -> keywordService.createKeyword(1L, new KeywordCreateRequest("sourdough")))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.INTEREST_AREA_REQUIRED);
+    }
+
+    @Test
+    void createKeyword_noSideEffectsWhenInterestAreaRequired() {
+        given(interestAreaRepository.existsByUserId(1L)).willReturn(false);
+
+        assertThatThrownBy(() -> keywordService.createKeyword(1L, new KeywordCreateRequest("croissant")))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.INTEREST_AREA_REQUIRED);
+
+        verify(keywordRepository, never()).save(any(KeywordEntity.class));
+        verify(userKeywordRepository, never()).save(any(UserKeywordEntity.class));
+    }
+
+    @Test
+    void createKeyword_succeedsWhenInterestAreaExists() {
+        given(interestAreaRepository.existsByUserId(1L)).willReturn(true);
+        KeywordEntity keyword = TestFixtures.keyword(10L, "bagel");
+        given(keywordRepository.findByNormalisedText("bagel")).willReturn(Optional.of(keyword));
+        given(userKeywordRepository.existsByUserIdAndKeywordId(1L, 10L)).willReturn(false);
+        given(userKeywordRepository.countByUserIdWithLock(1L)).willReturn(0L);
+
+        KeywordCreateResponse response = keywordService.createKeyword(1L, new KeywordCreateRequest("bagel"));
+
+        assertThat(response.success()).isTrue();
+        verify(userKeywordRepository).save(any(UserKeywordEntity.class));
     }
 }
