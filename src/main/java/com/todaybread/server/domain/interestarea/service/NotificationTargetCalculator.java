@@ -192,8 +192,8 @@ public class NotificationTargetCalculator {
 
     /**
      * 라스트 오더까지 남은 시간(분)을 계산합니다.
-     * 오늘 영업시간의 lastOrderTime과 현재 시간의 차이를 분 단위로 반환합니다.
-     * lastOrderTime이 없거나 이미 지난 경우 0을 반환합니다.
+     * 오늘 영업시간 또는 전날 자정 넘김 영업의 lastOrderTime과 현재 시간의 차이를 분 단위로 반환합니다.
+     * lastOrderTime이 없거나 이미 지난 경우 endTime을 기준으로 계산하고, 계산할 수 없으면 0을 반환합니다.
      */
     private long calculateMinutesUntilLastOrder(List<StoreBusinessHoursEntity> businessHours, Clock clock) {
         int todayDow = LocalDate.now(clock).getDayOfWeek().getValue();
