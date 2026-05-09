@@ -235,7 +235,7 @@ Token note
 
 Sample accounts
 - demo-user01@todaybread.com / todaybread123
-- demo-boss1@todaybread.com ~ demo-boss120@todaybread.com / todaybread123
+- demo-boss001@todaybread.com ~ demo-boss120@todaybread.com / todaybread123
 
 Recommended nearby query
 - Hansung Univ: lat=37.5826000, lng=127.0106000, radius=1

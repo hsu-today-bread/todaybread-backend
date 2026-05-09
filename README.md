@@ -52,7 +52,7 @@ MySQL CLI 접속은 아래 스크립트를 사용합니다.
 | 역할 | 계정 | 비밀번호 |
 |------|------|----------|
 | 일반 유저 | `demo-user01@todaybread.com` | `todaybread123` |
-| 사장님 | `demo-boss1@todaybread.com` ~ `demo-boss120@todaybread.com` | `todaybread123` |
+| 사장님 | `demo-boss001@todaybread.com` ~ `demo-boss120@todaybread.com` | `todaybread123` |
 
 근처 매장/빵 조회 추천 좌표:
 

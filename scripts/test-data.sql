@@ -8,7 +8,7 @@ SET collation_connection = 'utf8mb4_unicode_ci';
 
  샘플 로그인 계정
  - 일반 유저:  demo-user01@todaybread.com / todaybread123
- - 사장님 1~120: demo-boss1@todaybread.com ~ demo-boss120@todaybread.com / todaybread123
+ - 사장님 001~120: demo-boss001@todaybread.com ~ demo-boss120@todaybread.com / todaybread123
 
  근처 매장/빵 조회 기본 좌표
  - 한성대학교 기준
@@ -351,10 +351,10 @@ BEGIN
     WHILE v_i <= 120 DO
         INSERT INTO users (email, name, password_hash, nickname, phone_number, is_boss)
         VALUES (
-            CONCAT('demo-boss', v_i, '@todaybread.com'),
+            CONCAT('demo-boss', LPAD(v_i, 3, '0'), '@todaybread.com'),
             CONCAT('사장님 ', LPAD(v_i, 3, '0')),
             @pw,
-            CONCAT('demo-boss', v_i),
+            CONCAT('demo-boss', LPAD(v_i, 3, '0')),
             CONCAT('010-9200-', LPAD(v_i, 4, '0')),
             TRUE
         );
@@ -477,7 +477,7 @@ BEGIN
 
         SELECT id INTO v_boss_id
         FROM users
-        WHERE email = CONCAT('demo-boss', v_i, '@todaybread.com');
+        WHERE email = CONCAT('demo-boss', LPAD(v_i, 3, '0'), '@todaybread.com');
 
         INSERT INTO store (
             user_id, name, phone_number, description,
@@ -521,7 +521,10 @@ BEGIN
 
         SET v_j = 1;
         WHILE v_j <= 7 DO
-            IF v_expected_status = 'CLOSED' THEN
+            IF v_i = 1 THEN
+                INSERT INTO store_business_hours (store_id, day_of_week, is_closed, start_time, end_time, last_order_time)
+                VALUES (v_store_id, v_j, FALSE, '09:00:00', '22:00:00', '22:00:00');
+            ELSEIF v_expected_status = 'CLOSED' THEN
                 INSERT INTO store_business_hours (store_id, day_of_week, is_closed, start_time, end_time, last_order_time)
                 VALUES (v_store_id, v_j, TRUE, NULL, NULL, NULL);
             ELSEIF v_j BETWEEN 1 AND 5 THEN

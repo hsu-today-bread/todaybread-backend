@@ -79,11 +79,12 @@ Docker Compose로 실행 중인 MySQL 컨테이너에 `mysql` CLI로 접속합�
 삽입하는 주요 데이터:
 
 - 일반 유저 1명: `demo-user01@todaybread.com / todaybread123`
-- 사장님 120명: `demo-boss1@todaybread.com` ~ `demo-boss120@todaybread.com / todaybread123`
+- 사장님 120명: `demo-boss001@todaybread.com` ~ `demo-boss120@todaybread.com` / `todaybread123`
 - 서울 전역 매장 120개
 - 한성대학교 1km 이내 3개, 3km 이내 누적 10개, 5km 이내 누적 20개
 - 한성대 5km 안 판매중 9개, 영업중 품절 7개, 휴무 4개
 - 매장별 일반 영업시간: 평일 09:00~22:00, 토요일 09:00~21:00, 일요일 휴무
+- 001번 사장님 매장(`demo-boss001`)은 FCM/주문 테스트용으로 매일 09:00~22:00 영업시간을 고정
 - 매장별 메뉴 15개 이하, 한성대 1km 매장은 메뉴 3~5개
 - 빵 이미지 레코드
 - 즐겨찾기
