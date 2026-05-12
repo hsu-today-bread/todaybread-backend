@@ -8,7 +8,7 @@
 |------|------|
 | `scripts/mysql-connect.sh` | Docker MySQL 컨테이너에 접속하는 편의 스크립트 |
 | `scripts/test-data.sh` | 개발용 seed 데이터와 seed 이미지를 준비하고 `test-data.sql`을 DB에 적용 |
-| `scripts/test-data.sql` | 샘플 유저, 사장님, 매장, 영업시간, 빵, 이미지, 장바구니, 주문, 결제 데이터를 삽입 |
+| `scripts/test-data.sql` | 샘플 유저, 사장님, 관심지역, 키워드, 매장, 영업시간, 빵, 이미지, 장바구니, 주문, 결제, 리뷰 데이터를 삽입 |
 | `scripts/test-order.sh` | 로그인부터 주문 생성, 결제, 주문 상태 확인, 취소까지 확인하는 API 흐름 테스트 |
 | `scripts/seed-images/` | `test-data.sh`가 `uploads/`로 복사할 실제 seed 이미지 원본 |
 
@@ -54,7 +54,7 @@ Docker Compose로 실행 중인 MySQL 컨테이너에 `mysql` CLI로 접속합�
 실행 흐름:
 
 1. `todaybread-mysql` 컨테이너가 준비될 때까지 대기합니다.
-2. Flyway가 만든 기본 테이블이 있는지 확인합니다.
+2. Flyway가 만든 기본 테이블이 있는지 확인합니다. `users`, `interest_area`, `store`, `orders`, `review` 등 seed에 필요한 테이블이 없으면 중단합니다.
 3. `uploads/` 디렉터리에 seed 이미지를 준비합니다.
 4. 지정된 SQL 파일을 MySQL에 적용합니다.
 5. SQL 적용 후 `store_image`, `bread_image`, `review_image`의 `stored_filename`에 맞는 이미지 파일을 생성합니다.
@@ -79,6 +79,8 @@ Docker Compose로 실행 중인 MySQL 컨테이너에 `mysql` CLI로 접속합�
 삽입하는 주요 데이터:
 
 - 일반 유저 1명: `demo-user01@todaybread.com / todaybread123`
+- 일반 유저 관심지역 1개: 한성대학교, 반경 3km
+- 일반 유저 키워드 5개: 소금빵, 크루아상, 식빵, 베이글, 휘낭시에
 - 사장님 120명: `demo-boss001@todaybread.com` ~ `demo-boss120@todaybread.com` / `todaybread123`
 - 서울 전역 매장 120개
 - 한성대학교 1km 이내 3개, 3km 이내 누적 10개, 5km 이내 누적 20개
@@ -95,6 +97,20 @@ Docker Compose로 실행 중인 MySQL 컨테이너에 `mysql` CLI로 접속합�
 - 매장별 리뷰 10개, 그중 이미지 리뷰 5개와 텍스트 리뷰 5개
 - 이미지 리뷰는 리뷰당 1장 또는 2장
 
+정상 실행 시 주요 검증 metric:
+
+```text
+seed_stores = 120
+seed_reviews = 1200
+stores_without_reviews = 0
+min_reviews_per_store = 10
+max_reviews_per_store = 10
+seed_store_images = 120
+seed_bread_images = 생성된 빵 수와 동일
+review_image_reviews = 600
+seed_review_images = 900
+```
+
 추천 조회 좌표:
 
 ```text
@@ -109,6 +125,7 @@ Hansung Univ: lat=37.5826000, lng=127.0106000, radius=5
 - 기존 seed 계정과 관련된 주문, 결제, 장바구니, 이미지, 매장, 빵 데이터를 삭제한 뒤 다시 넣습니다.
 - `refresh_token`은 삭제만 하고 새로 넣지 않습니다. 토큰은 로그인 API로 발급해야 합니다.
 - 픽업 대기(`CONFIRMED`) 주문은 만들지 않습니다. 데모데이용 실시간 주문은 별도 스크립트에서 생성합니다.
+- 현재 seed에는 `밀도 선릉점`, `시나몬 롤` 데이터가 없습니다. 프론트에서 해당 이름이 보이면 다른 DB, 캐시, 또는 별도 seed 데이터를 보고 있는지 확인해야 합니다.
 
 ## `test-order.sh`
 

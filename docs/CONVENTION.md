@@ -64,6 +64,7 @@
 ### 9. DB 마이그레이션(Flyway) 규칙
 - 모든 스키마 변경은 SQL 파일로 관리하고 수동 DB 변경 금지
 - 버전 마이그레이션 파일명 규칙: `V{버전}__{설명}.sql` (예: `V1__init_user_table.sql`)
+- 현재 개발 baseline은 `src/main/resources/db/migration/V1__init_schema.sql` 단일 파일입니다. 공유 개발 DB나 운영 DB에 이미 적용된 뒤에는 해당 파일을 수정하지 말고 새 버전 migration을 추가합니다.
 - 운영 반영 전 로컬/스테이징에서 동일 마이그레이션 검증
 - 롤백이 필요한 변경은 사전 대응 SQL 또는 대체 전략을 함께 준비
 - DB 제약조건과 인덱스 이름은 의미가 드러나도록 명시적으로 작성

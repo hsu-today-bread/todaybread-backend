@@ -64,6 +64,8 @@ Hansung Univ: lat=37.5826000, lng=127.0106000, radius=5
 
 한성대 기준 1km 이내 3개, 3km 이내 누적 10개, 5km 이내 누적 20개가 고정됩니다. 5km 안에는 판매중, 영업중 품절, 휴무 상태가 섞여 있어 `sellingStatus` 계산 로직을 검증할 수 있습니다. seed 주문은 픽업 완료(`PICKED_UP`)와 취소(`CANCELLED`)만 포함하며, 픽업 대기(`CONFIRMED`) 주문은 데모데이용 별도 스크립트에서 생성하는 전제로 제외합니다.
 
+리뷰는 매장당 10개씩 총 1,200개를 생성합니다. 각 매장은 이미지 리뷰 5개와 텍스트 리뷰 5개를 가지며, 리뷰 이미지는 총 900장입니다. seed 실행 결과에 `stores_without_reviews = 0`, `min_reviews_per_store = 10`, `max_reviews_per_store = 10`이 출력되면 리뷰 데이터가 정상입니다.
+
 토큰은 seed하지 않습니다. 로그인 API가 access token과 refresh token을 발급하고, refresh token은 DB에 해시로 저장합니다.
 
 ## 주문/결제 테스트
@@ -121,7 +123,9 @@ TOSS_CLIENT_KEY=test_ck_...
 │   │   ├── auth/
 │   │   ├── bread/
 │   │   ├── cart/
+│   │   ├── interestarea/
 │   │   ├── keyword/
+│   │   ├── notification/
 │   │   ├── order/
 │   │   ├── payment/
 │   │   ├── review/
@@ -164,6 +168,7 @@ Flyway 마이그레이션은 단일 baseline 파일 하나로 전체 스키마�
 | `users` | 사용자 정보 |
 | `refresh_token` | JWT refresh token 해시 |
 | `password_reset_token` | 비밀번호 재설정 일회용 토큰 (10분 유효) |
+| `interest_area` | 유저 관심지역 (유저당 1개, 기본 반경 3km) |
 | `keyword`, `user_keyword` | 키워드 마스터와 사용자 키워드 |
 | `store`, `store_image`, `store_business_hours`, `favourite_store` | 매장, 이미지, 영업시간, 단골 매장 |
 | `bread`, `bread_image` | 빵 메뉴와 이미지 (soft delete 지원) |
@@ -171,6 +176,7 @@ Flyway 마이그레이션은 단일 baseline 파일 하나로 전체 스키마�
 | `orders`, `order_item` | 주문과 주문 항목 (멱등성 키, 상태 머신) |
 | `payment` | 결제 승인/취소 정보 (토스 페이먼츠 연동) |
 | `review`, `review_image` | 리뷰와 리뷰 이미지 |
+| `fcm_token`, `notification_log` | FCM 토큰과 알림 발송 이력 |
 
 기존 로컬 DB에 오래된 Flyway 이력(V1~V11 분리 시절)이 남아 있으면 baseline과 맞지 않을 수 있습니다. 개발 DB를 새 스키마로 맞추려면 볼륨을 초기화합니다.
 

@@ -4,6 +4,12 @@
 - 이 문서 하나만 읽으면 Docker, .env, Flyway, Spring Boot 연결까지 전부 이해할 수 있습니다.
 - 다소 길더라도 읽어주세요.
 
+새 변경 사항 pull 시 DB를 새 baseline으로 맞추는 경우:
+1. `docker compose down -v`
+2. `docker compose up -d`
+3. `./gradlew bootRun`
+4. `./scripts/test-data.sh`
+
 ---
 
 ## 전체 구조 요약
@@ -409,18 +415,20 @@ CREATE TABLE users (
 
 ### 새 테이블이나 컬럼을 추가하고 싶을 때
 
-`db/migration/` 폴더에 새 SQL 파일을 추가하면 됩니다:
+공유 DB나 운영 DB에 이미 반영된 뒤라면 `db/migration/` 폴더에 새 SQL 파일을 추가합니다:
 ```
 V2__add_store_table.sql
 V3__add_address_to_users.sql
 ```
 
-> 이미 적용된 SQL 파일(V1__init.sql 등)은 절대 수정하면 안 됩니다.
+> 현재 개발 baseline은 `V1__init_schema.sql` 단일 파일입니다.
+> 로컬 개발 DB를 완전히 초기화할 수 있는 단계에서는 baseline을 정리할 수 있지만,
+> 팀원이 이미 적용한 DB나 운영 DB에 반영된 뒤에는 `V1__init_schema.sql`을 수정하지 않습니다.
 > Flyway가 체크섬을 비교해서 변경을 감지하면 앱 시작이 실패합니다.
 > 변경이 필요하면 항상 새 버전의 SQL 파일을 추가하세요.
 >
-> 여러 `V` 파일에 흩어진 `ALTER`/`INDEX`를 신규 환경 기준으로 정리하고 싶다면,
-> 기존 `V` 파일을 수정하지 말고 `B12__baseline_schema.sql` 같은 baseline migration을 추가하세요.
+> 이미 분리된 여러 migration을 신규 환경 기준으로 다시 정리해야 한다면,
+> 적용 대상 DB의 `flyway_schema_history`와 초기화 가능 여부를 먼저 확인하세요.
 
 ---
 
@@ -561,9 +569,19 @@ SELECT * FROM flyway_schema_history;  -- Flyway 마이그레이션 이력 확인
 
 추천 근처 조회 좌표:
 
-- `lat=37.4980950`
-- `lng=127.0276100`
-- `radius=5`
+- `lat=37.5826000`
+- `lng=127.0106000`
+- `radius=1`, `3`, `5`
+
+정상 seed 기준 주요 검증값:
+
+- 매장 120개
+- 리뷰 1,200개
+- 리뷰 없는 매장 0개
+- 매장별 리뷰 10개
+- 매장 이미지 120개
+- 리뷰 이미지가 있는 리뷰 600개
+- 리뷰 이미지 파일 900개
 
 > 이 스크립트는 Docker 볼륨 안의 현재 DB에 데이터를 추가합니다.
 > 컨테이너를 다시 띄워도 볼륨을 지우지 않으면 데이터는 유지됩니다.
@@ -660,7 +678,7 @@ docker compose ps
 
 1. 이미 적용된 SQL 파일을 수정하지 않았는지 확인
 2. SQL 문법 오류가 없는지 확인
-3. DB를 초기화하고 다시 시작:
+3. 로컬 개발 DB를 새 baseline으로 맞춰야 한다면 DB를 초기화하고 다시 시작:
    ```bash
    docker compose down -v
    docker compose up -d

@@ -19,8 +19,9 @@
 
 근처 매장/빵 조회 추천 좌표:
 
-- 강남역: `lat=37.4980950`, `lng=127.0276100`, `radius=5`
-- 한성대학교: `lat=37.5826000`, `lng=127.0106000`, `radius=2`
+- 한성대학교: `lat=37.5826000`, `lng=127.0106000`, `radius=1`, `3`, `5`
+
+이미지 URL은 정적 리소스 경로 `/images/{storedFilename}` 형태입니다. 예시는 설명용 파일명이며, 실제 seed 데이터에서는 `seed_store_01_store_001.png`, `seed_bread_01_bread_1.jpeg`, `seed_review_01_review_1_1.jpeg` 같은 저장 파일명이 내려옵니다.
 
 ## 빠른 이동
 
@@ -385,7 +386,7 @@ false
     "name": "시그니처 소금빵",
     "originalPrice": 3500,
     "salePrice": 2500,
-    "imageUrl": "/images/bread/1.jpg",
+    "imageUrl": "/images/bread_1_abc123.jpg",
     "storeId": 1,
     "storeName": "투데이브레드 데모 강남점",
     "isSelling": true,
@@ -421,7 +422,7 @@ false
   "salePrice": 2500,
   "remainingQuantity": 14,
   "description": "겉은 바삭하고 속은 촉촉한 대표 메뉴입니다.",
-  "imageUrl": "/images/bread/1.jpg",
+  "imageUrl": "/images/bread_1_abc123.jpg",
   "storeId": 1,
   "storeName": "투데이브레드 데모 강남점",
   "isSelling": true,
@@ -454,7 +455,7 @@ false
     "salePrice": 2500,
     "remainingQuantity": 14,
     "description": "겉은 바삭하고 속은 촉촉한 대표 메뉴입니다.",
-    "imageUrl": "/images/bread/1.jpg"
+    "imageUrl": "/images/bread_1_abc123.jpg"
   }
 ]
 ```
@@ -486,7 +487,7 @@ false
     "salePrice": 2500,
     "remainingQuantity": 14,
     "description": "겉은 바삭하고 속은 촉촉한 대표 메뉴입니다.",
-    "imageUrl": "/images/bread/1.jpg"
+    "imageUrl": "/images/bread_1_abc123.jpg"
   }
 ]
 ```
@@ -528,7 +529,7 @@ false
   "salePrice": 2800,
   "remainingQuantity": 10,
   "description": "부드러운 크림치즈가 듬뿍 들어간 베이글입니다.",
-  "imageUrl": "/images/bread/4.jpg"
+  "imageUrl": "/images/bread_4_abc123.jpg"
 }
 ```
 
@@ -571,7 +572,7 @@ false
   "salePrice": 3000,
   "remainingQuantity": 15,
   "description": "리뉴얼! 크림치즈가 더 듬뿍.",
-  "imageUrl": "/images/bread/4.jpg"
+  "imageUrl": "/images/bread_4_abc123.jpg"
 }
 ```
 
@@ -662,9 +663,9 @@ false
     "name": "투데이브레드 데모 강남점",
     "storeAddressLine1": "서울특별시 강남구 테헤란로 123",
     "storeAddressLine2": "1층",
-    "latitude": 37.4980950,
-    "longitude": 127.0276100,
-    "primaryImageUrl": "/images/store/1_0.jpg",
+    "latitude": 37.5826000,
+    "longitude": 127.0106000,
+    "primaryImageUrl": "/images/store_1_abc123.jpg",
     "isSelling": true,
     "distance": 0.35,
     "lastOrderTime": "22:30:00",
@@ -697,8 +698,8 @@ false
     "description": "강남역 근처에서 소금빵과 식사용 빵을 판매하는 프론트 연동용 데모 매장입니다.",
     "addressLine1": "서울특별시 강남구 테헤란로 123",
     "addressLine2": "1층",
-    "latitude": 37.4980950,
-    "longitude": 127.0276100,
+    "latitude": 37.5826000,
+    "longitude": 127.0106000,
     "businessHours": [
       {
         "dayOfWeek": 1,
@@ -719,7 +720,7 @@ false
   "images": [
     {
       "id": 1,
-      "imageUrl": "/images/store/1_0.jpg",
+      "imageUrl": "/images/store_1_abc123.jpg",
       "displayOrder": 0
     }
   ],
@@ -732,7 +733,7 @@ false
       "salePrice": 2500,
       "remainingQuantity": 14,
       "description": "겉은 바삭하고 속은 촉촉한 대표 메뉴입니다.",
-      "imageUrl": "/images/bread/1.jpg"
+      "imageUrl": "/images/bread_1_abc123.jpg"
     }
   ],
   "isSelling": true,
@@ -786,8 +787,8 @@ false
     "description": "강남역 근처에서 소금빵과 식사용 빵을 판매하는 프론트 연동용 데모 매장입니다.",
     "addressLine1": "서울특별시 강남구 테헤란로 123",
     "addressLine2": "1층",
-    "latitude": 37.4980950,
-    "longitude": 127.0276100,
+    "latitude": 37.5826000,
+    "longitude": 127.0106000,
     "businessHours": [
       {
         "dayOfWeek": 1,
@@ -801,12 +802,12 @@ false
   "images": [
     {
       "id": 1,
-      "imageUrl": "/images/store/1_0.jpg",
+      "imageUrl": "/images/store_1_abc123.jpg",
       "displayOrder": 0
     },
     {
       "id": 2,
-      "imageUrl": "/images/store/1_1.jpg",
+      "imageUrl": "/images/store_1_def456.jpg",
       "displayOrder": 1
     }
   ]
@@ -835,8 +836,8 @@ false
   "description": "강남역 근처 빵집입니다.",
   "addressLine1": "서울특별시 강남구 테헤란로 123",
   "addressLine2": "1층",
-  "latitude": 37.4980950,
-  "longitude": 127.0276100,
+  "latitude": 37.5826000,
+  "longitude": 127.0106000,
   "businessHours": [
     {
       "dayOfWeek": 1,
@@ -907,8 +908,8 @@ false
     "description": "강남역 근처 빵집입니다.",
     "addressLine1": "서울특별시 강남구 테헤란로 123",
     "addressLine2": "1층",
-    "latitude": 37.4980950,
-    "longitude": 127.0276100,
+    "latitude": 37.5826000,
+    "longitude": 127.0106000,
     "businessHours": [
       {
         "dayOfWeek": 1,
@@ -922,7 +923,7 @@ false
   "images": [
     {
       "id": 1,
-      "imageUrl": "/images/store/1_0.jpg",
+      "imageUrl": "/images/store_1_abc123.jpg",
       "displayOrder": 0
     }
   ]
@@ -949,8 +950,8 @@ false
   "description": "리뉴얼 오픈! 강남역 근처 빵집입니다.",
   "addressLine1": "서울특별시 강남구 테헤란로 123",
   "addressLine2": "1층",
-  "latitude": 37.4980950,
-  "longitude": 127.0276100,
+  "latitude": 37.5826000,
+  "longitude": 127.0106000,
   "businessHours": [
     {
       "dayOfWeek": 1,
@@ -976,8 +977,8 @@ false
   "description": "리뉴얼 오픈! 강남역 근처 빵집입니다.",
   "addressLine1": "서울특별시 강남구 테헤란로 123",
   "addressLine2": "1층",
-  "latitude": 37.4980950,
-  "longitude": 127.0276100,
+  "latitude": 37.5826000,
+  "longitude": 127.0106000,
   "businessHours": [
     {
       "dayOfWeek": 1,
@@ -1010,12 +1011,12 @@ false
 [
   {
     "id": 10,
-    "imageUrl": "/images/store/1_0.jpg",
+    "imageUrl": "/images/store_1_abc123.jpg",
     "displayOrder": 0
   },
   {
     "id": 11,
-    "imageUrl": "/images/store/1_1.jpg",
+    "imageUrl": "/images/store_1_def456.jpg",
     "displayOrder": 1
   }
 ]
@@ -1313,7 +1314,7 @@ false
     "storeId": 1,
     "name": "투데이브레드 데모 강남점",
     "address": "서울특별시 강남구 테헤란로 123 1층",
-    "imageUrl": "/images/store/1_0.jpg",
+    "imageUrl": "/images/store_1_abc123.jpg",
     "isSelling": true
   }
 ]
@@ -1350,7 +1351,7 @@ false
       "storeId": 1,
       "name": "투데이브레드 데모 강남점",
       "address": "서울특별시 강남구 테헤란로 123 1층",
-      "imageUrl": "/images/store/1_0.jpg",
+      "imageUrl": "/images/store_1_abc123.jpg",
       "isSelling": true
     }
   ]
@@ -1404,7 +1405,7 @@ false
       "breadName": "시그니처 소금빵",
       "description": "겉은 바삭하고 속은 촉촉한 대표 메뉴입니다.",
       "quantity": 2,
-      "imageUrl": "/images/bread/1.jpg",
+      "imageUrl": "/images/bread_1_abc123.jpg",
       "salePrice": 2500
     }
   ]
@@ -1497,7 +1498,7 @@ false
       "breadName": "시그니처 소금빵",
       "breadPrice": 2500,
       "quantity": 3,
-      "breadImageUrl": "/images/bread/1.jpg"
+      "breadImageUrl": "/images/bread_1_abc123.jpg"
     }
   ]
 }
@@ -1539,7 +1540,7 @@ false
       "breadName": "시그니처 소금빵",
       "breadPrice": 2500,
       "quantity": 2,
-      "breadImageUrl": "/images/bread/1.jpg"
+      "breadImageUrl": "/images/bread_1_abc123.jpg"
     }
   ]
 }
@@ -1631,7 +1632,7 @@ false
       "breadName": "시그니처 소금빵",
       "breadPrice": 2500,
       "quantity": 3,
-      "breadImageUrl": "/images/bread/1.jpg"
+      "breadImageUrl": "/images/bread_1_abc123.jpg"
     }
   ]
 }
@@ -1714,7 +1715,7 @@ false
 | 항목 | 값 |
 |------|-----|
 | 인증 | O |
-| 권한 | USER 이상 |
+| 권한 | USER |
 | Content-Type | `multipart/form-data` |
 | 응답 코드 | 201 Created |
 
@@ -1744,7 +1745,7 @@ false
   "orderItemId": 2000,
   "rating": 4,
   "content": "정말 맛있는 빵이었습니다! 추천합니다.",
-  "imageUrls": ["/images/review/1_0.jpg"],
+  "imageUrls": ["/images/review_1_abc123.jpg"],
   "createdAt": "2026-04-15T18:30:00"
 }
 ```
@@ -1761,7 +1762,7 @@ false
 | 항목 | 값 |
 |------|-----|
 | 인증 | O |
-| 권한 | USER 이상 |
+| 권한 | USER |
 
 **경로 변수:** `storeId` (가게 ID)
 
@@ -1784,8 +1785,8 @@ false
       "rating": 4,
       "content": "정말 맛있는 빵이었습니다! 추천합니다.",
       "breadName": "시그니처 소금빵",
-      "breadImageUrl": "/images/bread/1.jpg",
-      "imageUrls": ["/images/review/1_0.jpg"],
+      "breadImageUrl": "/images/bread_1_abc123.jpg",
+      "imageUrls": ["/images/review_1_abc123.jpg"],
       "createdAt": "2026-04-15T18:30:00"
     }
   ],
@@ -1799,6 +1800,7 @@ false
 ```
 
 > `breadName`은 주문 시점의 빵 이름 스냅샷입니다. 빵 이름이 변경되어도 리뷰에는 구매 당시 이름이 표시됩니다.
+> 현재 컨트롤러 클래스에 `@PreAuthorize("hasRole('USER')")`가 적용되어 있어 BOSS 토큰이나 비로그인 요청으로는 이 API를 조회할 수 없습니다.
 
 **에러 응답:** `STORE_004`, `COMMON_001`
 
@@ -1809,7 +1811,7 @@ false
 | 항목 | 값 |
 |------|-----|
 | 인증 | O |
-| 권한 | USER 이상 |
+| 권한 | USER |
 
 **쿼리 파라미터:**
 
@@ -1827,12 +1829,12 @@ false
     {
       "reviewId": 1,
       "breadName": "시그니처 소금빵",
-      "breadImageUrl": "/images/bread/1.jpg",
+      "breadImageUrl": "/images/bread_1_abc123.jpg",
       "storeName": "투데이브레드 데모 강남점",
       "storeId": 1,
       "rating": 4,
       "content": "정말 맛있는 빵이었습니다! 추천합니다.",
-      "imageUrls": ["/images/review/1_0.jpg"],
+      "imageUrls": ["/images/review_1_abc123.jpg"],
       "createdAt": "2026-04-15T18:30:00"
     }
   ],
@@ -1876,8 +1878,8 @@ false
       "rating": 4,
       "content": "정말 맛있는 빵이었습니다! 추천합니다.",
       "breadName": "시그니처 소금빵",
-      "breadImageUrl": "/images/bread/1.jpg",
-      "imageUrls": ["/images/review/1_0.jpg"],
+      "breadImageUrl": "/images/bread_1_abc123.jpg",
+      "imageUrls": ["/images/review_1_abc123.jpg"],
       "createdAt": "2026-04-15T18:30:00",
       "purchaseCount": 3
     }
