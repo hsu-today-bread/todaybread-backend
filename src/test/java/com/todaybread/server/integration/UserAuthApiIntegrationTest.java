@@ -1,11 +1,15 @@
 package com.todaybread.server.integration;
 
+import com.todaybread.server.domain.user.client.NtsBusinessClient;
+import com.todaybread.server.domain.user.client.dto.NtsBusinessValidationResult;
 import com.todaybread.server.domain.user.entity.UserEntity;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MvcResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -13,6 +17,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class UserAuthApiIntegrationTest extends ApiIntegrationTestSupport {
+
+    @MockitoBean
+    private NtsBusinessClient ntsBusinessClient;
 
     @Test
     void registerLoginReissueAndLogoutFlow() throws Exception {
@@ -94,12 +101,17 @@ class UserAuthApiIntegrationTest extends ApiIntegrationTestSupport {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("STORE_001"));
 
+        given(ntsBusinessClient.validate("1234567890", "20200101", "홍길동"))
+                .willReturn(new NtsBusinessValidationResult("01", "계속사업자"));
+
         MvcResult approveResult = mockMvc.perform(post("/api/user/boss-approve")
                         .header("Authorization", "Bearer " + accessToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "bossNumber": "1234567890"
+                                  "bossNumber": "1234567890",
+                                  "businessStartDate": "20200101",
+                                  "representativeName": "홍길동"
                                 }
                                 """))
                 .andExpect(status().isOk())
