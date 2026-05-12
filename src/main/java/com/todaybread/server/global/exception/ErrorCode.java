@@ -56,6 +56,10 @@ public enum ErrorCode {
     USER_BOSS_ALREADY_APPROVED("USER_006", "이미 사장님 등록이 완료된 상태입니다.", HttpStatus.CONFLICT),
     USER_BOSS_NUMBER_FORMAT_ERROR("USER_007","사업자 번호 형식이 맞지 않습니다.",HttpStatus.BAD_REQUEST),
     USER_RESET_TOKEN_INVALID("USER_008", "유효하지 않은 비밀번호 재설정 토큰입니다.", HttpStatus.BAD_REQUEST),
+    USER_BOSS_VERIFICATION_FAILED("USER_009", "사업자 등록정보가 일치하지 않습니다.", HttpStatus.BAD_REQUEST),
+    USER_BOSS_NOT_ACTIVE_BUSINESS("USER_010", "영업 중인 사업자만 등록할 수 있습니다.", HttpStatus.CONFLICT),
+    USER_BOSS_NUMBER_ALREADY_REGISTERED("USER_011", "이미 등록된 사업자번호입니다.", HttpStatus.CONFLICT),
+    USER_BOSS_VERIFICATION_UNAVAILABLE("USER_012", "사업자 등록정보 확인이 지연되고 있습니다. 잠시 후 다시 시도해주세요.", HttpStatus.SERVICE_UNAVAILABLE),
 
     /**
      * ============================

@@ -30,6 +30,7 @@ import com.todaybread.server.domain.store.repository.StoreBusinessHoursRepositor
 import com.todaybread.server.domain.store.repository.StoreImageRepository;
 import com.todaybread.server.domain.store.repository.StoreRepository;
 import com.todaybread.server.domain.user.entity.UserEntity;
+import com.todaybread.server.domain.user.repository.BusinessApprovalRepository;
 import com.todaybread.server.domain.user.repository.PasswordResetTokenRepository;
 import com.todaybread.server.domain.user.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -90,6 +91,9 @@ abstract class ApiIntegrationTestSupport {
 
     @Autowired
     protected PasswordResetTokenRepository passwordResetTokenRepository;
+
+    @Autowired
+    protected BusinessApprovalRepository businessApprovalRepository;
 
     @Autowired
     protected RefreshTokenRepository refreshTokenRepository;
@@ -159,6 +163,7 @@ abstract class ApiIntegrationTestSupport {
         interestAreaRepository.deleteAllInBatch();
         refreshTokenRepository.deleteAllInBatch();
         passwordResetTokenRepository.deleteAllInBatch();
+        businessApprovalRepository.deleteAllInBatch();
         userRepository.deleteAllInBatch();
 
         FileSystemUtils.deleteRecursively(UPLOAD_DIR);

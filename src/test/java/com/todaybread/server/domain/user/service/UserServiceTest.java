@@ -2,6 +2,8 @@ package com.todaybread.server.domain.user.service;
 
 import com.todaybread.server.config.jwt.JwtTokenService;
 import com.todaybread.server.domain.auth.service.AuthService;
+import com.todaybread.server.domain.user.client.NtsBusinessClient;
+import com.todaybread.server.domain.user.client.dto.NtsBusinessValidationResult;
 import com.todaybread.server.domain.user.dto.UserBossRequest;
 import com.todaybread.server.domain.user.dto.UserBossResponse;
 import com.todaybread.server.domain.user.dto.UserLoginRequest;
@@ -46,6 +48,12 @@ class UserServiceTest {
 
     @Mock
     private JwtTokenService jwtTokenService;
+
+    @Mock
+    private NtsBusinessClient ntsBusinessClient;
+
+    @Mock
+    private BossApprovalFinalizer bossApprovalFinalizer;
 
     @InjectMocks
     private UserService userService;
@@ -161,23 +169,30 @@ class UserServiceTest {
         UserEntity user = TestFixtures.user(1L, false);
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
 
-        assertThatThrownBy(() -> userService.approveBoss(1L, new UserBossRequest("invalid")))
+        assertThatThrownBy(() -> userService.approveBoss(1L,
+                new UserBossRequest("invalid", "20200101", "홍길동")))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.USER_BOSS_NUMBER_FORMAT_ERROR);
     }
 
     @Test
-    void approveBoss_updatesRoleAndReturnsNewTokens() {
+    void approveBoss_validatesBusinessAndDelegatesFinalApproval() {
         UserEntity user = TestFixtures.user(1L, false);
+        NtsBusinessValidationResult validationResult =
+                new NtsBusinessValidationResult("01", "계속사업자");
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(jwtTokenService.generateAccessToken(1L, user.getEmail(), "BOSS")).willReturn("boss-access");
-        given(jwtTokenService.generateRefreshToken(1L)).willReturn("boss-refresh");
+        given(ntsBusinessClient.validate("1234567890", "20200101", "홍길동"))
+                .willReturn(validationResult);
+        given(bossApprovalFinalizer.finalizeApproval(1L, "1234567890", "20200101", validationResult))
+                .willReturn(UserBossResponse.ok("boss-access", "boss-refresh"));
 
-        UserBossResponse response = userService.approveBoss(1L, new UserBossRequest("1234567890"));
+        UserBossResponse response = userService.approveBoss(1L,
+                new UserBossRequest("1234567890", "20200101", " 홍길동 "));
 
         assertThat(response.success()).isTrue();
-        assertThat(user.getIsBoss()).isTrue();
-        verify(authService).saveRefreshToken(1L, "boss-refresh");
+        assertThat(response.accessToken()).isEqualTo("boss-access");
+        verify(ntsBusinessClient).validate("1234567890", "20200101", "홍길동");
+        verify(bossApprovalFinalizer).finalizeApproval(1L, "1234567890", "20200101", validationResult);
     }
 }

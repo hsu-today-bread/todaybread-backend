@@ -2,6 +2,8 @@ package com.todaybread.server.domain.user.service;
 
 import com.todaybread.server.config.jwt.JwtTokenService;
 import com.todaybread.server.domain.auth.service.AuthService;
+import com.todaybread.server.domain.user.client.NtsBusinessClient;
+import com.todaybread.server.domain.user.client.dto.NtsBusinessValidationResult;
 import com.todaybread.server.domain.user.dto.*;
 import com.todaybread.server.domain.user.entity.UserEntity;
 import com.todaybread.server.domain.user.repository.UserRepository;
@@ -25,6 +27,8 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final AuthService authService;
     private final JwtTokenService jwtTokenService;
+    private final NtsBusinessClient ntsBusinessClient;
+    private final BossApprovalFinalizer bossApprovalFinalizer;
 
     /**
      * 이메일 중복 여부를 체크합니다.
@@ -166,8 +170,6 @@ public class UserService {
      * @param request 요청 DTO
      * @return 응답 DTO
      */
-    // TODO 사업자 등록 서비스 로직 수행
-    @Transactional
     public UserBossResponse approveBoss(Long userId, UserBossRequest request) {
         UserEntity userEntity = getUserOrThrow(userId);
 
@@ -180,17 +182,18 @@ public class UserService {
             throw new CustomException(ErrorCode.USER_BOSS_NUMBER_FORMAT_ERROR);
         }
 
-        userEntity.approveBoss();
+        NtsBusinessValidationResult validationResult = ntsBusinessClient.validate(
+                bossNumber,
+                request.businessStartDate(),
+                request.representativeName().trim()
+        );
 
-        String userEmail = userEntity.getEmail();
-        String userRole = userEntity.getIsBoss() ? "BOSS" : "USER";
-
-        String accessToken = jwtTokenService.generateAccessToken(userId,userEmail,userRole);
-        String refreshToken = jwtTokenService.generateRefreshToken(userId);
-
-        authService.saveRefreshToken(userId,refreshToken);
-
-        return UserBossResponse.ok(accessToken, refreshToken);
+        return bossApprovalFinalizer.finalizeApproval(
+                userId,
+                bossNumber,
+                request.businessStartDate(),
+                validationResult
+        );
     }
 
     /**
