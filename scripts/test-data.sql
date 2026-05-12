@@ -344,8 +344,14 @@ BEGIN
     VALUES ('demo-user01@todaybread.com', '데모 유저', @pw, 'demo-user01', '010-9000-0001', FALSE);
     SET v_user_id = LAST_INSERT_ID();
 
-    INSERT INTO interest_area (user_id, name, address, latitude, longitude, radius_km)
-    VALUES (v_user_id, '한성대학교', '서울특별시 성북구 삼선교로16길 116', 37.5826000, 127.0106000, 3.0);
+    INSERT INTO interest_area (
+        user_id, name, address, latitude, longitude, radius_km,
+        created_at, updated_at
+    )
+    VALUES (
+        v_user_id, '한성대학교', '서울특별시 성북구 삼선교로16길 116', 37.5826000, 127.0106000, 3.0,
+        NOW(6), NOW(6)
+    );
 
     SET v_i = 1;
     WHILE v_i <= 120 DO
@@ -882,6 +888,44 @@ BEGIN
     GROUP BY status
     ORDER BY status;
 
+    SELECT 'seed_reviews' AS metric, COUNT(*) AS value
+    FROM review r
+    JOIN tmp_store_specs tss ON tss.store_id = r.store_id;
+
+    SELECT 'stores_without_reviews' AS metric, COUNT(*) AS value
+    FROM tmp_store_specs tss
+    LEFT JOIN (
+        SELECT store_id, COUNT(*) AS review_count
+        FROM review
+        GROUP BY store_id
+    ) r ON r.store_id = tss.store_id
+    WHERE COALESCE(r.review_count, 0) = 0;
+
+    SELECT 'min_reviews_per_store' AS metric, MIN(review_count) AS value
+    FROM (
+        SELECT tss.store_id, COUNT(r.id) AS review_count
+        FROM tmp_store_specs tss
+        LEFT JOIN review r ON r.store_id = tss.store_id
+        GROUP BY tss.store_id
+    ) review_counts;
+
+    SELECT 'max_reviews_per_store' AS metric, MAX(review_count) AS value
+    FROM (
+        SELECT tss.store_id, COUNT(r.id) AS review_count
+        FROM tmp_store_specs tss
+        LEFT JOIN review r ON r.store_id = tss.store_id
+        GROUP BY tss.store_id
+    ) review_counts;
+
+    SELECT 'seed_store_images' AS metric, COUNT(*) AS value
+    FROM store_image si
+    JOIN tmp_store_specs tss ON tss.store_id = si.store_id;
+
+    SELECT 'seed_bread_images' AS metric, COUNT(*) AS value
+    FROM bread_image bi
+    JOIN bread b ON b.id = bi.bread_id
+    JOIN tmp_store_specs tss ON tss.store_id = b.store_id;
+
     SELECT DATE_FORMAT(order_date, '%Y-%m') AS sales_month, MAX(monthly_count) AS max_orders_per_store
     FROM (
         SELECT store_id, DATE_FORMAT(order_date, '%Y-%m') AS order_month, COUNT(*) AS monthly_count, MIN(order_date) AS order_date
@@ -893,6 +937,11 @@ BEGIN
     ORDER BY sales_month;
 
     SELECT 'review_image_reviews' AS metric, COUNT(DISTINCT review_id) AS value
+    FROM review_image ri
+    JOIN review r ON r.id = ri.review_id
+    JOIN tmp_store_specs tss ON tss.store_id = r.store_id;
+
+    SELECT 'seed_review_images' AS metric, COUNT(*) AS value
     FROM review_image ri
     JOIN review r ON r.id = ri.review_id
     JOIN tmp_store_specs tss ON tss.store_id = r.store_id;

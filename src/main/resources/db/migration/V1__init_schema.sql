@@ -1,5 +1,5 @@
 /*
- TodayBread 전체 스키마 통합 baseline migration (V1~V11 병합)
+ TodayBread 전체 스키마 통합 baseline migration
  신규 환경에서 현재 최종 스키마를 한 번에 구성합니다.
  users, auth, keyword, store, bread, cart, order, payment, review 도메인 테이블과 인덱스를 포함합니다.
  */
@@ -295,4 +295,63 @@ CREATE TABLE review_image (
     updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
     CONSTRAINT fk_review_image_review FOREIGN KEY (review_id) REFERENCES review(id) ON DELETE CASCADE,
     INDEX idx_review_image_review_id (review_id)
+);
+
+-- ============================================================
+-- interest_area
+-- ============================================================
+
+CREATE TABLE interest_area (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    name VARCHAR(50) NOT NULL,
+    address VARCHAR(200) NOT NULL,
+    latitude DECIMAL(10, 7) NOT NULL,
+    longitude DECIMAL(10, 7) NOT NULL,
+    radius_km DOUBLE NOT NULL DEFAULT 3.0,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    CONSTRAINT uk_interest_area_user_id UNIQUE (user_id),
+    CONSTRAINT fk_interest_area_users FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT chk_interest_area_latitude CHECK (latitude BETWEEN -90 AND 90),
+    CONSTRAINT chk_interest_area_longitude CHECK (longitude BETWEEN -180 AND 180),
+    CONSTRAINT chk_interest_area_name_length CHECK (CHAR_LENGTH(name) >= 1),
+    CONSTRAINT chk_interest_area_address_length CHECK (CHAR_LENGTH(address) >= 1)
+);
+
+-- ============================================================
+-- notification
+-- ============================================================
+
+CREATE TABLE fcm_token (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    token VARCHAR(512) NOT NULL,
+    platform VARCHAR(10) NOT NULL,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    last_seen_at DATETIME(6) NOT NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    CONSTRAINT uk_fcm_token_user_id UNIQUE (user_id),
+    CONSTRAINT uk_fcm_token_token UNIQUE (token),
+    CONSTRAINT fk_fcm_token_users FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT chk_fcm_token_platform CHECK (platform IN ('ANDROID', 'IOS')),
+    INDEX idx_fcm_token_active (active)
+);
+
+CREATE TABLE notification_log (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    type VARCHAR(30) NOT NULL,
+    target_id VARCHAR(100) NOT NULL,
+    event_key VARCHAR(200) NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    body VARCHAR(500) NOT NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    CONSTRAINT uk_notification_log_dedup UNIQUE (user_id, type, event_key),
+    CONSTRAINT fk_notification_log_users FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT chk_notification_log_type CHECK (type IN ('KEYWORD_STOCK', 'FAVORITE_STORE_STOCK', 'ORDER_CREATED')),
+    INDEX idx_notification_log_user_id (user_id),
+    INDEX idx_notification_log_type (type)
 );
