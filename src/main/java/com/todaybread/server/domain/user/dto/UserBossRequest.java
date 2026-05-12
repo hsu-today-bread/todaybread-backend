@@ -12,9 +12,7 @@ import jakarta.validation.constraints.Size;
  * @param representativeName 대표자명
  */
 public record UserBossRequest (
-        @NotBlank
-        @Pattern(regexp = "^\\d{10}$")
-        String bossNumber,
+        @NotBlank String bossNumber,
 
         @NotBlank
         @Pattern(regexp = "^\\d{8}$")
