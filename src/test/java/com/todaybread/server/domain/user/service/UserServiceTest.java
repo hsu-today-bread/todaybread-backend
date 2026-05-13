@@ -33,6 +33,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -194,5 +195,23 @@ class UserServiceTest {
         assertThat(response.accessToken()).isEqualTo("boss-access");
         verify(ntsBusinessClient).validate("1234567890", "20200101", "홍길동");
         verify(bossApprovalFinalizer).finalizeApproval(1L, "1234567890", "20200101", validationResult);
+    }
+
+    @Test
+    void approveBoss_bypassesNtsOnlyForDevelopmentApprovalCase() {
+        UserEntity user = TestFixtures.user(1L, false);
+        NtsBusinessValidationResult validationResult =
+                new NtsBusinessValidationResult("01", "개발용 자동 승인");
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(bossApprovalFinalizer.finalizeApproval(1L, "1234567890", "20260101", validationResult))
+                .willReturn(UserBossResponse.ok("boss-access", "boss-refresh"));
+
+        UserBossResponse response = userService.approveBoss(1L,
+                new UserBossRequest("1234567890", "20260101", " 김한성 "));
+
+        assertThat(response.success()).isTrue();
+        assertThat(response.accessToken()).isEqualTo("boss-access");
+        verifyNoInteractions(ntsBusinessClient);
+        verify(bossApprovalFinalizer).finalizeApproval(1L, "1234567890", "20260101", validationResult);
     }
 }

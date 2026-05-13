@@ -182,11 +182,16 @@ public class UserService {
             throw new CustomException(ErrorCode.USER_BOSS_NUMBER_FORMAT_ERROR);
         }
 
-        NtsBusinessValidationResult validationResult = ntsBusinessClient.validate(
-                bossNumber,
-                request.businessStartDate(),
-                request.representativeName().trim()
-        );
+        NtsBusinessValidationResult validationResult;
+        if (isDevelopmentBossApprovalCase(request)) {
+            validationResult = new NtsBusinessValidationResult("01", "개발용 자동 승인");
+        } else {
+            validationResult = ntsBusinessClient.validate(
+                    bossNumber,
+                    request.businessStartDate(),
+                    request.representativeName().trim()
+            );
+        }
 
         return bossApprovalFinalizer.finalizeApproval(
                 userId,
@@ -194,6 +199,16 @@ public class UserService {
                 request.businessStartDate(),
                 validationResult
         );
+    }
+
+    /**
+     * 테스트 케이스를 위한 검증 코드
+     * TODO: 실제 프로덕션 시 지워야함
+     */
+    private boolean isDevelopmentBossApprovalCase(UserBossRequest request) {
+        return request.bossNumber().equals("1234567890")
+                && request.businessStartDate().equals("20260101")
+                && request.representativeName().trim().equals("김한성");
     }
 
     /**
