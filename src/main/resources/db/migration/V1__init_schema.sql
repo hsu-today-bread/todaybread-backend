@@ -45,7 +45,7 @@ CREATE TABLE business_approval (
     user_id BIGINT NOT NULL,
     business_number_hash VARCHAR(64) NOT NULL,
     business_number_last4 VARCHAR(4) NOT NULL,
-    business_start_date CHAR(8) NOT NULL,
+    business_start_date VARCHAR(8) NOT NULL,
     business_status_code VARCHAR(2) NOT NULL,
     business_status_name VARCHAR(30) NOT NULL,
     verified_at DATETIME(6) NOT NULL,

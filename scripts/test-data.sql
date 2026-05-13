@@ -201,6 +201,9 @@ BEGIN
     DELETE prt FROM password_reset_token prt
     JOIN tmp_cleanup_users cu ON prt.user_id = cu.id;
 
+    DELETE ba FROM business_approval ba
+    JOIN tmp_cleanup_users cu ON ba.user_id = cu.id;
+
     DELETE u FROM users u
     JOIN tmp_cleanup_users cu ON u.id = cu.id;
 
