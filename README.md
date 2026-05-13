@@ -43,7 +43,7 @@ MySQL CLI 접속은 아래 스크립트를 사용합니다.
 ./scripts/mysql-connect.sh
 ```
 
-## 테스트 데이터
+## 테스트 데이터 및 데모 시나리오
 
 `./scripts/test-data.sh`는 `scripts/test-data.sql`을 적용하고 `uploads/`에 seed 이미지를 준비합니다. 기본 seed는 서울 전역 120개 매장을 만들며, 한성대학교 기준 근처 조회 데모에 맞춰져 있습니다. `scripts/seed-images/`에 실제 이미지가 있으면 해당 파일을 사용하고, 없으면 SVG placeholder를 생성합니다.
 
@@ -53,6 +53,12 @@ MySQL CLI 접속은 아래 스크립트를 사용합니다.
 |------|------|----------|
 | 일반 유저 | `demo-user01@todaybread.com` ~ `demo-user20@todaybread.com` | `todaybread123` |
 | 사장님 | `demo-boss001@todaybread.com` ~ `demo-boss120@todaybread.com` | `todaybread123` |
+
+사업자 인증 테스트용 케이스: 
+
+|사업자 번호|사업 시작일|대표자 명|
+|--------|---------|-------|
+|1234567890|20260101|김한성|
 
 근처 매장/빵 조회 추천 좌표:
 

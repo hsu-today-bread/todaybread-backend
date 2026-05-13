@@ -258,8 +258,8 @@ false
 ```json
 {
   "bossNumber": "1234567890",
-  "businessStartDate": "20200101",
-  "representativeName": "홍길동"
+  "businessStartDate": "20260101",
+  "representativeName": "김한성"
 }
 ```
 
