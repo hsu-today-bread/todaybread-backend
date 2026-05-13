@@ -299,9 +299,11 @@ Docker가 컨테이너를 처음 만들 때 이 값들로 DB와 유저를 자동
     command: >-
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
+      --log-bin-trust-function-creators=1
 ```
 MySQL 시작 시 문자 인코딩을 utf8mb4로 설정합니다.
 한글, 이모지 등 모든 유니코드 문자를 지원합니다.
+`log-bin-trust-function-creators`는 Flyway가 일반 앱 계정으로 트리거를 생성할 수 있게 하는 로컬 개발용 설정입니다.
 
 ```yaml
     healthcheck:
