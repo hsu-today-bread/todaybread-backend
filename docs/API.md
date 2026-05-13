@@ -35,6 +35,7 @@
 - [주문 — 사장님](#boss-orders)
 - [매출 — 사장님](#boss-sales)
 - [키워드](#keyword)
+- [관심지역](#interest-area)
 - [단골 가게](#favourite-store)
 - [찜목록](#wishlist)
 - [장바구니](#cart)
@@ -1270,9 +1271,105 @@ false
 
 ---
 
+<a id="interest-area"></a>
+
+### 11. 관심지역 (Interest Area)
+
+#### `GET /api/interest-area` — 관심지역 조회
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+
+**응답 형식:**
+
+```json
+{
+  "interestArea": {
+    "id": 1,
+    "name": "한성대학교",
+    "address": "서울특별시 성북구 삼선교로16길 116",
+    "latitude": 37.5826000,
+    "longitude": 127.0106000,
+    "radiusKm": 3.0
+  }
+}
+```
+
+> `name`은 화면에 표시할 관심지역 이름이고, `address`는 도로명 주소입니다. 관심지역이 없으면 `interestArea`는 `null`입니다.
+
+---
+
+#### `POST /api/interest-area` — 관심지역 등록
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+
+**요청 바디:**
+
+```json
+{
+  "name": "한성대학교",
+  "address": "서울특별시 성북구 삼선교로16길 116",
+  "latitude": 37.5826000,
+  "longitude": 127.0106000
+}
+```
+
+**응답 형식:**
+
+```json
+{
+  "id": 1,
+  "name": "한성대학교",
+  "address": "서울특별시 성북구 삼선교로16길 116",
+  "latitude": 37.5826000,
+  "longitude": 127.0106000,
+  "radiusKm": 3.0
+}
+```
+
+**에러 응답:** `INTEREST_AREA_001`, `COMMON_001`
+
+---
+
+#### `PUT /api/interest-area` — 관심지역 수정
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+
+**요청 바디:** `POST /api/interest-area`와 동일
+
+**응답 형식:** `POST /api/interest-area`와 동일
+
+**에러 응답:** `INTEREST_AREA_002`, `COMMON_001`
+
+---
+
+#### `DELETE /api/interest-area` — 관심지역 삭제
+
+| 항목 | 값 |
+|------|-----|
+| 인증 | O |
+
+**응답 형식:**
+
+```json
+{
+  "success": true,
+  "keywordNotificationDisabled": true
+}
+```
+
+**에러 응답:** `INTEREST_AREA_002`, `COMMON_001`
+
+---
+
 <a id="favourite-store"></a>
 
-### 11. 단골 가게 (Favourite Store)
+### 12. 단골 가게 (Favourite Store)
 
 #### `POST /api/favourite-stores` — 단골 가게 토글 (추가/해제)
 
@@ -1326,7 +1423,7 @@ false
 
 <a id="wishlist"></a>
 
-### 12. 찜목록 (Wishlist)
+### 13. 찜목록 (Wishlist)
 
 #### `GET /api/wishlist` — 찜목록 통합 조회
 
@@ -1364,7 +1461,7 @@ false
 
 <a id="cart"></a>
 
-### 13. 장바구니 (Cart)
+### 14. 장바구니 (Cart)
 
 #### `POST /api/cart` — 장바구니에 빵 추가
 
@@ -1471,7 +1568,7 @@ false
 
 <a id="order"></a>
 
-### 14. 주문 (Order)
+### 15. 주문 (Order)
 
 > 주문 생성 API(`POST /api/orders/cart`, `POST /api/orders/direct`)는 `Idempotency-Key` 헤더가 필수입니다.
 > 네트워크 오류 등으로 응답을 받지 못했을 때 같은 key로 재요청하면 동일한 주문 결과를 반환합니다.
@@ -1646,7 +1743,7 @@ false
 
 <a id="payment"></a>
 
-### 15. 결제 (Payment)
+### 16. 결제 (Payment)
 
 > 결제 승인 확정 API(`POST /api/payments/confirm`)는 `Idempotency-Key` 헤더가 필수입니다.
 > 같은 key로 재요청하면 토스 Confirm API를 중복 호출하지 않고 기존 결제 결과를 반환합니다.
@@ -1710,7 +1807,7 @@ false
 
 <a id="review"></a>
 
-### 16. 리뷰 (Review)
+### 17. 리뷰 (Review)
 
 #### `POST /api/review` — 리뷰 작성 (multipart)
 
@@ -1903,7 +2000,7 @@ false
 
 <a id="system"></a>
 
-### 17. 시스템 (System)
+### 18. 시스템 (System)
 
 #### `GET /api/system/health` — 서버 상태 확인
 
@@ -2002,6 +2099,14 @@ false
 | `KEYWORD_003` | 400 | 키워드는 최대 10자까지 입력할 수 있습니다. |
 | `KEYWORD_004` | 404 | 키워드를 찾을 수 없습니다. |
 | `KEYWORD_005` | 403 | 해당 키워드에 대한 권한이 없습니다. |
+
+### 관심지역 (INTEREST_AREA)
+
+| 코드 | HTTP | 메시지 |
+|------|------|--------|
+| `INTEREST_AREA_001` | 409 | 이미 관심지역이 등록되어 있습니다. |
+| `INTEREST_AREA_002` | 404 | 관심지역을 찾을 수 없습니다. |
+| `INTEREST_AREA_003` | 400 | 키워드 알림을 위해 관심지역 설정이 필요합니다. |
 
 ### 매장 (STORE)
 
