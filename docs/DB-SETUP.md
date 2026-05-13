@@ -564,7 +564,7 @@ SELECT * FROM flyway_schema_history;  -- Flyway 마이그레이션 이력 확인
 
 삽입되는 샘플 계정:
 
-- `demo-user01@todaybread.com` / `todaybread123`
+- `demo-user01@todaybread.com` ~ `demo-user20@todaybread.com` / `todaybread123`
 - `demo-boss001@todaybread.com` ~ `demo-boss120@todaybread.com` / `todaybread123`
 
 추천 근처 조회 좌표:
@@ -579,6 +579,8 @@ SELECT * FROM flyway_schema_history;  -- Flyway 마이그레이션 이력 확인
 - 리뷰 1,200개
 - 리뷰 없는 매장 0개
 - 매장별 리뷰 10개
+- `demo-user01` 주문 10개, 리뷰 0개
+- 리뷰/주문자 불일치 0개
 - 매장 이미지 120개
 - 리뷰 이미지가 있는 리뷰 600개
 - 리뷰 이미지 파일 900개

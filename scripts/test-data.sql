@@ -7,7 +7,7 @@ SET collation_connection = 'utf8mb4_unicode_ci';
  기본 실행으로 서울 전역 120개 매장을 생성합니다.
 
  샘플 로그인 계정
- - 일반 유저:  demo-user01@todaybread.com / todaybread123
+ - 일반 유저 01~20: demo-user01@todaybread.com ~ demo-user20@todaybread.com / todaybread123
  - 사장님 001~120: demo-boss001@todaybread.com ~ demo-boss120@todaybread.com / todaybread123
 
  근처 매장/빵 조회 기본 좌표
@@ -22,7 +22,7 @@ SET collation_connection = 'utf8mb4_unicode_ci';
  - seed 자체는 sellingStatus를 저장하지 않습니다. 영업시간 + 재고 조건으로 SELLING / OPEN_SOLD_OUT / CLOSED를 계산할 수 있게 만듭니다.
  - 주문은 PICKED_UP 또는 CANCELLED만 생성합니다. PENDING / CONFIRMED / CANCEL_PENDING은 생성하지 않습니다.
  - 주문/매출 날짜는 2026-01-01부터 2026-05-07까지만 사용합니다.
- - 매장별 월 주문은 최대 15건이며, 2026년 5월은 7일까지만 생성합니다.
+ - 매장별 월 주문 날짜는 5~15일이며, 2026년 5월은 5~7일만 생성합니다.
  - 리뷰는 매장당 10개를 만들고, 이미지 리뷰 5개 + 텍스트 리뷰 5개를 유지합니다.
  - 이미지 리뷰는 리뷰당 1장 또는 2장만 연결합니다.
  */
@@ -40,7 +40,9 @@ BEGIN
     DECLARE v_store_id BIGINT;
     DECLARE v_boss_id BIGINT;
     DECLARE v_user_id BIGINT;
-    DECLARE v_cart_id BIGINT;
+    DECLARE v_order_user_id BIGINT;
+    DECLARE v_review_user_id BIGINT;
+    DECLARE v_order_user_no INT;
     DECLARE v_menu_count INT;
     DECLARE v_target_menu_count INT;
     DECLARE v_menu_idx INT;
@@ -101,6 +103,7 @@ BEGIN
     DROP TEMPORARY TABLE IF EXISTS tmp_cleanup_stores;
     DROP TEMPORARY TABLE IF EXISTS tmp_district_centers;
     DROP TEMPORARY TABLE IF EXISTS tmp_store_specs;
+    DROP TEMPORARY TABLE IF EXISTS tmp_seed_users;
     DROP TEMPORARY TABLE IF EXISTS tmp_seed_breads;
     DROP TEMPORARY TABLE IF EXISTS tmp_seed_order_items;
     DROP TEMPORARY TABLE IF EXISTS tmp_review_candidates;
@@ -113,7 +116,7 @@ BEGIN
     INSERT INTO tmp_cleanup_users (id)
     SELECT id
     FROM users
-    WHERE email IN ('demo-user@todaybread.com', 'demo-user01@todaybread.com')
+    WHERE email LIKE 'demo-user%@todaybread.com'
        OR email LIKE 'demo-boss%@todaybread.com'
        OR email IN (
            'demo-user@todaybread.local',
@@ -223,6 +226,14 @@ BEGIN
         menu_count INT NOT NULL
     );
 
+    CREATE TEMPORARY TABLE tmp_seed_users (
+        user_no INT PRIMARY KEY,
+        user_id BIGINT NULL,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        name VARCHAR(30) NOT NULL,
+        nickname VARCHAR(30) NOT NULL UNIQUE
+    );
+
     CREATE TEMPORARY TABLE tmp_seed_breads (
         store_no INT NOT NULL,
         menu_idx INT NOT NULL,
@@ -240,6 +251,7 @@ BEGIN
         pickup_seq INT NOT NULL,
         order_item_id BIGINT NOT NULL,
         bread_id BIGINT NOT NULL,
+        user_id BIGINT NOT NULL,
         created_at DATETIME(6) NOT NULL,
         PRIMARY KEY (store_no, pickup_seq),
         INDEX idx_tmp_seed_order_items_bread_id (bread_id)
@@ -343,18 +355,51 @@ BEGIN
         (11, '포장 시간이 빠르고 빵이 눅눅하지 않아서 만족스러웠습니다.'),
         (12, '종류가 다양해서 가족들과 나눠 먹기 좋았습니다.');
 
+    INSERT INTO tmp_seed_users (user_no, email, name, nickname) VALUES
+        (1, 'demo-user01@todaybread.com', '김민준', '빵지민'),
+        (2, 'demo-user02@todaybread.com', '최서연', 'BakerAri'),
+        (3, 'demo-user03@todaybread.com', '박지우', '소금빵Leo'),
+        (4, 'demo-user04@todaybread.com', '이도윤', '크루아상Mia🥐'),
+        (5, 'demo-user05@todaybread.com', '정하은', '하루빵집'),
+        (6, 'demo-user06@todaybread.com', '강시우', 'ovenJoon'),
+        (7, 'demo-user07@todaybread.com', '조유나', '달콤Nari'),
+        (8, 'demo-user08@todaybread.com', '윤서준', 'BreadHana'),
+        (9, 'demo-user09@todaybread.com', '장지민', '빵순이Yun✨'),
+        (10, 'demo-user10@todaybread.com', '임예린', '구름베이커'),
+        (11, 'demo-user11@todaybread.com', '한도현', 'ToastMin'),
+        (12, 'demo-user12@todaybread.com', '오수아', '버터Jae'),
+        (13, 'demo-user13@todaybread.com', '신지호', 'CookieRin🍪'),
+        (14, 'demo-user14@todaybread.com', '서하린', '모닝빵솔'),
+        (15, 'demo-user15@todaybread.com', '권민서', 'YeonBread'),
+        (16, 'demo-user16@todaybread.com', '황준서', '단팥Luna'),
+        (17, 'demo-user17@todaybread.com', '안채원', '베이글진'),
+        (18, 'demo-user18@todaybread.com', '송유준', 'CrustKai'),
+        (19, 'demo-user19@todaybread.com', '전가은', '밀도Ara🌙'),
+        (20, 'demo-user20@todaybread.com', '문태오', '오늘도빵');
+
     INSERT INTO users (email, name, password_hash, nickname, phone_number, is_boss)
-    VALUES ('demo-user01@todaybread.com', '데모 유저', @pw, 'demo-user01', '010-9000-0001', FALSE);
-    SET v_user_id = LAST_INSERT_ID();
+    SELECT
+        email,
+        name,
+        @pw,
+        nickname,
+        CONCAT('010-9000-', LPAD(user_no, 4, '0')),
+        FALSE
+    FROM tmp_seed_users
+    ORDER BY user_no;
+
+    UPDATE tmp_seed_users tsu
+    JOIN users u ON u.email = tsu.email
+    SET tsu.user_id = u.id;
 
     INSERT INTO interest_area (
         user_id, name, address, latitude, longitude, radius_km,
         created_at, updated_at
     )
-    VALUES (
-        v_user_id, '한성대학교', '서울특별시 성북구 삼선교로16길 116', 37.5826000, 127.0106000, 3.0,
+    SELECT
+        user_id, '한성대학교', '서울특별시 성북구 삼선교로16길 116', 37.5826000, 127.0106000, 3.0,
         NOW(6), NOW(6)
-    );
+    FROM tmp_seed_users;
 
     SET v_i = 1;
     WHILE v_i <= 120 DO
@@ -373,8 +418,9 @@ BEGIN
     INSERT IGNORE INTO keyword (normalised_text) VALUES ('소금빵'), ('크루아상'), ('식빵'), ('베이글'), ('휘낭시에');
 
     INSERT INTO user_keyword (user_id, keyword_id, display_text)
-    SELECT v_user_id, k.id, k.normalised_text
-    FROM keyword k
+    SELECT tsu.user_id, k.id, k.normalised_text
+    FROM tmp_seed_users tsu
+    CROSS JOIN keyword k
     WHERE k.normalised_text IN ('소금빵', '크루아상', '식빵', '베이글', '휘낭시에');
 
     SET v_i = 1;
@@ -611,22 +657,9 @@ BEGIN
     END WHILE;
 
     INSERT INTO favourite_store (user_id, store_id)
-    SELECT v_user_id, store_id
-    FROM tmp_store_specs
-    WHERE store_no <= 5;
-
-    SELECT store_id INTO v_store_id
-    FROM tmp_store_specs
-    WHERE store_no = 1;
-
-    INSERT INTO cart (user_id, store_id)
-    VALUES (v_user_id, v_store_id);
-    SET v_cart_id = LAST_INSERT_ID();
-
-    INSERT INTO cart_item (cart_id, bread_id, quantity)
-    SELECT v_cart_id, bread_id, 1
-    FROM tmp_seed_breads
-    WHERE store_no = 1 AND menu_idx IN (1, 2);
+    SELECT tsu.user_id, tss.store_id
+    FROM tmp_seed_users tsu
+    JOIN tmp_store_specs tss ON tss.store_no <= ((tsu.user_no - 1) MOD 6);
 
     SET v_i = 1;
     WHILE v_i <= 120 DO
@@ -657,14 +690,17 @@ BEGIN
                 SET v_month_order_count = IF(v_month = 5, 6 + (v_i MOD 2), 12 + ((v_i + v_month) MOD 4));
             END IF;
 
-            SET v_month_order_count = LEAST(15, v_month_order_count);
+            SET v_month_order_count = GREATEST(5, LEAST(15, v_month_order_count));
             IF v_month = 5 THEN
-                SET v_month_order_count = LEAST(7, v_month_order_count);
+                SET v_month_order_count = GREATEST(5, LEAST(7, v_month_order_count));
             END IF;
 
             SET v_j = 1;
             WHILE v_j <= v_month_order_count DO
-                SET v_day_no = 1 + ((v_i * 7 + v_j * 5 + v_month * 3) MOD v_max_day);
+                SET v_day_no = 1 + MOD(
+                    FLOOR(((v_j - 1) * v_max_day) / v_month_order_count) + ((v_i + v_month) MOD v_max_day),
+                    v_max_day
+                );
                 SET v_order_date = STR_TO_DATE(CONCAT('2026-', LPAD(v_month, 2, '0'), '-', LPAD(v_day_no, 2, '0')), '%Y-%m-%d');
                 SET v_created_at = TIMESTAMP(v_order_date, CAST(CONCAT(LPAD(9 + ((v_i + v_j) MOD 12), 2, '0'), ':', LPAD((v_j * 7) MOD 60, 2, '0'), ':00') AS TIME));
 
@@ -682,6 +718,11 @@ BEGIN
 
                 SET v_qty = 1 + ((v_i + v_j + v_month) MOD 3);
                 SET v_order_number = CONCAT(CHAR(65 + ((v_i + v_month) MOD 26)), LPAD(v_j, 2, '0'), CHAR(65 + (v_month MOD 26)));
+                SET v_order_user_no = 2 + ((v_i + v_month + v_j) MOD 19);
+
+                SELECT user_id INTO v_order_user_id
+                FROM tmp_seed_users
+                WHERE user_no = v_order_user_no;
 
                 INSERT INTO orders (
                     user_id, store_id, status, total_amount,
@@ -689,7 +730,7 @@ BEGIN
                     created_at, updated_at
                 )
                 VALUES (
-                    v_user_id,
+                    v_order_user_id,
                     v_store_id,
                     v_status,
                     v_order_bread_price * v_qty,
@@ -718,8 +759,8 @@ BEGIN
 
                 IF v_status = 'PICKED_UP' THEN
                     SET v_pickup_seq = v_pickup_seq + 1;
-                    INSERT INTO tmp_seed_order_items (store_no, pickup_seq, order_item_id, bread_id, created_at)
-                    VALUES (v_i, v_pickup_seq, v_order_item_id, v_order_bread_id, v_created_at);
+                    INSERT INTO tmp_seed_order_items (store_no, pickup_seq, order_item_id, bread_id, user_id, created_at)
+                    VALUES (v_i, v_pickup_seq, v_order_item_id, v_order_bread_id, v_order_user_id, v_created_at);
                     SET v_payment_status = 'APPROVED';
                 ELSE
                     SET v_payment_status = 'CANCELLED';
@@ -754,16 +795,100 @@ BEGIN
         SET v_i = v_i + 1;
     END WHILE;
 
+    SELECT user_id INTO v_user_id
+    FROM tmp_seed_users
+    WHERE user_no = 1;
+
+    SET v_i = 1;
+    WHILE v_i <= 10 DO
+        SELECT store_id, menu_count
+        INTO v_store_id, v_menu_count
+        FROM tmp_store_specs
+        WHERE store_no = v_i;
+
+        SET v_target_menu_count = IF(v_menu_count <= 5, 2, LEAST(3, GREATEST(2, CEIL(v_menu_count / 5))));
+        SET v_menu_idx = 1 + (v_i MOD v_target_menu_count);
+
+        SELECT bread_id, bread_name, sale_price
+        INTO v_order_bread_id, v_order_bread_name, v_order_bread_price
+        FROM tmp_seed_breads
+        WHERE store_no = v_i AND menu_idx = v_menu_idx;
+
+        SET v_order_date = STR_TO_DATE(CONCAT('2026-01-', LPAD(1 + ((v_i + 1) MOD 31), 2, '0')), '%Y-%m-%d');
+        SET v_created_at = TIMESTAMP(v_order_date, CAST(CONCAT(LPAD(10 + (v_i MOD 8), 2, '0'), ':', LPAD((v_i * 11) MOD 60, 2, '0'), ':30') AS TIME));
+        SET v_status = IF(MOD(v_i, 4) = 0, 'CANCELLED', 'PICKED_UP');
+        SET v_payment_status = IF(v_status = 'PICKED_UP', 'APPROVED', 'CANCELLED');
+        SET v_qty = 1 + (v_i MOD 2);
+        SET v_order_number = CONCAT('U', LPAD(v_i, 2, '0'), 'A');
+
+        INSERT INTO orders (
+            user_id, store_id, status, total_amount,
+            idempotency_key, order_number, order_date,
+            created_at, updated_at
+        )
+        VALUES (
+            v_user_id,
+            v_store_id,
+            v_status,
+            v_order_bread_price * v_qty,
+            CONCAT('seed-user01-order-', v_i),
+            v_order_number,
+            v_order_date,
+            v_created_at,
+            v_created_at
+        );
+        SET v_order_id = LAST_INSERT_ID();
+
+        INSERT INTO order_item (
+            order_id, bread_id, bread_name, bread_price,
+            quantity, created_at, updated_at
+        )
+        VALUES (
+            v_order_id,
+            v_order_bread_id,
+            v_order_bread_name,
+            v_order_bread_price,
+            v_qty,
+            v_created_at,
+            v_created_at
+        );
+
+        INSERT INTO payment (
+            order_id, amount, status, paid_at, idempotency_key,
+            payment_key, method, cancel_reason, cancelled_at,
+            created_at, updated_at
+        )
+        VALUES (
+            v_order_id,
+            v_order_bread_price * v_qty,
+            v_payment_status,
+            DATE_ADD(v_created_at, INTERVAL 5 SECOND),
+            CONCAT('seed-user01-payment-', v_i),
+            CONCAT('seed_payment_', LPAD(v_global_order_seq, 6, '0')),
+            'CARD',
+            IF(v_status = 'CANCELLED', '사용자 요청 취소', NULL),
+            IF(v_status = 'CANCELLED', DATE_ADD(v_created_at, INTERVAL 20 MINUTE), NULL),
+            v_created_at,
+            IF(v_status = 'CANCELLED', DATE_ADD(v_created_at, INTERVAL 20 MINUTE), v_created_at)
+        );
+
+        SET v_global_order_seq = v_global_order_seq + 1;
+        SET v_i = v_i + 1;
+    END WHILE;
+
     CREATE TEMPORARY TABLE tmp_review_candidates AS
     SELECT
         toi.store_no,
         toi.order_item_id,
         toi.bread_id,
+        toi.user_id,
         toi.created_at,
         ROW_NUMBER() OVER (PARTITION BY toi.store_no ORDER BY toi.created_at, toi.order_item_id) AS review_seq
     FROM tmp_seed_order_items toi
     JOIN tmp_seed_breads tb ON tb.bread_id = toi.bread_id
-    WHERE tb.is_review_target = TRUE;
+    JOIN tmp_seed_users tsu ON tsu.user_id = toi.user_id
+    WHERE tb.is_review_target = TRUE
+      AND tsu.user_no BETWEEN 2 AND 20;
 
     SET v_i = 1;
     WHILE v_i <= 120 DO
@@ -773,8 +898,8 @@ BEGIN
 
         SET v_review_idx = 1;
         WHILE v_review_idx <= 10 DO
-            SELECT order_item_id, bread_id, created_at
-            INTO v_order_item_id, v_bread_id, v_created_at
+            SELECT order_item_id, bread_id, user_id, created_at
+            INTO v_order_item_id, v_bread_id, v_review_user_id, v_created_at
             FROM tmp_review_candidates
             WHERE store_no = v_i AND review_seq = v_review_idx;
 
@@ -799,7 +924,7 @@ BEGIN
                 rating, content, created_at, updated_at
             )
             VALUES (
-                v_user_id,
+                v_review_user_id,
                 v_store_id,
                 v_bread_id,
                 v_order_item_id,
@@ -845,9 +970,13 @@ BEGIN
     SET s.rating_sum = COALESCE(r.rating_sum, 0),
         s.review_count = COALESCE(r.review_count, 0);
 
+    SELECT 'seed_normal_users' AS metric, COUNT(*) AS value
+    FROM users
+    WHERE email LIKE 'demo-user%@todaybread.com';
+
     SELECT 'seed_users' AS metric, COUNT(*) AS value
     FROM users
-    WHERE email = 'demo-user01@todaybread.com'
+    WHERE email LIKE 'demo-user%@todaybread.com'
        OR email LIKE 'demo-boss%@todaybread.com';
 
     SELECT 'seed_stores' AS metric, COUNT(*) AS value
@@ -891,6 +1020,44 @@ BEGIN
     GROUP BY status
     ORDER BY status;
 
+    SELECT 'user01_orders' AS metric, COUNT(*) AS value
+    FROM orders o
+    JOIN users u ON u.id = o.user_id
+    WHERE u.email = 'demo-user01@todaybread.com';
+
+    SELECT 'user01_reviews' AS metric, COUNT(*) AS value
+    FROM review r
+    JOIN users u ON u.id = r.user_id
+    WHERE u.email = 'demo-user01@todaybread.com';
+
+    SELECT 'demo_cart_rows' AS metric, COUNT(*) AS value
+    FROM cart c
+    JOIN tmp_seed_users tsu ON tsu.user_id = c.user_id;
+
+    SELECT 'demo_cart_item_rows' AS metric, COUNT(*) AS value
+    FROM cart_item ci
+    JOIN cart c ON c.id = ci.cart_id
+    JOIN tmp_seed_users tsu ON tsu.user_id = c.user_id;
+
+    SELECT 'favourite_pattern_mismatches' AS metric, COUNT(*) AS value
+    FROM (
+        SELECT tsu.user_no, ((tsu.user_no - 1) MOD 6) AS expected_count, COUNT(fs.id) AS actual_count
+        FROM tmp_seed_users tsu
+        LEFT JOIN favourite_store fs ON fs.user_id = tsu.user_id
+        GROUP BY tsu.user_no
+        HAVING actual_count <> expected_count
+    ) favourite_counts;
+
+    SELECT 'invalid_review_order_links' AS metric, COUNT(*) AS value
+    FROM review r
+    JOIN order_item oi ON oi.id = r.order_item_id
+    JOIN orders o ON o.id = oi.order_id
+    JOIN tmp_store_specs tss ON tss.store_id = r.store_id
+    WHERE r.user_id <> o.user_id
+       OR r.store_id <> o.store_id
+       OR r.bread_id <> oi.bread_id
+       OR o.status <> 'PICKED_UP';
+
     SELECT 'seed_reviews' AS metric, COUNT(*) AS value
     FROM review r
     JOIN tmp_store_specs tss ON tss.store_id = r.store_id;
@@ -903,6 +1070,15 @@ BEGIN
         GROUP BY store_id
     ) r ON r.store_id = tss.store_id
     WHERE COALESCE(r.review_count, 0) = 0;
+
+    SELECT 'stores_below_10_reviews' AS metric, COUNT(*) AS value
+    FROM tmp_store_specs tss
+    LEFT JOIN (
+        SELECT store_id, COUNT(*) AS review_count
+        FROM review
+        GROUP BY store_id
+    ) r ON r.store_id = tss.store_id
+    WHERE COALESCE(r.review_count, 0) < 10;
 
     SELECT 'min_reviews_per_store' AS metric, MIN(review_count) AS value
     FROM (
@@ -929,15 +1105,27 @@ BEGIN
     JOIN bread b ON b.id = bi.bread_id
     JOIN tmp_store_specs tss ON tss.store_id = b.store_id;
 
-    SELECT DATE_FORMAT(order_date, '%Y-%m') AS sales_month, MAX(monthly_count) AS max_orders_per_store
+    SELECT order_month AS sales_month,
+           MIN(monthly_order_days) AS min_order_days_per_store,
+           MAX(monthly_order_days) AS max_order_days_per_store
     FROM (
-        SELECT store_id, DATE_FORMAT(order_date, '%Y-%m') AS order_month, COUNT(*) AS monthly_count, MIN(order_date) AS order_date
+        SELECT store_id, DATE_FORMAT(order_date, '%Y-%m') AS order_month, COUNT(DISTINCT order_date) AS monthly_order_days
         FROM orders
         WHERE store_id IN (SELECT store_id FROM tmp_store_specs)
         GROUP BY store_id, DATE_FORMAT(order_date, '%Y-%m')
     ) m
-    GROUP BY DATE_FORMAT(order_date, '%Y-%m')
+    GROUP BY order_month
     ORDER BY sales_month;
+
+    SELECT 'monthly_order_day_range_violations' AS metric, COUNT(*) AS value
+    FROM (
+        SELECT store_id, DATE_FORMAT(order_date, '%Y-%m') AS order_month, COUNT(DISTINCT order_date) AS monthly_order_days
+        FROM orders
+        WHERE store_id IN (SELECT store_id FROM tmp_store_specs)
+        GROUP BY store_id, DATE_FORMAT(order_date, '%Y-%m')
+    ) m
+    WHERE (order_month < '2026-05' AND monthly_order_days NOT BETWEEN 5 AND 15)
+       OR (order_month = '2026-05' AND monthly_order_days NOT BETWEEN 5 AND 7);
 
     SELECT 'review_image_reviews' AS metric, COUNT(DISTINCT review_id) AS value
     FROM review_image ri
@@ -953,6 +1141,7 @@ BEGIN
     DROP TEMPORARY TABLE IF EXISTS tmp_cleanup_stores;
     DROP TEMPORARY TABLE IF EXISTS tmp_district_centers;
     DROP TEMPORARY TABLE IF EXISTS tmp_store_specs;
+    DROP TEMPORARY TABLE IF EXISTS tmp_seed_users;
     DROP TEMPORARY TABLE IF EXISTS tmp_seed_breads;
     DROP TEMPORARY TABLE IF EXISTS tmp_seed_order_items;
     DROP TEMPORARY TABLE IF EXISTS tmp_review_candidates;

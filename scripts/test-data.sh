@@ -153,7 +153,7 @@ create_per_review_images() {
     -u"${MYSQL_USER_NAME}" \
     "${PASSWORD_ARG[@]}" \
     -D "${DATABASE_NAME}" \
-    -e "SELECT ri.stored_filename, SUBSTRING_INDEX(ri.original_filename, '.', 1) AS source_key FROM review_image ri JOIN review r ON ri.review_id = r.id JOIN users u ON r.user_id = u.id WHERE u.email = 'demo-user01@todaybread.com';" 2>/dev/null || true)
+    -e "SELECT ri.stored_filename, SUBSTRING_INDEX(ri.original_filename, '.', 1) AS source_key FROM review_image ri JOIN review r ON ri.review_id = r.id JOIN users u ON r.user_id = u.id WHERE u.email LIKE 'demo-user%@todaybread.com' AND u.email <> 'demo-user01@todaybread.com';" 2>/dev/null || true)
 
   if [[ -z "${filenames}" ]]; then
     echo "Warning: Could not fetch review image filenames from DB. Skipping per-review images."
@@ -234,7 +234,7 @@ Token note
 - Run /api/user/login with a sample account; the app will issue tokens and save refresh_token.
 
 Sample accounts
-- demo-user01@todaybread.com / todaybread123
+- demo-user01@todaybread.com ~ demo-user20@todaybread.com / todaybread123
 - demo-boss001@todaybread.com ~ demo-boss120@todaybread.com / todaybread123
 
 Recommended nearby query

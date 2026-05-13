@@ -8,7 +8,7 @@
 |------|------|
 | `scripts/mysql-connect.sh` | Docker MySQL 컨테이너에 접속하는 편의 스크립트 |
 | `scripts/test-data.sh` | 개발용 seed 데이터와 seed 이미지를 준비하고 `test-data.sql`을 DB에 적용 |
-| `scripts/test-data.sql` | 샘플 유저, 사장님, 관심지역, 키워드, 매장, 영업시간, 빵, 이미지, 장바구니, 주문, 결제, 리뷰 데이터를 삽입 |
+| `scripts/test-data.sql` | 샘플 유저, 사장님, 관심지역, 키워드, 매장, 영업시간, 빵, 이미지, 즐겨찾기, 주문, 결제, 리뷰 데이터를 삽입 |
 | `scripts/test-order.sh` | 로그인부터 주문 생성, 결제, 주문 상태 확인, 취소까지 확인하는 API 흐름 테스트 |
 | `scripts/seed-images/` | `test-data.sh`가 `uploads/`로 복사할 실제 seed 이미지 원본 |
 
@@ -78,9 +78,9 @@ Docker Compose로 실행 중인 MySQL 컨테이너에 `mysql` CLI로 접속합�
 
 삽입하는 주요 데이터:
 
-- 일반 유저 1명: `demo-user01@todaybread.com / todaybread123`
-- 일반 유저 관심지역 1개: 한성대학교, 반경 3km
-- 일반 유저 키워드 5개: 소금빵, 크루아상, 식빵, 베이글, 휘낭시에
+- 일반 유저 20명: `demo-user01@todaybread.com` ~ `demo-user20@todaybread.com` / `todaybread123`
+- 일반 유저별 관심지역 1개: 한성대학교, 반경 3km
+- 일반 유저별 키워드 5개: 소금빵, 크루아상, 식빵, 베이글, 휘낭시에
 - 사장님 120명: `demo-boss001@todaybread.com` ~ `demo-boss120@todaybread.com` / `todaybread123`
 - 서울 전역 매장 120개
 - 한성대학교 1km 이내 3개, 3km 이내 누적 10개, 5km 이내 누적 20개
@@ -89,12 +89,13 @@ Docker Compose로 실행 중인 MySQL 컨테이너에 `mysql` CLI로 접속합�
 - 001번 사장님 매장(`demo-boss001`)은 FCM/주문 테스트용으로 매일 09:00~22:00 영업시간을 고정
 - 매장별 메뉴 15개 이하, 한성대 1km 매장은 메뉴 3~5개
 - 빵 이미지 레코드
-- 즐겨찾기
-- 장바구니 샘플
+- 유저별 0~5개 반복 즐겨찾기
+- 장바구니는 비어 있는 상태로 유지
 - 2026년 1월 1일부터 2026년 5월 7일까지의 주문/매출 내역
-- 매장별 월 주문 최대 15건, 2026년 5월은 7일까지만 생성
+- 매장별 월 주문 날짜 5~15일, 2026년 5월은 5~7일만 생성
 - 주문 상태에 맞는 결제 데이터 (`PICKED_UP`/`CANCELLED`만 생성)
 - 매장별 리뷰 10개, 그중 이미지 리뷰 5개와 텍스트 리뷰 5개
+- 리뷰는 `demo-user02`~`demo-user20`의 픽업 완료 주문상품에만 연결
 - 이미지 리뷰는 리뷰당 1장 또는 2장
 
 정상 실행 시 주요 검증 metric:
@@ -102,9 +103,17 @@ Docker Compose로 실행 중인 MySQL 컨테이너에 `mysql` CLI로 접속합�
 ```text
 seed_stores = 120
 seed_reviews = 1200
+seed_normal_users = 20
+user01_orders = 10
+user01_reviews = 0
+demo_cart_rows = 0
+favourite_pattern_mismatches = 0
+invalid_review_order_links = 0
 stores_without_reviews = 0
+stores_below_10_reviews = 0
 min_reviews_per_store = 10
 max_reviews_per_store = 10
+monthly_order_day_range_violations = 0
 seed_store_images = 120
 seed_bread_images = 생성된 빵 수와 동일
 review_image_reviews = 600

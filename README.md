@@ -51,7 +51,7 @@ MySQL CLI 접속은 아래 스크립트를 사용합니다.
 
 | 역할 | 계정 | 비밀번호 |
 |------|------|----------|
-| 일반 유저 | `demo-user01@todaybread.com` | `todaybread123` |
+| 일반 유저 | `demo-user01@todaybread.com` ~ `demo-user20@todaybread.com` | `todaybread123` |
 | 사장님 | `demo-boss001@todaybread.com` ~ `demo-boss120@todaybread.com` | `todaybread123` |
 
 근처 매장/빵 조회 추천 좌표:
@@ -64,7 +64,7 @@ Hansung Univ: lat=37.5826000, lng=127.0106000, radius=5
 
 한성대 기준 1km 이내 3개, 3km 이내 누적 10개, 5km 이내 누적 20개가 고정됩니다. 5km 안에는 판매중, 영업중 품절, 휴무 상태가 섞여 있어 `sellingStatus` 계산 로직을 검증할 수 있습니다. seed 주문은 픽업 완료(`PICKED_UP`)와 취소(`CANCELLED`)만 포함하며, 픽업 대기(`CONFIRMED`) 주문은 데모데이용 별도 스크립트에서 생성하는 전제로 제외합니다.
 
-리뷰는 매장당 10개씩 총 1,200개를 생성합니다. 각 매장은 이미지 리뷰 5개와 텍스트 리뷰 5개를 가지며, 리뷰 이미지는 총 900장입니다. seed 실행 결과에 `stores_without_reviews = 0`, `min_reviews_per_store = 10`, `max_reviews_per_store = 10`이 출력되면 리뷰 데이터가 정상입니다.
+리뷰는 매장당 10개씩 총 1,200개를 생성합니다. 각 매장은 이미지 리뷰 5개와 텍스트 리뷰 5개를 가지며, 리뷰 이미지는 총 900장입니다. 리뷰 작성자는 `demo-user02`~`demo-user20`에 분산되고, `demo-user01`은 주문 10개만 가지며 리뷰는 없습니다. seed 실행 결과에 `stores_without_reviews = 0`, `min_reviews_per_store = 10`, `max_reviews_per_store = 10`, `invalid_review_order_links = 0`이 출력되면 리뷰 데이터가 정상입니다.
 
 토큰은 seed하지 않습니다. 로그인 API가 access token과 refresh token을 발급하고, refresh token은 DB에 해시로 저장합니다.
 
