@@ -120,6 +120,30 @@ CREATE TABLE favourite_store (
     INDEX idx_favourite_store_user_id (user_id)
 );
 
+DELIMITER //
+CREATE TRIGGER trg_favourite_store_limit_before_insert
+BEFORE INSERT ON favourite_store
+FOR EACH ROW
+BEGIN
+    DECLARE v_user_id BIGINT;
+    DECLARE v_favourite_count BIGINT DEFAULT 0;
+
+    SELECT u.id INTO v_user_id
+    FROM users u
+    WHERE u.id = NEW.user_id
+    FOR UPDATE;
+
+    SELECT COUNT(*) INTO v_favourite_count
+    FROM favourite_store fs
+    WHERE fs.user_id = NEW.user_id;
+
+    IF v_favourite_count >= 5 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Favourite store limit exceeded';
+    END IF;
+END //
+DELIMITER ;
+
 CREATE TABLE store_image (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     store_id BIGINT NOT NULL,

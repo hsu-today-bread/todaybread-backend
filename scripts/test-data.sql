@@ -613,7 +613,7 @@ BEGIN
     INSERT INTO favourite_store (user_id, store_id)
     SELECT v_user_id, store_id
     FROM tmp_store_specs
-    WHERE store_no <= 20 OR store_no IN (31, 42, 53, 64, 75, 86, 97, 108, 119);
+    WHERE store_no <= 5;
 
     SELECT store_id INTO v_store_id
     FROM tmp_store_specs
