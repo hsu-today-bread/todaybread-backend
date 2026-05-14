@@ -76,6 +76,7 @@ class PaymentServicePropertyTest {
 
         // Arrange: PENDING 주문, 금액 일치
         OrderEntity order = TestFixtures.order(orderId, userId, 100L, OrderStatus.PENDING, amount, "order-key");
+        String tossOrderId = "tb_" + orderId + "_orderkey";
         given(orderRepository.findByIdWithLock(orderId)).willReturn(Optional.of(order));
         given(paymentRepository.findByOrderIdAndIdempotencyKey(orderId, idempotencyKey)).willReturn(Optional.empty());
         given(paymentRepository.findByOrderId(orderId)).willReturn(Optional.empty());
@@ -84,11 +85,12 @@ class PaymentServicePropertyTest {
         // 토스 DONE 응답
         PaymentResult successResult = new PaymentResult(
                 PaymentStatus.APPROVED, "ok", paymentKey, method, "2025-07-01T18:31:00+09:00");
-        given(paymentProcessor.confirm(eq(paymentKey), eq("order_" + orderId), eq(amount), eq(idempotencyKey)))
+        given(paymentProcessor.confirm(eq(paymentKey), eq(tossOrderId), eq(amount), eq(idempotencyKey)))
                 .willReturn(successResult);
 
         // Act
-        PaymentEntity result = paymentService.confirmPayment(userId, paymentKey, orderId, amount, idempotencyKey);
+        PaymentEntity result = paymentService.confirmPayment(userId, paymentKey, orderId, tossOrderId, amount,
+                idempotencyKey);
 
         // Assert: Payment 상태 APPROVED
         assertThat(result.getStatus()).isEqualTo(PaymentStatus.APPROVED);
@@ -126,18 +128,19 @@ class PaymentServicePropertyTest {
 
         // Arrange: PENDING 주문, 금액 일치
         OrderEntity order = TestFixtures.order(orderId, userId, 100L, OrderStatus.PENDING, amount, "order-key");
+        String tossOrderId = "tb_" + orderId + "_orderkey";
         given(orderRepository.findByIdWithLock(orderId)).willReturn(Optional.of(order));
         given(paymentRepository.findByOrderIdAndIdempotencyKey(orderId, idempotencyKey)).willReturn(Optional.empty());
         given(paymentRepository.findByOrderId(orderId)).willReturn(Optional.empty());
         given(paymentRepository.save(any(PaymentEntity.class))).willAnswer(inv -> inv.getArgument(0));
 
         // 토스 에러 응답 (카드 관련 에러 - TossPaymentException으로 전파)
-        given(paymentProcessor.confirm(eq(paymentKey), eq("order_" + orderId), eq(amount), eq(idempotencyKey)))
+        given(paymentProcessor.confirm(eq(paymentKey), eq(tossOrderId), eq(amount), eq(idempotencyKey)))
                 .willThrow(new TossPaymentException(errorCode, errorMessage, 400));
 
         // Act & Assert: TossPaymentException이 전파됨
         assertThatThrownBy(() ->
-                paymentService.confirmPayment(userId, paymentKey, orderId, amount, idempotencyKey))
+                paymentService.confirmPayment(userId, paymentKey, orderId, tossOrderId, amount, idempotencyKey))
                 .isInstanceOf(TossPaymentException.class);
 
         // Assert: Payment가 FAILED로 저장됨
@@ -188,7 +191,9 @@ class PaymentServicePropertyTest {
         given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
 
         // Act: 두 번째 호출 (동일 idempotencyKey)
-        PaymentEntity result = paymentService.confirmPayment(userId, paymentKey, orderId, amount, idempotencyKey);
+        String tossOrderId = "tb_" + orderId + "_orderkey";
+        PaymentEntity result = paymentService.confirmPayment(userId, paymentKey, orderId, tossOrderId, amount,
+                idempotencyKey);
 
         // Assert: 토스 API 호출하지 않음
         verify(paymentProcessor, never()).confirm(any(), any(), anyInt(), any());

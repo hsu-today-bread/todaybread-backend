@@ -1,6 +1,7 @@
 package com.todaybread.server.domain.payment.processor;
 
 import com.todaybread.server.domain.payment.client.dto.TossPaymentResponse;
+import com.todaybread.server.domain.payment.util.TossOrderIdHelper;
 
 /**
  * 결제 처리 인터페이스입니다.
@@ -22,13 +23,13 @@ public interface PaymentProcessor {
      * 기본 구현은 {@link #pay(Long, int)}에 위임합니다.
      *
      * @param paymentKey     토스 페이먼츠 결제 고유 키
-     * @param orderId        주문 ID (문자열)
+     * @param orderId        토스 주문 ID (문자열)
      * @param amount         결제 금액
      * @param idempotencyKey 멱등성 키 (토스 Idempotency-Key 헤더로 전달)
      * @return 결제 처리 결과
      */
     default PaymentResult confirm(String paymentKey, String orderId, int amount, String idempotencyKey) {
-        return pay(Long.parseLong(orderId), amount);
+        return pay(TossOrderIdHelper.fromTossOrderId(orderId), amount);
     }
 
     /**

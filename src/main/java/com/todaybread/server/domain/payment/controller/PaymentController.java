@@ -55,7 +55,8 @@ public class PaymentController {
 
         Long userId = JwtRoleHelper.getUserId(jwt);
         PaymentEntity payment = paymentService.confirmPayment(
-                userId, request.paymentKey(), request.orderId(), request.amount(), idempotencyKey);
+                userId, request.paymentKey(), request.orderId(), request.tossOrderId(),
+                request.amount(), idempotencyKey);
         return PaymentConfirmResponse.of(payment);
     }
 

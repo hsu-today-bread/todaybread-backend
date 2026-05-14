@@ -42,7 +42,7 @@ public class PaymentService {
 
     /**
      * 토스 결제 승인을 확정합니다.
-     * 프론트엔드에서 받은 paymentKey, orderId, amount를 검증하고 토스 Confirm API를 호출합니다.
+     * 프론트엔드에서 받은 paymentKey, orderId, tossOrderId, amount를 검증하고 토스 Confirm API를 호출합니다.
      *
      * <p>멱등성: 동일 orderId + idempotencyKey로 이미 APPROVED 결제가 있으면 기존 결과를 반환합니다.
      * <p>토스 에러 처리:
@@ -55,13 +55,16 @@ public class PaymentService {
      * @param userId         유저 ID
      * @param paymentKey     토스 페이먼츠 결제 고유 키
      * @param orderId        주문 ID
+     * @param tossOrderId    토스 페이먼츠 주문 ID
      * @param amount         결제 금액
      * @param idempotencyKey 멱등성 키
      * @return 결제 엔티티
      */
     @Transactional
-    public PaymentEntity confirmPayment(Long userId, String paymentKey, Long orderId, int amount,
-                                        String idempotencyKey) {
+    public PaymentEntity confirmPayment(Long userId, String paymentKey, Long orderId, String tossOrderId,
+                                        int amount, String idempotencyKey) {
+        validateTossOrderIdMatchesOrder(tossOrderId, orderId);
+
         // 1. 멱등성 처리: 동일 orderId + idempotencyKey로 기존 APPROVED 결제가 있으면 기존 결과 반환
         Optional<PaymentEntity> existingByKey = paymentRepository.findByOrderIdAndIdempotencyKey(orderId, idempotencyKey);
         if (existingByKey.isPresent() && existingByKey.get().getStatus() == PaymentStatus.APPROVED) {
@@ -71,6 +74,7 @@ public class PaymentService {
             if (!existingOrder.getUserId().equals(userId)) {
                 throw new CustomException(ErrorCode.ORDER_ACCESS_DENIED);
             }
+            validateTossOrderIdMatchesOrderIdempotencyKey(tossOrderId, existingOrder);
             return existingByKey.get();
         }
 
@@ -93,11 +97,12 @@ public class PaymentService {
             throw new CustomException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
         }
 
+        validateTossOrderIdMatchesOrderIdempotencyKey(tossOrderId, order);
+
         // 6. 기존 결제 확인
         Optional<PaymentEntity> existingPayment = paymentRepository.findByOrderId(orderId);
 
         // 7. PaymentProcessor.confirm() 호출
-        String tossOrderId = TossOrderIdHelper.toTossOrderId(orderId);
         try {
             PaymentResult result = paymentProcessor.confirm(paymentKey, tossOrderId, amount, idempotencyKey);
 
@@ -130,7 +135,8 @@ public class PaymentService {
 
             // ALREADY_PROCESSED_PAYMENT: 토스 조회 API로 실제 상태 확인 후 동기화
             if ("ALREADY_PROCESSED_PAYMENT".equals(ex.getErrorCode())) {
-                return handleAlreadyProcessedPayment(paymentKey, orderId, amount, idempotencyKey, existingPayment);
+                return handleAlreadyProcessedPayment(paymentKey, orderId, tossOrderId, amount, idempotencyKey,
+                        existingPayment);
             }
 
             // PROVIDER_ERROR: PAYMENT_004 에러 반환
@@ -181,8 +187,8 @@ public class PaymentService {
     /**
      * ALREADY_PROCESSED_PAYMENT 에러 시 토스 조회 API로 실제 상태를 확인하고 동기화합니다.
      */
-    private PaymentEntity handleAlreadyProcessedPayment(String paymentKey, Long orderId, int amount,
-                                                         String idempotencyKey,
+    private PaymentEntity handleAlreadyProcessedPayment(String paymentKey, Long orderId, String tossOrderId,
+                                                         int amount, String idempotencyKey,
                                                          Optional<PaymentEntity> existingPayment) {
         // 기존 결제가 APPROVED면 그대로 반환
         if (existingPayment.isPresent() && existingPayment.get().getStatus() == PaymentStatus.APPROVED) {
@@ -195,12 +201,11 @@ public class PaymentService {
 
             if ("DONE".equals(tossPayment.status())) {
                 // 토스 조회 결과의 orderId/totalAmount/paymentKey를 현재 요청과 비교
-                String expectedTossOrderId = TossOrderIdHelper.toTossOrderId(orderId);
-                if (!expectedTossOrderId.equals(tossPayment.orderId())
+                if (!tossOrderId.equals(tossPayment.orderId())
                         || tossPayment.totalAmount() != amount
                         || !paymentKey.equals(tossPayment.paymentKey())) {
                     log.error("ALREADY_PROCESSED 재조정 불일치: expected orderId={}, amount={}, paymentKey={} / actual orderId={}, amount={}, paymentKey={}",
-                            expectedTossOrderId, amount, paymentKey,
+                            tossOrderId, amount, paymentKey,
                             tossPayment.orderId(), tossPayment.totalAmount(), tossPayment.paymentKey());
                     saveFailedPayment(orderId, amount, idempotencyKey, existingPayment);
                     throw new CustomException(ErrorCode.PAYMENT_PROVIDER_ERROR);
@@ -231,6 +236,8 @@ public class PaymentService {
                         orderId, tossPayment.paymentKey());
                 return payment;
             }
+        } catch (CustomException e) {
+            throw e;
         } catch (Exception e) {
             log.error("토스 결제 조회 실패: paymentKey={}, orderId={}", paymentKey, orderId, e);
         }
@@ -238,6 +245,23 @@ public class PaymentService {
         // 토스 상태가 DONE이 아니거나 조회 실패 → FAILED 저장 후 예외
         saveFailedPayment(orderId, amount, idempotencyKey, existingPayment);
         throw new CustomException(ErrorCode.PAYMENT_PROVIDER_ERROR);
+    }
+
+    private void validateTossOrderIdMatchesOrder(String tossOrderId, Long orderId) {
+        try {
+            Long parsedOrderId = TossOrderIdHelper.fromTossOrderId(tossOrderId);
+            if (!parsedOrderId.equals(orderId) || !TossOrderIdHelper.isCurrentFormat(tossOrderId)) {
+                throw new CustomException(ErrorCode.COMMON_REQUEST_VALIDATION_FAILED);
+            }
+        } catch (IllegalArgumentException e) {
+            throw new CustomException(ErrorCode.COMMON_REQUEST_VALIDATION_FAILED);
+        }
+    }
+
+    private void validateTossOrderIdMatchesOrderIdempotencyKey(String tossOrderId, OrderEntity order) {
+        if (!TossOrderIdHelper.matchesOrderIdempotencyKey(tossOrderId, order.getIdempotencyKey())) {
+            throw new CustomException(ErrorCode.COMMON_REQUEST_VALIDATION_FAILED);
+        }
     }
 
     /**

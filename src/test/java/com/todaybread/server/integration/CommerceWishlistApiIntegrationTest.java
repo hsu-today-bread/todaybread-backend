@@ -121,9 +121,10 @@ class CommerceWishlistApiIntegrationTest extends ApiIntegrationTestSupport {
                                 {
                                   "paymentKey": "tgen_stub_%d",
                                   "orderId": %d,
+                                  "tossOrderId": "tb_%d_orderkey1",
                                   "amount": 5000
                                 }
-                                """.formatted(orderId, orderId)))
+                                """.formatted(orderId, orderId, orderId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.orderId").value(orderId))
                 .andExpect(jsonPath("$.status").value("APPROVED"));

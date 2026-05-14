@@ -59,6 +59,8 @@ class PaymentServiceTest {
     @InjectMocks
     private PaymentService paymentService;
 
+    private static final String TOSS_ORDER_ID = "tb_1_orderkey";
+
     @Test
     void confirmPayment_returnsExistingPaymentForSameOrderIdAndIdempotencyKey() {
         PaymentEntity payment = TestFixtures.payment(10L, 1L, 3_000, PaymentStatus.APPROVED,
@@ -68,7 +70,7 @@ class PaymentServiceTest {
         OrderEntity order = TestFixtures.order(1L, 1L, 100L, OrderStatus.CONFIRMED, 3_000, "order-key");
         given(orderRepository.findById(1L)).willReturn(Optional.of(order));
 
-        PaymentEntity result = paymentService.confirmPayment(1L, "tgen_abc", 1L, 3_000, "pay-key");
+        PaymentEntity result = paymentService.confirmPayment(1L, "tgen_abc", 1L, TOSS_ORDER_ID, 3_000, "pay-key");
 
         assertThat(result.getId()).isEqualTo(10L);
         verify(paymentProcessor, never()).confirm(any(), any(), any(Integer.class), any());
@@ -79,7 +81,7 @@ class PaymentServiceTest {
         given(paymentRepository.findByOrderIdAndIdempotencyKey(1L, "pay-key")).willReturn(Optional.empty());
         given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> paymentService.confirmPayment(1L, "tgen_abc", 1L, 3_000, "pay-key"))
+        assertThatThrownBy(() -> paymentService.confirmPayment(1L, "tgen_abc", 1L, TOSS_ORDER_ID, 3_000, "pay-key"))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.ORDER_NOT_FOUND);
@@ -91,7 +93,7 @@ class PaymentServiceTest {
         given(paymentRepository.findByOrderIdAndIdempotencyKey(1L, "pay-key")).willReturn(Optional.empty());
         given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
 
-        assertThatThrownBy(() -> paymentService.confirmPayment(1L, "tgen_abc", 1L, 2_000, "pay-key"))
+        assertThatThrownBy(() -> paymentService.confirmPayment(1L, "tgen_abc", 1L, TOSS_ORDER_ID, 2_000, "pay-key"))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
@@ -103,7 +105,7 @@ class PaymentServiceTest {
         given(paymentRepository.findByOrderIdAndIdempotencyKey(1L, "pay-key")).willReturn(Optional.empty());
         given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
 
-        assertThatThrownBy(() -> paymentService.confirmPayment(1L, "tgen_abc", 1L, 3_000, "pay-key"))
+        assertThatThrownBy(() -> paymentService.confirmPayment(1L, "tgen_abc", 1L, TOSS_ORDER_ID, 3_000, "pay-key"))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.PAYMENT_ORDER_STATUS_INVALID);
@@ -115,13 +117,13 @@ class PaymentServiceTest {
         given(paymentRepository.findByOrderIdAndIdempotencyKey(1L, "pay-key")).willReturn(Optional.empty());
         given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
         given(paymentRepository.findByOrderId(1L)).willReturn(Optional.empty());
-        given(paymentProcessor.confirm(eq("tgen_abc"), eq("order_1"), eq(3_000), eq("pay-key")))
+        given(paymentProcessor.confirm(eq("tgen_abc"), eq(TOSS_ORDER_ID), eq(3_000), eq("pay-key")))
                 .willReturn(new PaymentResult(PaymentStatus.APPROVED, "ok", "tgen_abc", "카드", "2025-07-01T18:31:00+09:00"));
         given(clock.instant()).willReturn(TestFixtures.FIXED_CLOCK.instant());
         given(clock.getZone()).willReturn(TestFixtures.FIXED_CLOCK.getZone());
         given(paymentRepository.save(any(PaymentEntity.class))).willAnswer(invocation -> invocation.getArgument(0));
 
-        PaymentEntity result = paymentService.confirmPayment(1L, "tgen_abc", 1L, 3_000, "pay-key");
+        PaymentEntity result = paymentService.confirmPayment(1L, "tgen_abc", 1L, TOSS_ORDER_ID, 3_000, "pay-key");
 
         assertThat(result.getStatus()).isEqualTo(PaymentStatus.APPROVED);
         assertThat(result.getPaidAt()).isNotNull();

@@ -84,7 +84,7 @@ class PaymentControllerTest {
     @Test
     void confirmPayment_withValidRequestAndIdempotencyKey_returns200() throws Exception {
         // given
-        PaymentConfirmRequest request = new PaymentConfirmRequest("tgen_test123", 1L, 5000);
+        PaymentConfirmRequest request = new PaymentConfirmRequest("tgen_test123", 1L, "tb_1_orderkey", 5000);
 
         PaymentEntity payment = PaymentEntity.builder()
                 .orderId(1L)
@@ -96,7 +96,8 @@ class PaymentControllerTest {
         ReflectionTestUtils.setField(payment, "id", 100L);
         ReflectionTestUtils.setField(payment, "method", "카드");
 
-        given(paymentService.confirmPayment(eq(1L), eq("tgen_test123"), eq(1L), eq(5000), eq("idem-key-001")))
+        given(paymentService.confirmPayment(eq(1L), eq("tgen_test123"), eq(1L), eq("tb_1_orderkey"),
+                eq(5000), eq("idem-key-001")))
                 .willReturn(payment);
 
         // when & then
@@ -120,7 +121,7 @@ class PaymentControllerTest {
     @Test
     void confirmPayment_withoutIdempotencyKey_returns400WithPayment008() throws Exception {
         // given
-        PaymentConfirmRequest request = new PaymentConfirmRequest("tgen_test123", 1L, 5000);
+        PaymentConfirmRequest request = new PaymentConfirmRequest("tgen_test123", 1L, "tb_1_orderkey", 5000);
 
         // when & then
         mockMvc.perform(post("/api/payments/confirm")
@@ -143,11 +144,30 @@ class PaymentControllerTest {
                 {
                     "paymentKey": "",
                     "orderId": 1,
+                    "tossOrderId": "tb_1_orderkey",
                     "amount": 5000
                 }
                 """;
 
         // when & then
+        mockMvc.perform(post("/api/payments/confirm")
+                        .header("Idempotency-Key", "idem-key-001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_001"));
+    }
+
+    @Test
+    void confirmPayment_withoutTossOrderId_returns400() throws Exception {
+        String invalidBody = """
+                {
+                    "paymentKey": "tgen_test123",
+                    "orderId": 1,
+                    "amount": 5000
+                }
+                """;
+
         mockMvc.perform(post("/api/payments/confirm")
                         .header("Idempotency-Key", "idem-key-001")
                         .contentType(MediaType.APPLICATION_JSON)

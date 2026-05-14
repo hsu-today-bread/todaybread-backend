@@ -9,11 +9,13 @@ import jakarta.validation.constraints.NotNull;
  *
  * @param paymentKey 토스 페이먼츠 결제 고유 키
  * @param orderId    주문 ID
+ * @param tossOrderId 토스 페이먼츠 주문 ID
  * @param amount     결제 금액
  */
 public record PaymentConfirmRequest(
         @NotBlank String paymentKey,
         @NotNull Long orderId,
+        @NotBlank String tossOrderId,
         @NotNull @Min(1) Integer amount
 ) {
 }

@@ -5,6 +5,7 @@ import com.todaybread.server.domain.order.entity.OrderStatus;
 import com.todaybread.server.domain.order.repository.OrderRepository;
 import com.todaybread.server.domain.order.service.OrderService;
 import com.todaybread.server.domain.payment.client.TossPaymentException;
+import com.todaybread.server.domain.payment.client.dto.TossPaymentResponse;
 import com.todaybread.server.domain.payment.entity.PaymentEntity;
 import com.todaybread.server.domain.payment.entity.PaymentStatus;
 import com.todaybread.server.domain.payment.processor.CancelResult;
@@ -62,6 +63,8 @@ class PaymentServiceConfirmTest {
     @InjectMocks
     private PaymentService paymentService;
 
+    private static final String TOSS_ORDER_ID = "tb_1_orderkey";
+
     // ========================================================================
     // confirmPayment 테스트
     // ========================================================================
@@ -84,10 +87,10 @@ class PaymentServiceConfirmTest {
 
             PaymentResult result = new PaymentResult(
                     PaymentStatus.APPROVED, "ok", "tgen_abc123", "카드", "2025-07-01T18:31:00+09:00");
-            given(paymentProcessor.confirm("tgen_abc123", "order_1", 5_000, "idem-1")).willReturn(result);
+            given(paymentProcessor.confirm("tgen_abc123", TOSS_ORDER_ID, 5_000, "idem-1")).willReturn(result);
 
             // Act
-            PaymentEntity payment = paymentService.confirmPayment(1L, "tgen_abc123", 1L, 5_000, "idem-1");
+            PaymentEntity payment = paymentService.confirmPayment(1L, "tgen_abc123", 1L, TOSS_ORDER_ID, 5_000, "idem-1");
 
             // Assert
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.APPROVED);
@@ -106,12 +109,12 @@ class PaymentServiceConfirmTest {
             given(paymentRepository.findByOrderId(1L)).willReturn(Optional.empty());
             given(paymentRepository.save(any(PaymentEntity.class))).willAnswer(inv -> inv.getArgument(0));
 
-            given(paymentProcessor.confirm("tgen_abc123", "order_1", 5_000, "idem-1"))
+            given(paymentProcessor.confirm("tgen_abc123", TOSS_ORDER_ID, 5_000, "idem-1"))
                     .willThrow(new TossPaymentException("REJECT_CARD_PAYMENT", "카드 결제가 거절되었습니다.", 400));
 
             // Act & Assert
             assertThatThrownBy(() ->
-                    paymentService.confirmPayment(1L, "tgen_abc123", 1L, 5_000, "idem-1"))
+                    paymentService.confirmPayment(1L, "tgen_abc123", 1L, TOSS_ORDER_ID, 5_000, "idem-1"))
                     .isInstanceOf(TossPaymentException.class);
 
             verify(orderService, never()).confirmOrder(any());
@@ -130,7 +133,7 @@ class PaymentServiceConfirmTest {
             given(orderRepository.findById(1L)).willReturn(Optional.of(existingOrder));
 
             // Act
-            PaymentEntity payment = paymentService.confirmPayment(1L, "tgen_abc123", 1L, 5_000, "idem-1");
+            PaymentEntity payment = paymentService.confirmPayment(1L, "tgen_abc123", 1L, TOSS_ORDER_ID, 5_000, "idem-1");
 
             // Assert
             assertThat(payment.getId()).isEqualTo(10L);
@@ -148,7 +151,7 @@ class PaymentServiceConfirmTest {
 
             // Act & Assert
             assertThatThrownBy(() ->
-                    paymentService.confirmPayment(1L, "tgen_abc123", 1L, 3_000, "idem-1"))
+                    paymentService.confirmPayment(1L, "tgen_abc123", 1L, TOSS_ORDER_ID, 3_000, "idem-1"))
                     .isInstanceOf(CustomException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
@@ -163,7 +166,7 @@ class PaymentServiceConfirmTest {
 
             // Act & Assert
             assertThatThrownBy(() ->
-                    paymentService.confirmPayment(1L, "tgen_abc123", 1L, 5_000, "idem-1"))
+                    paymentService.confirmPayment(1L, "tgen_abc123", 1L, TOSS_ORDER_ID, 5_000, "idem-1"))
                     .isInstanceOf(CustomException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.ORDER_NOT_FOUND);
@@ -179,10 +182,91 @@ class PaymentServiceConfirmTest {
 
             // Act & Assert
             assertThatThrownBy(() ->
-                    paymentService.confirmPayment(1L, "tgen_abc123", 1L, 5_000, "idem-1"))
+                    paymentService.confirmPayment(1L, "tgen_abc123", 1L, TOSS_ORDER_ID, 5_000, "idem-1"))
                     .isInstanceOf(CustomException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.PAYMENT_ORDER_STATUS_INVALID);
+        }
+
+        @Test
+        @DisplayName("실패: 요청 orderId와 tossOrderId 내부 주문 ID가 다르면 COMMON_001 에러")
+        void tossOrderIdOrderIdMismatch() {
+            assertThatThrownBy(() ->
+                    paymentService.confirmPayment(1L, "tgen_abc123", 1L, "tb_2_orderkey", 5_000, "idem-1"))
+                    .isInstanceOf(CustomException.class)
+                    .extracting("errorCode")
+                    .isEqualTo(ErrorCode.COMMON_REQUEST_VALIDATION_FAILED);
+        }
+
+        @Test
+        @DisplayName("실패: 주문 생성 idempotencyKey와 tossOrderId suffix가 다르면 COMMON_001 에러")
+        void tossOrderIdIdempotencySuffixMismatch() {
+            // Arrange
+            OrderEntity order = TestFixtures.order(1L, 1L, 100L, OrderStatus.PENDING, 5_000, "order-key");
+            given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
+            given(paymentRepository.findByOrderIdAndIdempotencyKey(1L, "idem-1")).willReturn(Optional.empty());
+
+            // Act & Assert
+            assertThatThrownBy(() ->
+                    paymentService.confirmPayment(1L, "tgen_abc123", 1L, "tb_1_otherkey", 5_000, "idem-1"))
+                    .isInstanceOf(CustomException.class)
+                    .extracting("errorCode")
+                    .isEqualTo(ErrorCode.COMMON_REQUEST_VALIDATION_FAILED);
+        }
+
+        @Test
+        @DisplayName("ALREADY_PROCESSED: 토스 조회 결과가 같은 tossOrderId의 DONE이면 결제 동기화")
+        void alreadyProcessedPayment_reconcilesWhenTossOrderIdMatches() {
+            // Arrange
+            OrderEntity order = TestFixtures.order(1L, 1L, 100L, OrderStatus.PENDING, 5_000, "order-key");
+            given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
+            given(paymentRepository.findByOrderIdAndIdempotencyKey(1L, "idem-1")).willReturn(Optional.empty());
+            given(paymentRepository.findByOrderId(1L)).willReturn(Optional.empty());
+            given(paymentRepository.save(any(PaymentEntity.class))).willAnswer(inv -> inv.getArgument(0));
+            given(clock.instant()).willReturn(TestFixtures.FIXED_CLOCK.instant());
+            given(clock.getZone()).willReturn(TestFixtures.FIXED_CLOCK.getZone());
+
+            given(paymentProcessor.confirm("tgen_abc123", TOSS_ORDER_ID, 5_000, "idem-1"))
+                    .willThrow(new TossPaymentException("ALREADY_PROCESSED_PAYMENT", "이미 처리된 결제입니다.", 400));
+            given(paymentProcessor.getPayment("tgen_abc123"))
+                    .willReturn(new TossPaymentResponse(
+                            "tgen_abc123", TOSS_ORDER_ID, "DONE", "카드",
+                            "2025-07-01T18:31:00+09:00", 5_000));
+
+            // Act
+            PaymentEntity payment = paymentService.confirmPayment(1L, "tgen_abc123", 1L, TOSS_ORDER_ID, 5_000, "idem-1");
+
+            // Assert
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.APPROVED);
+            assertThat(payment.getPaymentKey()).isEqualTo("tgen_abc123");
+            verify(orderService).confirmOrder(1L);
+        }
+
+        @Test
+        @DisplayName("ALREADY_PROCESSED: 토스 조회 결과의 orderId가 다르면 PAYMENT_004 에러")
+        void alreadyProcessedPayment_rejectsWhenTossOrderIdDiffers() {
+            // Arrange
+            OrderEntity order = TestFixtures.order(1L, 1L, 100L, OrderStatus.PENDING, 5_000, "order-key");
+            given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
+            given(paymentRepository.findByOrderIdAndIdempotencyKey(1L, "idem-1")).willReturn(Optional.empty());
+            given(paymentRepository.findByOrderId(1L)).willReturn(Optional.empty());
+            given(paymentRepository.save(any(PaymentEntity.class))).willAnswer(inv -> inv.getArgument(0));
+
+            given(paymentProcessor.confirm("tgen_abc123", TOSS_ORDER_ID, 5_000, "idem-1"))
+                    .willThrow(new TossPaymentException("ALREADY_PROCESSED_PAYMENT", "이미 처리된 결제입니다.", 400));
+            given(paymentProcessor.getPayment("tgen_abc123"))
+                    .willReturn(new TossPaymentResponse(
+                            "tgen_abc123", "tb_1_otherkey", "DONE", "카드",
+                            "2025-07-01T18:31:00+09:00", 5_000));
+
+            // Act & Assert
+            assertThatThrownBy(() ->
+                    paymentService.confirmPayment(1L, "tgen_abc123", 1L, TOSS_ORDER_ID, 5_000, "idem-1"))
+                    .isInstanceOf(CustomException.class)
+                    .extracting("errorCode")
+                    .isEqualTo(ErrorCode.PAYMENT_PROVIDER_ERROR);
+
+            verify(orderService, never()).confirmOrder(any());
         }
     }
 
