@@ -41,6 +41,22 @@ public interface FavouriteStoreRepository extends JpaRepository<FavouriteStoreEn
     List<FavouriteStoreEntity> findByStoreId(Long storeId);
 
     /**
+     * 특정 가게를 단골로 등록한 일반 유저 목록을 조회합니다.
+     * 사장님으로 전환된 유저는 재고/신규 빵 단골 매장 알림 대상에서 제외합니다.
+     *
+     * @param storeId 가게 ID
+     * @return 해당 가게를 단골로 등록한 일반 유저의 단골 엔티티 목록
+     */
+    @Query("""
+            SELECT f
+            FROM FavouriteStoreEntity f
+            JOIN UserEntity u ON u.id = f.userId
+            WHERE f.storeId = :storeId
+              AND u.isBoss = false
+            """)
+    List<FavouriteStoreEntity> findByStoreIdForUserNotificationTargets(@Param("storeId") Long storeId);
+
+    /**
      * 특정 사용자의 단골 가게 등록 수를 비관적 락으로 조회합니다.
      * 동시 요청 시 개수 제한을 정확히 보장하기 위해 사용합니다.
      *

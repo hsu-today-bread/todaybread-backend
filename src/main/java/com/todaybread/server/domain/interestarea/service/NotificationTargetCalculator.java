@@ -84,7 +84,8 @@ public class NotificationTargetCalculator {
         List<Long> matchedKeywordIds = matchedKeywords.stream()
                 .map(KeywordEntity::getId)
                 .toList();
-        List<UserKeywordEntity> matchedUserKeywords = userKeywordRepository.findByKeywordIdIn(matchedKeywordIds);
+        List<UserKeywordEntity> matchedUserKeywords =
+                userKeywordRepository.findByKeywordIdInForUserNotificationTargets(matchedKeywordIds);
 
         Map<Long, List<String>> userKeywordMap = new LinkedHashMap<>();
         for (UserKeywordEntity userKeyword : matchedUserKeywords) {

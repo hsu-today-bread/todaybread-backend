@@ -206,7 +206,7 @@ class InterestAreaDeleteKeywordPreservationAndNotificationRestorationTest {
         given(storeBusinessHoursRepository.findByStoreIdOrderByDayOfWeekAsc(STORE_ID))
                 .willReturn(List.of(hours));
         given(keywordRepository.findAll()).willReturn(List.of(keyword));
-        given(userKeywordRepository.findByKeywordIdIn(any())).willReturn(userKeywords);
+        given(userKeywordRepository.findByKeywordIdInForUserNotificationTargets(any())).willReturn(userKeywords);
         // 관심지역 삭제된 상태 → 일괄 조회 결과가 비어 있음
         given(interestAreaRepository.findByUserIdIn(any())).willReturn(List.of());
 
@@ -293,7 +293,7 @@ class InterestAreaDeleteKeywordPreservationAndNotificationRestorationTest {
                 .willReturn(List.of(hours));
         given(keywordRepository.findAll()).willReturn(List.of(keyword));
         // 키워드 "소금빵"을 구독하는 유저가 없음
-        given(userKeywordRepository.findByKeywordIdIn(any())).willReturn(List.of());
+        given(userKeywordRepository.findByKeywordIdInForUserNotificationTargets(any())).willReturn(List.of());
 
         NotificationTargetResult result = calculator.calculateTargets(bread, store, FIXED_CLOCK);
 

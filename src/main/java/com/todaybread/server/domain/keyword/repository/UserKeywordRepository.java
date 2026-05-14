@@ -41,6 +41,22 @@ public interface UserKeywordRepository extends JpaRepository<UserKeywordEntity, 
     List<UserKeywordEntity> findByKeywordIdIn(Collection<Long> keywordIds);
 
     /**
+     * 여러 키워드를 구독한 일반 유저 연결 목록을 한 번에 조회합니다.
+     * 사장님으로 전환된 유저는 재고/신규 빵 키워드 알림 대상에서 제외합니다.
+     *
+     * @param keywordIds 키워드 ID 목록
+     * @return 일반 유저의 사용자-키워드 연결 목록
+     */
+    @Query("""
+            SELECT uk
+            FROM UserKeywordEntity uk
+            JOIN UserEntity u ON u.id = uk.userId
+            WHERE uk.keywordId IN :keywordIds
+              AND u.isBoss = false
+            """)
+    List<UserKeywordEntity> findByKeywordIdInForUserNotificationTargets(@Param("keywordIds") Collection<Long> keywordIds);
+
+    /**
      * 사용자-키워드 중복 등록 여부를 확인합니다.
      *
      * @param userId 유저 ID

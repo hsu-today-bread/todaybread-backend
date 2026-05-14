@@ -131,7 +131,7 @@ class NotificationTargetUserDeduplicationPropertyTest {
                     .build();
             userKeywords.add(userKeyword);
         }
-        given(userKeywordRepository.findByKeywordIdIn(any()))
+        given(userKeywordRepository.findByKeywordIdInForUserNotificationTargets(any()))
                 .willReturn(userKeywords);
 
         // Arrange: InterestArea 설정 (매장과 동일 좌표 → 3km 이내)

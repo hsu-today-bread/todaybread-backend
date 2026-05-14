@@ -195,7 +195,7 @@ class NotificationTargetCalculatorTest {
 
         // 유저 1이 해당 키워드 구독
         UserKeywordEntity uk = userKeywordEntity(1L, 10L, 1L);
-        given(userKeywordRepository.findByKeywordIdIn(any())).willReturn(List.of(uk));
+        given(userKeywordRepository.findByKeywordIdInForUserNotificationTargets(any())).willReturn(List.of(uk));
 
         // 유저 10의 관심지역: 매장에서 1km 이내 (37.505, 127.027)
         InterestAreaEntity interestArea = interestAreaEntity(1L, 10L,
@@ -229,7 +229,7 @@ class NotificationTargetCalculatorTest {
         given(keywordRepository.findAll()).willReturn(List.of(keyword));
 
         UserKeywordEntity uk = userKeywordEntity(1L, 10L, 1L);
-        given(userKeywordRepository.findByKeywordIdIn(any())).willReturn(List.of(uk));
+        given(userKeywordRepository.findByKeywordIdInForUserNotificationTargets(any())).willReturn(List.of(uk));
 
         // 유저 10의 관심지역: 매장에서 약 10km 떨어진 곳 (37.58, 127.1)
         InterestAreaEntity interestArea = interestAreaEntity(1L, 10L,
@@ -259,7 +259,7 @@ class NotificationTargetCalculatorTest {
         given(keywordRepository.findAll()).willReturn(List.of(keyword));
 
         UserKeywordEntity uk = userKeywordEntity(1L, 10L, 1L);
-        given(userKeywordRepository.findByKeywordIdIn(any())).willReturn(List.of(uk));
+        given(userKeywordRepository.findByKeywordIdInForUserNotificationTargets(any())).willReturn(List.of(uk));
 
         // 유저 10에게 관심지역 없음
         given(interestAreaRepository.findByUserIdIn(any())).willReturn(List.of());
@@ -290,7 +290,7 @@ class NotificationTargetCalculatorTest {
         // 동일 유저(10)가 두 키워드 모두 구독
         UserKeywordEntity uk1 = userKeywordEntity(1L, 10L, 1L);
         UserKeywordEntity uk2 = userKeywordEntity(2L, 10L, 2L);
-        given(userKeywordRepository.findByKeywordIdIn(any())).willReturn(List.of(uk1, uk2));
+        given(userKeywordRepository.findByKeywordIdInForUserNotificationTargets(any())).willReturn(List.of(uk1, uk2));
 
         // 유저 10의 관심지역: 매장 근처 (1km 이내)
         InterestAreaEntity interestArea = interestAreaEntity(1L, 10L,
@@ -343,7 +343,7 @@ class NotificationTargetCalculatorTest {
         given(keywordRepository.findAll()).willReturn(List.of(keyword));
 
         UserKeywordEntity uk = userKeywordEntity(1L, 10L, 1L);
-        given(userKeywordRepository.findByKeywordIdIn(any())).willReturn(List.of(uk));
+        given(userKeywordRepository.findByKeywordIdInForUserNotificationTargets(any())).willReturn(List.of(uk));
 
         // 유저 10의 관심지역: 매장 근처
         InterestAreaEntity interestArea = interestAreaEntity(1L, 10L,
@@ -401,7 +401,7 @@ class NotificationTargetCalculatorTest {
         given(keywordRepository.findAll()).willReturn(List.of(keyword));
 
         UserKeywordEntity uk = userKeywordEntity(1L, 10L, 1L);
-        given(userKeywordRepository.findByKeywordIdIn(any())).willReturn(List.of(uk));
+        given(userKeywordRepository.findByKeywordIdInForUserNotificationTargets(any())).willReturn(List.of(uk));
 
         InterestAreaEntity interestArea = interestAreaEntity(1L, 10L,
                 BigDecimal.valueOf(37.505), BigDecimal.valueOf(127.027));

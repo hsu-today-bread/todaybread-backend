@@ -97,7 +97,7 @@ class NotificationTargetReregistrationPropertyTest {
                 .keywordId(keyword.getId())
                 .displayText(keyword.getNormalisedText())
                 .build();
-        given(userKeywordRepository.findByKeywordIdIn(any()))
+        given(userKeywordRepository.findByKeywordIdInForUserNotificationTargets(any()))
                 .willReturn(List.of(userKeyword));
 
         // Arrange: 관심지역 없음 (삭제된 상태 시뮬레이션)
@@ -144,7 +144,7 @@ class NotificationTargetReregistrationPropertyTest {
                 .keywordId(keyword.getId())
                 .displayText(keyword.getNormalisedText())
                 .build();
-        given(userKeywordRepository.findByKeywordIdIn(any()))
+        given(userKeywordRepository.findByKeywordIdInForUserNotificationTargets(any()))
                 .willReturn(List.of(userKeyword));
 
         // Arrange: 관심지역 재등록 (매장과 동일 좌표 → 3km 이내)

@@ -80,7 +80,7 @@ class NotificationTargetCompletenessPropertyTest {
         given(keywordRepository.findAll()).willReturn(List.of(scenario.keyword));
 
         // Arrange: 유저-키워드 관계 반환
-        given(userKeywordRepository.findByKeywordIdIn(any()))
+        given(userKeywordRepository.findByKeywordIdInForUserNotificationTargets(any()))
                 .willReturn(List.of(scenario.userKeyword));
 
         // Arrange: 관심지역 반환 (매장과 3km 이내)

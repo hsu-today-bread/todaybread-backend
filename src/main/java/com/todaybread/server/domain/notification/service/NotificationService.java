@@ -140,7 +140,8 @@ public class NotificationService {
     private void sendFavoriteStoreStockNotifications(BreadEntity bread, StoreEntity store,
                                                     StockEventType eventType, LocalDateTime eventOccurredAt,
                                                     String orderAvailableUntilText) {
-        List<FavouriteStoreEntity> favourites = favouriteStoreRepository.findByStoreId(store.getId());
+        List<FavouriteStoreEntity> favourites =
+                favouriteStoreRepository.findByStoreIdForUserNotificationTargets(store.getId());
         String targetId = String.valueOf(bread.getId());
         String eventKey = EventKeyGenerator.favouriteStoreStockKey(eventType, bread.getId(), eventOccurredAt);
         String body = "단골 매장 %s에 \"%s\"이 등록되었어요! %s 주문 가능해요."
