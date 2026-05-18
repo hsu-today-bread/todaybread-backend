@@ -1,27 +1,119 @@
-# TodayBread
-
-한성대학교 캡스톤 프로젝트 TodayBread 백엔드 서버입니다.
+# 오늘의 빵 🥖
+2026 한성대학교 모바일 소프트웨어 캡스톤 오늘의 빵(TodayBread) 백엔드 리포지터리입니다.
 
 ## 개발 환경
 
 | 항목 | 내용 |
 |------|------|
-| Language | Java 21 |
-| Framework | Spring Boot 3.5.11 |
-| Build | Gradle |
+| 언어 | Java 21 |
+| 프레임워크 | Spring Boot 3.5.11 |
+| 빌드 | Gradle |
 | DB | MySQL 8.0.45, H2 테스트 |
-| Migration | Flyway |
-| Auth | Spring Security + JWT |
-| API Docs | SpringDoc OpenAPI, Swagger UI |
-| Password | Argon2 |
-| Payment | Toss Payments, local stub profile |
+| DB 마이그레이션 | Flyway |
+| 인증 | Spring Security + JWT |
+| API 문서 | SpringDoc OpenAPI, Swagger UI |
+| 비밀번호 | Argon2 |
 
-## 빠른 시작
+## 주요 문서
 
-`.env` 없이도 Docker Compose와 Spring Boot가 기본값으로 동작합니다.
+| 문서 | 설명 |
+|------|------|
+| [API.md](docs/API.md) | 전체 API 목록, 요청/응답 예시, 에러 코드 |
+| [DB-SETUP.md](docs/DB-SETUP.md) | Docker MySQL, `.env`, Flyway, DB 클라이언트 연결 |
+| [SCRIPTS.md](docs/SCRIPTS.md) | seed 데이터, demo 데이터, 스크립트 실행 규칙 |
+| [TOSS.md](docs/TOSS.md) | 토스 페이먼츠 결제 흐름, 키 관리, confirm/cancel 구조 |
+| [JWT-GUIDE.md](docs/JWT-GUIDE.md) | JWT 인증 엔드포인트 작성 패턴 |
+| [CONVENTION.md](docs/CONVENTION.md) | 코드, API, 예외, 협업 컨벤션 |
+
+## 프로젝트 구조
+
+- 각 도메인은 `controller`, `dto`, `entity`, `repository`, `service` 중심의 레이어 구조를 따릅니다.
+
+```text
+.
+├── docker-compose.yml # 개발 과정에서 DB 연동을 위한 도커 설정 파일
+├── .env.example # 로컬 개발 및 테스트 시 환경 변수 파일
+├── .env.ec2.example # EC2 배포 시 환경 변수 파일
+├── docs/ # 각종 프로젝트 문서
+├── scripts/ # 스크립트 디렉터리
+├── src/main/java/com/todaybread/server/ # 소스 코드
+├── src/main/resources/ # 프로젝트 설정 디렉터리
+│   ├── application.properties
+│   ├── application-local.properties
+│   ├── application-ec2.properties
+│   └── db/migration/ # Flyway DB 마이그레이션 디렉터리
+└── src/test/ # 테스트 코드
+```
+
+## 로컬 환경 빠른 시작
+
+- 로컬 실행은 `.env.example`을 복사해 `.env`를 만들고, Docker MySQL과 Spring Boot에 같은 환경변수를 주입하는 방식입니다.
+- 현재 properties에는 기본값을 두지 않으므로 `.env`의 모든 환경변수는 ***서버 실행 전에 반드시 설정***해야 합니다.
+
+### 1. env 파일 생성
+
+```bash
+cp .env.example .env
+```
+
+### 2. env 파일 수정
+
+`.env` 파일을 열고 로컬에서 사용할 값을 채웁니다.
+외부 연동을 사용하지 않는 경우에도 Spring placeholder 해결을 위해 값 자체는 필요합니다.
+모든 .env 파일의 값은 필수이므로, 토스, 국세청, FCM을 위한 값을 모두 가져오세요.
+
+```text
+# ===========================
+# Toss Payments
+# ===========================
+TOSS_SECRET_KEY=토스_시크릿_키
+TOSS_CLIENT_KEY=토스_클라이언트_키
+
+# ===========================
+# FCM Push Notification
+# ===========================
+FCM_ENABLED=true
+GOOGLE_APPLICATION_CREDENTIALS=FCM_json_파일_절대_경로
+
+# ===========================
+# NTS Service
+# ===========================
+NTS_BUSINESS_SERVICE_KEY=국세청_API_시크릿_키
+```
+
+JWT와 사업자 승인 해시 키는 32바이트 랜덤값을 사용합니다.
+
+```bash
+openssl rand -hex 32
+```
+
+생성한 값을 `.env`에 넣습니다.
+
+```text
+# ===========================
+# JWT
+# ===========================
+JWT_SECRET=위_명령어로_생성된_키값
+
+# ===========================
+# Business Approval
+# ===========================
+BUSINESS_APPROVAL_HASH_SECRET=위_명령어로_생성된_키값
+```
+
+### 3. Docker MySQL 실행
 
 ```bash
 docker compose up -d
+```
+
+### 4. 환경변수 주입 후 서버 실행
+
+```bash
+set -a
+source .env
+set +a
+
 ./gradlew bootRun
 ```
 
@@ -31,7 +123,9 @@ docker compose up -d
 http://localhost:8080/swagger-ui/index.html
 ```
 
-개발용 seed 데이터가 필요하면, 서버를 한 번 실행해서 Flyway가 테이블을 만든 뒤 실행합니다.
+### 5. (선택) 테스트 데이터 삽입 및 DB 연결
+
+서버를 실행 후, 테스트 데이터가 필요하면 해당 스크립트를 실행합니다.
 
 ```bash
 ./scripts/test-data.sh
@@ -43,155 +137,22 @@ MySQL CLI 접속은 아래 스크립트를 사용합니다.
 ./scripts/mysql-connect.sh
 ```
 
-## 테스트 데이터 및 데모 시나리오
+위 스크립트들은 `.env` 파일을 직접 읽지는 않지만, 로컬 기본 DB 값과 맞는 내부 기본값을 가지고 있습니다.
+`.env`에서 DB 이름, 계정, 비밀번호, 업로드 경로를 바꿨다면 해당 터미널에서도 `source .env` 후 실행합니다.
 
-`./scripts/test-data.sh`는 `scripts/test-data.sql`을 적용하고 `uploads/`에 seed 이미지를 준비합니다. 기본 seed는 서울 전역 120개 매장을 만들며, 한성대학교 기준 근처 조회 데모에 맞춰져 있습니다. `scripts/seed-images/`에 실제 이미지가 있으면 해당 파일을 사용하고, 없으면 SVG placeholder를 생성합니다.
+## 설정 구조
 
-샘플 계정:
-
-| 역할 | 계정 | 비밀번호 |
-|------|------|----------|
-| 일반 유저 | `demo-user01@todaybread.com` ~ `demo-user20@todaybread.com` | `todaybread123` |
-| 사장님 | `demo-boss001@todaybread.com` ~ `demo-boss120@todaybread.com` | `todaybread123` |
-
-사업자 인증 테스트용 케이스: 
-
-|사업자 번호|사업 시작일|대표자 명|
-|--------|---------|-------|
-|1234567890|20260101|김한성|
-
-근처 매장/빵 조회 추천 좌표:
-
-```text
-Hansung Univ: lat=37.5826000, lng=127.0106000, radius=1
-Hansung Univ: lat=37.5826000, lng=127.0106000, radius=3
-Hansung Univ: lat=37.5826000, lng=127.0106000, radius=5
-```
-
-한성대 기준 1km 이내 3개, 3km 이내 누적 10개, 5km 이내 누적 20개가 고정됩니다. 5km 안에는 판매중, 영업중 품절, 휴무 상태가 섞여 있어 `sellingStatus` 계산 로직을 검증할 수 있습니다. seed 주문은 픽업 완료(`PICKED_UP`)와 취소(`CANCELLED`)만 포함하며, 픽업 대기(`CONFIRMED`) 주문은 데모데이용 별도 스크립트에서 생성하는 전제로 제외합니다.
-
-리뷰는 매장당 10개씩 총 1,200개를 생성합니다. 각 매장은 이미지 리뷰 5개와 텍스트 리뷰 5개를 가지며, 리뷰 이미지는 총 900장입니다. 리뷰 작성자는 `demo-user02`~`demo-user20`에 분산되고, `demo-user01`은 주문 10개만 가지며 리뷰는 없습니다. seed 실행 결과에 `stores_without_reviews = 0`, `min_reviews_per_store = 10`, `max_reviews_per_store = 10`, `invalid_review_order_links = 0`이 출력되면 리뷰 데이터가 정상입니다.
-
-토큰은 seed하지 않습니다. 로그인 API가 access token과 refresh token을 발급하고, refresh token은 DB에 해시로 저장합니다.
-
-## 주문/결제 테스트
-
-stub 결제 모드에서는 토스 키 없이 주문 생성부터 결제, 주문 취소까지 확인할 수 있습니다.
-
-```bash
-SPRING_PROFILES_ACTIVE=stub ./gradlew bootRun
-./scripts/test-order.sh
-```
-
-토스 연동 모드는 주문 생성 후 confirm API 호출용 `curl` 예시를 출력합니다. 실제 승인에는 프론트엔드 토스 SDK에서 받은 `paymentKey`가 필요합니다.
-
-```bash
-./scripts/test-order.sh --toss
-```
-
-토스 테스트 키는 환경 변수로 설정합니다.
-
-```bash
-TOSS_SECRET_KEY=test_sk_...
-TOSS_CLIENT_KEY=test_ck_...
-./gradlew bootRun
-```
-
-## 주요 문서
-
-| 문서 | 설명 |
+| 파일 | 역할 |
 |------|------|
-| [API.md](docs/API.md) | 전체 API 목록, 요청/응답 예시, 에러 코드 |
-| [DB-SETUP.md](docs/DB-SETUP.md) | Docker MySQL, `.env`, Flyway, DBeaver/TablePlus 연결 |
-| [SCRIPTS.md](docs/SCRIPTS.md) | `scripts/` 폴더의 실행 스크립트와 seed 이미지 규칙 |
-| [TOSS.md](docs/TOSS.md) | 토스 페이먼츠 결제 흐름, 키 관리, confirm/cancel 구조 |
-| [JWT-GUIDE.md](docs/JWT-GUIDE.md) | JWT 인증 엔드포인트 작성 패턴 |
-| [CONVENTION.md](docs/CONVENTION.md) | 코드, API, 예외, 협업 컨벤션 |
+| `.env.example` | 로컬 개발용 환경변수 예시 |
+| `.env.ec2.example` | EC2 배포용 환경변수 예시 |
+| `application.properties` | 공통 Spring 설정 |
+| `application-local.properties` | 로컬 Docker MySQL, JWT, 업로드 경로 설정 |
+| `application-ec2.properties` | EC2/RDS, JWT, 업로드 경로 설정 |
+| `application-test.properties` | 테스트용 H2 설정 |
 
-## 프로젝트 구조
-
-```text
-.
-├── docker-compose.yml
-├── build.gradle
-├── docs/
-├── scripts/
-│   ├── mysql-connect.sh
-│   ├── test-data.sh
-│   ├── test-data.sql
-│   ├── test-order.sh
-│   └── seed-images/
-├── uploads/
-├── src/main/java/com/todaybread/server/
-│   ├── ServerApplication.java
-│   ├── config/
-│   ├── domain/
-│   │   ├── auth/
-│   │   ├── bread/
-│   │   ├── cart/
-│   │   ├── interestarea/
-│   │   ├── keyword/
-│   │   ├── notification/
-│   │   ├── order/
-│   │   ├── payment/
-│   │   ├── review/
-│   │   ├── store/
-│   │   ├── user/
-│   │   └── wishlist/
-│   ├── global/
-│   └── system/
-├── src/main/resources/
-│   ├── application.properties
-│   └── db/migration/
-│       └── V1__init_schema.sql
-└── src/test/
-```
-
-각 도메인은 대체로 아래 레이어를 따릅니다.
-
-```text
-domain/{name}/
-├── controller/
-├── dto/
-├── entity/
-├── repository/
-├── service/
-└── util/
-```
-
-## DB 마이그레이션
-
-Flyway 마이그레이션은 단일 baseline 파일 하나로 전체 스키마를 생성합니다.
-
-| 파일 | 설명 |
-|------|------|
-| `V1__init_schema.sql` | 전체 스키마 (테이블, 인덱스, FK, CHECK 제약 포함) |
-
-주요 테이블:
-
-| 테이블 | 설명 |
-|--------|------|
-| `users` | 사용자 정보 |
-| `refresh_token` | JWT refresh token 해시 |
-| `password_reset_token` | 비밀번호 재설정 일회용 토큰 (10분 유효) |
-| `interest_area` | 유저 관심지역 (유저당 1개, 기본 반경 3km) |
-| `keyword`, `user_keyword` | 키워드 마스터와 사용자 키워드 |
-| `store`, `store_image`, `store_business_hours`, `favourite_store` | 매장, 이미지, 영업시간, 단골 매장 |
-| `bread`, `bread_image` | 빵 메뉴와 이미지 (soft delete 지원) |
-| `cart`, `cart_item` | 장바구니 (단일 매장 제약) |
-| `orders`, `order_item` | 주문과 주문 항목 (멱등성 키, 상태 머신) |
-| `payment` | 결제 승인/취소 정보 (토스 페이먼츠 연동) |
-| `review`, `review_image` | 리뷰와 리뷰 이미지 |
-| `fcm_token`, `notification_log` | FCM 토큰과 알림 발송 이력 |
-
-기존 로컬 DB에 오래된 Flyway 이력(V1~V11 분리 시절)이 남아 있으면 baseline과 맞지 않을 수 있습니다. 개발 DB를 새 스키마로 맞추려면 볼륨을 초기화합니다.
-
-```bash
-docker compose down -v
-docker compose up -d
-./gradlew bootRun
-./scripts/test-data.sh
-```
+Spring Boot는 `.env` 파일을 자동으로 읽지 않습니다. 터미널에서는 `set -a && source .env && set +a`로 export합니다.
+IntelliJ에서는 EnvFile 플러그인 또는 Run Configuration의 Environment variables에 등록합니다. 값이 하나라도 빠지면 서버가 시작 단계에서 실패할 수 있습니다.
 
 ## 자주 쓰는 명령
 
@@ -200,6 +161,11 @@ docker compose up -d
 docker compose ps
 ./scripts/mysql-connect.sh -e "SHOW TABLES;"
 ./scripts/test-data.sh
-SPRING_PROFILES_ACTIVE=stub ./gradlew bootRun
-./scripts/test-order.sh
+```
+
+DB를 완전히 초기화해야 하면 Docker 볼륨까지 제거합니다.
+
+```bash
+docker compose down -v
+docker compose up -d
 ```

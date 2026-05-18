@@ -38,8 +38,10 @@ bin/
 
 # Environment files
 .env
+.env*
 .env.*
 !.env.example
+!.env.ec2.example
 
 # Project-local directories
 uploads/

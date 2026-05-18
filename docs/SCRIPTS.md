@@ -9,7 +9,6 @@
 | `scripts/mysql-connect.sh` | Docker MySQL 컨테이너에 접속하는 편의 스크립트 |
 | `scripts/test-data.sh` | 개발용 seed 데이터와 seed 이미지를 준비하고 `test-data.sql`을 DB에 적용 |
 | `scripts/test-data.sql` | 샘플 유저, 사장님, 관심지역, 키워드, 매장, 영업시간, 빵, 이미지, 즐겨찾기, 주문, 결제, 리뷰 데이터를 삽입 |
-| `scripts/test-order.sh` | 로그인부터 주문 생성, 결제, 주문 상태 확인, 취소까지 확인하는 API 흐름 테스트 |
 | `scripts/seed-images/` | `test-data.sh`가 `uploads/`로 복사할 실제 seed 이미지 원본 |
 
 ## `mysql-connect.sh`
@@ -20,16 +19,16 @@ Docker Compose로 실행 중인 MySQL 컨테이너에 `mysql` CLI로 접속합�
 ./scripts/mysql-connect.sh
 ```
 
-기본 접속값은 프로젝트 기본 DB 설정과 맞춰져 있습니다.
+이 스크립트는 편의를 위해 내부 fallback 값을 가지고 있습니다. 일반 로컬 개발 흐름에서는 `.env`의 MySQL 값과 맞춰 실행하는 것을 권장합니다.
 
-| 환경 변수 | 기본값 | 설명 |
-|-----------|--------|------|
-| `MYSQL_CONTAINER_NAME` | `todaybread-mysql` | 접속할 Docker 컨테이너 이름 |
-| `MYSQL_DATABASE` | `todaybread` | 접속할 데이터베이스 |
-| `MYSQL_USER` | `todaybread` | MySQL 사용자 |
-| `MYSQL_PASSWORD` | `todaybread` | MySQL 비밀번호 |
-| `MYSQL_DEFAULT_CHARSET` | `utf8mb4` | CLI 문자셋 |
-| `MYSQL_HOST` | `127.0.0.1` | 컨테이너 내부에서 접속할 host |
+| 환경 변수 | 설명 |
+|-----------|------|
+| `MYSQL_CONTAINER_NAME` | 접속할 Docker 컨테이너 이름 |
+| `MYSQL_DATABASE` | 접속할 데이터베이스 |
+| `MYSQL_USER` | MySQL 사용자 |
+| `MYSQL_PASSWORD` | MySQL 비밀번호 |
+| `MYSQL_DEFAULT_CHARSET` | CLI 문자셋 |
+| `MYSQL_HOST` | 컨테이너 내부에서 접속할 host |
 
 뒤에 MySQL CLI 옵션을 그대로 붙일 수 있습니다.
 
@@ -65,7 +64,7 @@ Docker Compose로 실행 중인 MySQL 컨테이너에 `mysql` CLI로 접속합�
 - `scripts/seed-images/seed_bread_01.*` ~ `seed_bread_10.*`이 있으면 빵 이미지 원본으로 사용합니다.
 - `scripts/seed-images/seed_review_01.*` ~ `seed_review_05.*`이 있으면 리뷰 이미지 원본으로 사용합니다.
 - 원본 이미지가 없으면 SVG placeholder를 생성합니다.
-- `UPLOAD_DIR` 환경 변수로 업로드 디렉터리를 바꿀 수 있습니다. 기본값은 프로젝트 루트의 `uploads/`입니다.
+- `UPLOAD_DIR` 환경 변수는 Spring local profile과 seed 이미지 복사 경로를 맞추는 데 사용합니다.
 
 토큰 주의:
 
@@ -136,38 +135,6 @@ Hansung Univ: lat=37.5826000, lng=127.0106000, radius=5
 - 픽업 대기(`CONFIRMED`) 주문은 만들지 않습니다. 데모데이용 실시간 주문은 별도 스크립트에서 생성합니다.
 - 현재 seed에는 `밀도 선릉점`, `시나몬 롤` 데이터가 없습니다. 프론트에서 해당 이름이 보이면 다른 DB, 캐시, 또는 별도 seed 데이터를 보고 있는지 확인해야 합니다.
 
-## `test-order.sh`
-
-주문과 결제 API 흐름을 빠르게 확인하는 스크립트입니다.
-
-```bash
-./scripts/test-order.sh
-```
-
-기본 흐름:
-
-1. `/api/system/health`로 서버 상태 확인
-2. 샘플 유저 로그인
-3. `/api/payments/client-key` 조회
-4. `/api/bread/nearby`에서 주문 가능한 빵 조회
-5. `/api/orders/direct`로 바로 구매 주문 생성
-6. stub 모드에서는 `/api/payments`로 가짜 결제 승인
-7. 주문 상세 조회
-8. `CONFIRMED` 주문이면 주문 취소 API 호출
-
-토스 연동 안내 모드:
-
-```bash
-./scripts/test-order.sh --toss
-```
-
-`--toss` 모드는 실제 토스 결제를 자동 완료하지 않습니다. 주문 생성 후 `/api/payments/confirm`에 보낼 `curl` 예시를 출력합니다. 실제 confirm에는 토스 결제 인증 단계에서 발급된 `paymentKey`가 필요합니다.
-
-현재 주의점:
-
-- `test-order.sh`의 기본 로그인 계정은 `test-data.sql` seed 계정과 같은 `demo-user01@todaybread.com`입니다.
-- 일반 토스 모드에서는 `paymentKey`가 있어야 합니다.
-
 ## `seed-images/`
 
 `test-data.sh`가 seed 이미지 원본으로 사용하는 파일 디렉터리입니다.
@@ -193,14 +160,20 @@ scripts/seed-images/seed_review_02.jpeg
 로컬 개발 DB를 처음 준비할 때는 보통 아래 순서로 실행합니다.
 
 ```bash
+cp .env.example .env
 docker compose up -d
+
+set -a
+source .env
+set +a
+
 ./gradlew bootRun
+```
+
+서버가 뜬 뒤 다른 터미널에서 seed 데이터를 적용합니다.
+
+```bash
 ./scripts/test-data.sh
 ```
 
-주문/결제 흐름을 stub으로 확인하려면 서버를 `stub` 프로필로 띄운 뒤 실행합니다.
-
-```bash
-SPRING_PROFILES_ACTIVE=stub ./gradlew bootRun
-./scripts/test-order.sh
-```
+주문/결제 흐름은 프론트엔드 토스 SDK와 백엔드 confirm API를 함께 사용해 확인합니다. 자세한 내용은 `docs/TOSS.md`를 참고합니다.

@@ -185,7 +185,7 @@ TossPaymentProcessor (Profile: !stub)
   └── cancel() → TossPaymentClient.cancelPayment()
 
 StubPaymentProcessor (Profile: stub)
-  └── pay() → 가짜 결제 성공 반환 (로컬 개발용)
+  └── pay() → 가짜 결제 성공 반환 (테스트/우회용)
 
 TossPaymentClient
   ├── confirmPayment() → POST /v1/payments/confirm (토스 API)
@@ -207,6 +207,9 @@ TossPaymentClient
 
 ### `.env` 설정
 
+`TOSS_SECRET_KEY`, `TOSS_CLIENT_KEY`는 서버 실행 필수 환경변수입니다.
+현재 properties에는 기본값이 없으므로 로컬과 EC2 모두 실행 전에 값을 주입해야 합니다.
+
 ```bash
 # 개발 환경 (테스트 키)
 TOSS_SECRET_KEY=test_sk_발급받은키
@@ -223,12 +226,13 @@ TOSS_CLIENT_KEY=test_ck_발급받은키
 ### `application.properties`
 
 ```properties
-toss.payment.secret-key=${TOSS_SECRET_KEY:}
-toss.payment.client-key=${TOSS_CLIENT_KEY:}
+toss.payment.secret-key=${TOSS_SECRET_KEY}
+toss.payment.client-key=${TOSS_CLIENT_KEY}
 toss.payment.base-url=https://api.tosspayments.com
 ```
 
-`${TOSS_SECRET_KEY:}`는 OS 환경 변수를 읽는 문법입니다. `.env` 파일을 직접 읽는 게 아니라 시스템에 설정된 환경 변수를 가져옵니다.
+`${TOSS_SECRET_KEY}`는 OS 환경 변수를 읽는 문법입니다. `.env` 파일을 직접 읽는 게 아니라 시스템에 설정된 환경 변수를 가져옵니다.
+값이 없으면 Spring placeholder를 해결하지 못해 서버가 시작 단계에서 실패할 수 있습니다.
 
 ### 인텔리제이에서 `.env` 파일 로드
 
@@ -241,38 +245,31 @@ toss.payment.base-url=https://api.tosspayments.com
 
 | 환경 | 프로필 | 결제 처리기 | 토스 키 필요 | 설명 |
 |------|--------|------------|-------------|------|
-| 로컬 개발 (키 없음) | `stub` | `StubPaymentProcessor` | ❌ | 가짜 결제 성공 반환 |
-| 개발/QA (테스트 키) | 기본 | `TossPaymentProcessor` | ✅ 테스트 키 | 토스 API 호출, 돈 안 빠짐 |
-| 운영 (라이브 키) | 기본 | `TossPaymentProcessor` | ✅ 라이브 키 | 토스 API 호출, 실제 결제 |
+| 로컬 개발/QA | `local` | `TossPaymentProcessor` | ✅ 테스트 키 | 토스 API 호출, 돈 안 빠짐 |
+| EC2 데모 | `ec2` | `TossPaymentProcessor` | ✅ 테스트/라이브 키 | 환경변수로 키 주입 |
+| 테스트/우회 | `local,stub` 또는 `test,stub` | `StubPaymentProcessor` | ✅ env 값은 주입 | 토스 API 호출만 우회 |
 
 ```bash
-# stub 모드 (키 없이 개발)
-SPRING_PROFILES_ACTIVE=stub ./gradlew bootRun
-
-# 토스 연동 모드 (.env에 키 설정 후)
+set -a
+source .env
+set +a
 ./gradlew bootRun
 ```
 
 ---
 
-## 7. 테스트 스크립트
+## 7. 결제 흐름 확인
 
-### stub 모드 (가짜 결제, 키 불필요)
+현재 저장소에는 주문/결제 흐름을 끝까지 자동 실행하는 별도 스크립트를 두지 않습니다.
+결제 확인은 프론트엔드 토스 SDK와 백엔드 confirm API를 함께 사용합니다.
 
-```bash
-./scripts/test-order.sh
-```
+1. 백엔드를 `local` 또는 `ec2` 프로필로 실행합니다.
+2. 프론트엔드가 `GET /api/payments/client-key`로 Client Key를 조회합니다.
+3. 프론트엔드가 토스 SDK로 결제 인증을 진행합니다.
+4. 토스 성공 콜백에서 받은 `paymentKey`, `orderId`, `amount`를 백엔드 `POST /api/payments/confirm`으로 보냅니다.
+5. 백엔드는 Secret Key로 토스 Confirm API를 호출하고 결제/주문 상태를 저장합니다.
 
-로그인 → Client Key 조회 → 주문 생성 → 결제 → 주문 확인 → 주문 취소까지 자동 실행.
-
-### 토스 연동 모드 (실제 토스 API 호출)
-
-```bash
-./scripts/test-order.sh --toss
-```
-
-로그인 → Client Key 조회 → 주문 생성까지 자동 실행 후, confirm API 호출용 curl 명령어를 출력합니다.
-`paymentKey`는 프론트엔드 토스 SDK를 통해서만 발급받을 수 있으므로, 수동으로 입력해야 합니다.
+`stub` 프로필은 토스 API 호출을 우회해야 하는 테스트 상황에서만 사용합니다. 이 경우에도 현재 env 정책상 Toss 관련 환경변수 값은 주입되어 있어야 합니다.
 
 ---
 

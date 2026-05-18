@@ -5,10 +5,18 @@
 > 이 문서는 전체 API 목록과 에러 코드를 정리한 참고용 문서입니다.
 > 실시간 API 스펙은 Swagger UI에서 확인하세요.
 
-개발용 테스트 데이터가 필요하면 먼저 아래 스크립트를 실행하세요:
+개발용 테스트 데이터가 필요하면 `.env` 값을 주입한 뒤 서버를 먼저 실행하세요. 서버가 한 번 떠서 Flyway가 테이블을 만든 다음 seed 데이터를 넣습니다.
 
 ```bash
+set -a
+source .env
+set +a
 ./gradlew bootRun
+```
+
+다른 터미널에서 seed 데이터를 적용합니다.
+
+```bash
 ./scripts/test-data.sh
 ```
 
