@@ -180,12 +180,9 @@ PaymentService
   ├── confirmPayment() → 멱등성 체크 → 주문 검증 → PaymentProcessor.confirm() → DB 저장
   └── cancelPayment() → 결제 조회 → PaymentProcessor.cancel() → DB 저장
 
-TossPaymentProcessor (Profile: !stub)
+TossPaymentProcessor
   ├── confirm() → TossPaymentClient.confirmPayment()
   └── cancel() → TossPaymentClient.cancelPayment()
-
-StubPaymentProcessor (Profile: stub)
-  └── pay() → 가짜 결제 성공 반환 (테스트/우회용)
 
 TossPaymentClient
   ├── confirmPayment() → POST /v1/payments/confirm (토스 API)
@@ -241,13 +238,12 @@ toss.payment.base-url=https://api.tosspayments.com
 3. **Load variables from file** 체크 → `.env` 파일 선택
 4. **Apply → OK**
 
-### Spring Profile 기반 결제 처리기 전환
+### 프로필별 실행
 
-| 환경 | 프로필 | 결제 처리기 | 토스 키 필요 | 설명 |
-|------|--------|------------|-------------|------|
-| 로컬 개발/QA | `local` | `TossPaymentProcessor` | ✅ 테스트 키 | 토스 API 호출, 돈 안 빠짐 |
-| EC2 데모 | `ec2` | `TossPaymentProcessor` | ✅ 테스트/라이브 키 | 환경변수로 키 주입 |
-| 테스트/우회 | `local,stub` 또는 `test,stub` | `StubPaymentProcessor` | ✅ env 값은 주입 | 토스 API 호출만 우회 |
+| 환경 | 프로필 | 결제 처리기 | 토스 키 |
+|------|--------|------------|---------|
+| 로컬 개발/QA | `local` | `TossPaymentProcessor` | 테스트 키 |
+| EC2 데모 | `ec2` | `TossPaymentProcessor` | 테스트 키 또는 라이브 키 |
 
 ```bash
 set -a
@@ -268,8 +264,6 @@ set +a
 3. 프론트엔드가 토스 SDK로 결제 인증을 진행합니다.
 4. 토스 성공 콜백에서 받은 `paymentKey`, `orderId`, `amount`를 백엔드 `POST /api/payments/confirm`으로 보냅니다.
 5. 백엔드는 Secret Key로 토스 Confirm API를 호출하고 결제/주문 상태를 저장합니다.
-
-`stub` 프로필은 토스 API 호출을 우회해야 하는 테스트 상황에서만 사용합니다. 이 경우에도 현재 env 정책상 Toss 관련 환경변수 값은 주입되어 있어야 합니다.
 
 ---
 

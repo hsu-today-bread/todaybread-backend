@@ -7,17 +7,13 @@ import com.todaybread.server.domain.payment.client.dto.TossConfirmResponse;
 import com.todaybread.server.domain.payment.client.dto.TossPaymentResponse;
 import com.todaybread.server.domain.payment.entity.PaymentStatus;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
  * 토스 페이먼츠 API를 사용하는 결제 처리 구현체입니다.
  * {@link TossPaymentClient}를 통해 토스 결제 승인 및 취소 API를 호출합니다.
- *
- * <p>stub 프로필이 아닌 환경에서 활성화됩니다.</p>
  */
 @Component
-@Profile("!stub")
 @RequiredArgsConstructor
 public class TossPaymentProcessor implements PaymentProcessor {
 

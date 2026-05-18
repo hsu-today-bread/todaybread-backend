@@ -128,7 +128,7 @@ class PaymentServiceConfirmTest {
             PaymentEntity existing = TestFixtures.payment(10L, 1L, 5_000, PaymentStatus.APPROVED,
                     LocalDateTime.of(2026, 4, 5, 12, 0), "idem-1");
             given(paymentRepository.findByOrderIdAndIdempotencyKey(1L, "idem-1")).willReturn(Optional.of(existing));
-            // C3: 소유자 검증을 위한 주문 조회 stub
+            // C3: 소유자 검증을 위한 주문 조회 mock
             OrderEntity existingOrder = TestFixtures.order(1L, 1L, 100L, OrderStatus.CONFIRMED, 5_000, "order-key");
             given(orderRepository.findById(1L)).willReturn(Optional.of(existingOrder));
 

@@ -119,7 +119,7 @@ class CommerceWishlistApiIntegrationTest extends ApiIntegrationTestSupport {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "paymentKey": "tgen_stub_%d",
+                                  "paymentKey": "tgen_test_%d",
                                   "orderId": %d,
                                   "tossOrderId": "tb_%d_orderkey1",
                                   "amount": 5000

@@ -10,7 +10,6 @@ import com.todaybread.server.domain.payment.client.dto.TossPaymentResponse;
 import com.todaybread.server.domain.payment.config.TossPaymentProperties;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -34,7 +33,6 @@ import java.util.Base64;
  */
 @Slf4j
 @Component
-@Profile("!stub")
 public class TossPaymentClient {
 
     private static final int CONNECT_TIMEOUT_MS = 5_000;

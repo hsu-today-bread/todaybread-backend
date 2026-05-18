@@ -186,7 +186,7 @@ class PaymentServicePropertyTest {
         given(paymentRepository.findByOrderIdAndIdempotencyKey(orderId, idempotencyKey))
                 .willReturn(Optional.of(existingPayment));
 
-        // C3: 소유자 검증을 위한 주문 조회 stub
+        // C3: 소유자 검증을 위한 주문 조회 mock
         OrderEntity order = TestFixtures.order(orderId, userId, 100L, OrderStatus.CONFIRMED, amount, "order-key");
         given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
 

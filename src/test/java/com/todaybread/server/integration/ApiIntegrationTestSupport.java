@@ -19,6 +19,9 @@ import com.todaybread.server.domain.keyword.repository.KeywordRepository;
 import com.todaybread.server.domain.keyword.repository.UserKeywordRepository;
 import com.todaybread.server.domain.order.repository.OrderItemRepository;
 import com.todaybread.server.domain.order.repository.OrderRepository;
+import com.todaybread.server.domain.payment.entity.PaymentStatus;
+import com.todaybread.server.domain.payment.processor.PaymentProcessor;
+import com.todaybread.server.domain.payment.processor.PaymentResult;
 import com.todaybread.server.domain.payment.repository.PaymentRepository;
 import com.todaybread.server.domain.store.dto.BusinessHoursRequest;
 import com.todaybread.server.domain.store.entity.FavouriteStoreEntity;
@@ -34,6 +37,7 @@ import com.todaybread.server.domain.user.repository.BusinessApprovalRepository;
 import com.todaybread.server.domain.user.repository.PasswordResetTokenRepository;
 import com.todaybread.server.domain.user.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -44,6 +48,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
@@ -63,9 +68,13 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.BDDMockito.given;
+
 @SpringBootTest(classes = {ServerApplication.class, ApiIntegrationTestSupport.FixedClockConfig.class})
 @AutoConfigureMockMvc
-@ActiveProfiles({"test", "stub"})
+@ActiveProfiles("test")
 @SpringJUnitConfig
 abstract class ApiIntegrationTestSupport {
 
@@ -128,6 +137,9 @@ abstract class ApiIntegrationTestSupport {
     @Autowired
     protected PaymentRepository paymentRepository;
 
+    @MockitoBean
+    protected PaymentProcessor paymentProcessor;
+
     @Autowired
     protected OrderItemRepository orderItemRepository;
 
@@ -143,6 +155,18 @@ abstract class ApiIntegrationTestSupport {
     @DynamicPropertySource
     static void registerProperties(DynamicPropertyRegistry registry) {
         registry.add("app.file.upload-dir", () -> UPLOAD_DIR.toString());
+    }
+
+    @BeforeEach
+    void setupPaymentProcessor() {
+        given(paymentProcessor.confirm(anyString(), anyString(), anyInt(), anyString()))
+                .willAnswer(invocation -> new PaymentResult(
+                        PaymentStatus.APPROVED,
+                        "결제가 승인되었습니다",
+                        invocation.getArgument(0, String.class),
+                        "카드",
+                        "2026-05-18T10:00:00+09:00"
+                ));
     }
 
     @AfterEach
