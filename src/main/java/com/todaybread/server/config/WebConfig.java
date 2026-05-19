@@ -2,6 +2,7 @@ package com.todaybread.server.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -10,6 +11,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * 업로드된 이미지 파일을 /images/** URL 패턴으로 서빙합니다.
  */
 @Configuration
+@Profile({"local", "test"})
 public class WebConfig implements WebMvcConfigurer {
 
     @Value("${app.file.upload-dir}")

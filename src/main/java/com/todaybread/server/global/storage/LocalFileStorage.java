@@ -5,7 +5,7 @@ import com.todaybread.server.global.exception.ErrorCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,11 +20,11 @@ import java.util.UUID;
  * {@link FileStorage}의 로컬 파일 시스템 구현체입니다.
  * 업로드된 이미지를 서버 로컬 디스크에 저장하고, 정적 리소스 경로인
  * {@code /images/**} 형태의 URL을 만들어 반환합니다.
- * 운영 환경에서 S3로 전환할 경우, 이 구현체를 대체하는 새 구현체를 추가하고
- * 상위 서비스는 그대로 {@link FileStorage}만 주입받도록 유지하면 됩니다.
+ * local/test 프로필에서만 활성화됩니다.
+ * EC2 프로필에서는 {@link S3FileStorage}가 같은 인터페이스로 동작합니다.
  */
 @Service
-@Primary
+@Profile({"local", "test"})
 public class LocalFileStorage implements FileStorage {
 
     private static final Logger log = LoggerFactory.getLogger(LocalFileStorage.class);

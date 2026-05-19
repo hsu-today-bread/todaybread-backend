@@ -3,7 +3,7 @@
 TodayBread 로컬 개발 DB는 Docker Compose로 MySQL 컨테이너를 띄우고, Spring Boot는 `local` 프로필로 해당 DB에 접속합니다.
 
 현재 설정은 의도적으로 **프로퍼티 기본값을 두지 않습니다.** 로컬 실행도 `.env` 또는 IntelliJ 환경변수 설정이 필요합니다.
-DB, JWT, Toss, FCM, NTS 같은 환경변수는 서버 시작 전에 모두 존재해야 합니다.
+DB, JWT, Toss, FCM, NTS 같은 환경변수는 서버 시작 전에 모두 존재해야 합니다. EC2 프로필에서는 S3 환경변수도 필요합니다.
 
 ## 전체 구조
 
@@ -14,8 +14,8 @@ DB, JWT, Toss, FCM, NTS 같은 환경변수는 서버 시작 전에 모두 존�
 
 docker-compose.yml          .env를 자동으로 읽어 MySQL 컨테이너 생성
 application.properties      공통 Spring 설정
-application-local.properties local 프로필 DB/JWT/업로드 설정
-application-ec2.properties  ec2 프로필 RDS/JWT/업로드 설정
+application-local.properties local 프로필 DB/JWT/로컬 업로드 설정
+application-ec2.properties  ec2 프로필 RDS/JWT/S3 설정
 ```
 
 Docker Compose는 프로젝트 루트의 `.env` 파일을 자동으로 읽습니다. Spring Boot는 `.env` 파일을 자동으로 읽지 않으므로, 터미널에서 export하거나 IntelliJ Run Configuration/EnvFile 플러그인으로 주입해야 합니다.
@@ -121,7 +121,7 @@ ports:
 |------|------|
 | `application.properties` | 공통 설정: 애플리케이션 이름, Swagger, Flyway, JWT 만료 시간, multipart 제한, 외부 API base-url |
 | `application-local.properties` | 로컬 DB 접속, SQL 로그 활성화, JWT secret, `UPLOAD_DIR` |
-| `application-ec2.properties` | RDS 접속, SQL 로그 비활성화, JWT secret, `UPLOAD_DIR` |
+| `application-ec2.properties` | RDS 접속, SQL 로그 비활성화, JWT secret, S3 bucket/region |
 | `application-test.properties` | 테스트용 H2, 테스트 JWT, 테스트 업로드 경로 |
 
 `application-local.properties`와 `application-ec2.properties`는 모두 `${ENV_VAR}`만 사용합니다. `${ENV_VAR:default}` 형태의 기본값은 두지 않습니다.
@@ -139,7 +139,6 @@ MYSQL_PORT=3306
 MYSQL_DATABASE=todaybread
 MYSQL_USER=todaybread
 MYSQL_PASSWORD=change-this-rds-password
-UPLOAD_DIR=/home/ubuntu/todaybread/uploads
 JWT_SECRET=change-this-to-a-long-random-secret
 TOSS_SECRET_KEY=test_sk_your_secret_key_here
 TOSS_CLIENT_KEY=test_ck_your_client_key_here
@@ -147,6 +146,8 @@ FCM_ENABLED=false
 GOOGLE_APPLICATION_CREDENTIALS=/home/ubuntu/todaybread/firebase-adminsdk.json
 NTS_BUSINESS_SERVICE_KEY=your_own_service_key
 BUSINESS_APPROVAL_HASH_SECRET=change-this-to-a-long-random-secret
+S3_BUCKET=todaybread-demo-images
+AWS_REGION=ap-northeast-2
 ```
 
 systemd를 쓰는 경우 서비스 파일에서 `EnvironmentFile`로 `.env`를 읽게 할 수 있습니다.
@@ -157,18 +158,18 @@ EnvironmentFile=/home/ubuntu/todaybread/.env
 ExecStart=/usr/bin/java -Xms256m -Xmx768m -jar /home/ubuntu/todaybread/server.jar
 ```
 
-## S3 예정 설정
+## S3 이미지 저장
 
-현재 코드는 아직 `S3FileStorage`를 구현하지 않았습니다. EC2에서도 S3 전환 전까지는 `LocalFileStorage`가 `UPLOAD_DIR`에 이미지를 저장합니다.
+EC2 프로필은 `S3FileStorage`를 사용합니다. 업로드와 삭제는 서버가 S3 권한으로 수행하고, API 응답의 `imageUrl`은 S3 public URL입니다.
 
-`.env.ec2.example`의 아래 값은 다음 단계 S3 구현을 위한 예시입니다.
+EC2 실행에는 아래 값이 필요합니다.
 
 ```env
 S3_BUCKET=todaybread-demo-images
 AWS_REGION=ap-northeast-2
 ```
 
-S3 구현 전까지는 `application-ec2.properties`에 S3 프로퍼티를 추가하지 않습니다.
+S3 버킷은 public read만 허용하고 public write는 허용하지 않습니다. EC2에는 `s3:PutObject`, `s3:DeleteObject`, 필요 시 `s3:GetObject` 권한을 가진 IAM Role을 붙입니다.
 
 ## 자주 쓰는 명령
 

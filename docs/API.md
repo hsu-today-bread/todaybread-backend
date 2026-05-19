@@ -29,7 +29,7 @@ set +a
 
 - 한성대학교: `lat=37.5826000`, `lng=127.0106000`, `radius=1`, `3`, `5`
 
-이미지 URL은 정적 리소스 경로 `/images/{storedFilename}` 형태입니다. 예시는 설명용 파일명이며, 실제 seed 데이터에서는 `seed_store_01_store_001.png`, `seed_bread_01_bread_1.jpeg`, `seed_review_01_review_1_1.jpeg` 같은 저장 파일명이 내려옵니다.
+이미지 URL은 프로필별 저장소에 따라 달라집니다. 로컬/test 프로필은 `/images/{storedFilename}`, EC2 프로필은 S3 public URL을 내려줍니다. 예시는 로컬 기준 설명용 파일명이며, 실제 seed 데이터에서는 `seed_store_01_store_001.png`, `seed_bread_01_bread_1.jpeg`, `seed_review_01_review_1_1.jpeg` 같은 저장 파일명이 내려옵니다.
 
 ## 빠른 이동
 
@@ -2043,7 +2043,7 @@ false
   - `/api/system/health` — 헬스체크
   - `/swagger-ui/**` — Swagger UI
   - `/v3/api-docs/**` — OpenAPI 스펙
-  - `/images/**` — 이미지 정적 파일
+  - `/images/**` — 로컬/test 프로필 이미지 정적 파일
 - 그 외 모든 경로는 `Authorization: Bearer {accessToken}` 필요
 - 사장님 전용 API (`/api/boss/**`)는 `@PreAuthorize("hasRole('BOSS')")` 적용
 

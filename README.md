@@ -138,7 +138,7 @@ MySQL CLI 접속은 아래 스크립트를 사용합니다.
 ```
 
 위 스크립트들은 `.env` 파일을 직접 읽지는 않지만, 로컬 기본 DB 값과 맞는 내부 기본값을 가지고 있습니다.
-`.env`에서 DB 이름, 계정, 비밀번호, 업로드 경로를 바꿨다면 해당 터미널에서도 `source .env` 후 실행합니다.
+`.env`에서 DB 이름, 계정, 비밀번호, 로컬 업로드 경로를 바꿨다면 해당 터미널에서도 `source .env` 후 실행합니다.
 
 ## 설정 구조
 
@@ -147,8 +147,8 @@ MySQL CLI 접속은 아래 스크립트를 사용합니다.
 | `.env.example` | 로컬 개발용 환경변수 예시 |
 | `.env.ec2.example` | EC2 배포용 환경변수 예시 |
 | `application.properties` | 공통 Spring 설정 |
-| `application-local.properties` | 로컬 Docker MySQL, JWT, 업로드 경로 설정 |
-| `application-ec2.properties` | EC2/RDS, JWT, 업로드 경로 설정 |
+| `application-local.properties` | 로컬 Docker MySQL, JWT, 로컬 업로드 경로 설정 |
+| `application-ec2.properties` | EC2/RDS, JWT, S3 이미지 저장 설정 |
 | `application-test.properties` | 테스트용 H2 설정 |
 
 Spring Boot는 `.env` 파일을 자동으로 읽지 않습니다. 터미널에서는 `set -a && source .env && set +a`로 export합니다.

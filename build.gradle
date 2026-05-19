@@ -47,6 +47,10 @@ dependencies {
 	// MySQL 드라이버
 	runtimeOnly 'com.mysql:mysql-connector-j'
 
+	// AWS SDK (S3 이미지 저장)
+	implementation platform('software.amazon.awssdk:bom:2.30.31')
+	implementation 'software.amazon.awssdk:s3'
+
 	// 테스트
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
