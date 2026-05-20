@@ -17,7 +17,7 @@ set +a
 다른 터미널에서 seed 데이터를 적용합니다.
 
 ```bash
-./scripts/test-data.sh
+./scripts/local-test-data.sh
 ```
 
 샘플 계정:

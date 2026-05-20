@@ -128,13 +128,13 @@ http://localhost:8080/swagger-ui/index.html
 서버를 실행 후, 테스트 데이터가 필요하면 해당 스크립트를 실행합니다.
 
 ```bash
-./scripts/test-data.sh
+./scripts/local-test-data.sh
 ```
 
 MySQL CLI 접속은 아래 스크립트를 사용합니다.
 
 ```bash
-./scripts/mysql-connect.sh
+./scripts/local-mysql-connect.sh
 ```
 
 위 스크립트들은 `.env` 파일을 직접 읽지는 않지만, 로컬 기본 DB 값과 맞는 내부 기본값을 가지고 있습니다.
@@ -159,8 +159,8 @@ IntelliJ에서는 EnvFile 플러그인 또는 Run Configuration의 Environment v
 ```bash
 ./gradlew test
 docker compose ps
-./scripts/mysql-connect.sh -e "SHOW TABLES;"
-./scripts/test-data.sh
+./scripts/local-mysql-connect.sh -e "SHOW TABLES;"
+./scripts/local-test-data.sh
 ```
 
 DB를 완전히 초기화해야 하면 Docker 볼륨까지 제거합니다.

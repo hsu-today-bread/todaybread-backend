@@ -205,7 +205,7 @@ if [[ "${SCHEMA_READY}" != "9" ]]; then
   cat >&2 <<'EOF'
 Database schema is not initialized yet.
 Run the Spring Boot app once so Flyway can create the tables, then run:
-  ./scripts/test-data.sh
+  ./scripts/local-test-data.sh
 EOF
   exit 1
 fi

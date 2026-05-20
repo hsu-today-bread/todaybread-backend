@@ -6,17 +6,21 @@
 
 | 경로 | 용도 |
 |------|------|
-| `scripts/mysql-connect.sh` | Docker MySQL 컨테이너에 접속하는 편의 스크립트 |
-| `scripts/test-data.sh` | 개발용 seed 데이터와 seed 이미지를 준비하고 `test-data.sql`을 DB에 적용 |
+| `scripts/local-mysql-connect.sh` | 로컬 Docker MySQL 컨테이너에 접속하는 편의 스크립트 |
+| `scripts/local-test-data.sh` | 로컬 Docker MySQL에 seed 데이터와 로컬 seed 이미지를 준비 |
+| `scripts/ec2-mysql-connect.sh` | EC2에서 `.env.ec2`를 읽어 RDS MySQL에 접속 |
+| `scripts/ec2-create-db.sh` | EC2에서 RDS 데이터베이스 생성 |
+| `scripts/ec2-drop-db.sh` | EC2에서 RDS 데이터베이스 삭제 |
+| `scripts/ec2-test-data.sh` | EC2에서 RDS seed 데이터 삽입과 S3 seed 이미지 업로드 |
 | `scripts/test-data.sql` | 샘플 유저, 사장님, 관심지역, 키워드, 매장, 영업시간, 빵, 이미지, 즐겨찾기, 주문, 결제, 리뷰 데이터를 삽입 |
-| `scripts/seed-images/` | `test-data.sh`가 `uploads/`로 복사할 실제 seed 이미지 원본 |
+| `scripts/seed-images/` | 로컬/EC2 seed 이미지 원본 |
 
-## `mysql-connect.sh`
+## `local-mysql-connect.sh`
 
 Docker Compose로 실행 중인 MySQL 컨테이너에 `mysql` CLI로 접속합니다.
 
 ```bash
-./scripts/mysql-connect.sh
+./scripts/local-mysql-connect.sh
 ```
 
 이 스크립트는 편의를 위해 내부 fallback 값을 가지고 있습니다. 일반 로컬 개발 흐름에서는 `.env`의 MySQL 값과 맞춰 실행하는 것을 권장합니다.
@@ -33,21 +37,21 @@ Docker Compose로 실행 중인 MySQL 컨테이너에 `mysql` CLI로 접속합�
 뒤에 MySQL CLI 옵션을 그대로 붙일 수 있습니다.
 
 ```bash
-./scripts/mysql-connect.sh -e "SHOW TABLES;"
+./scripts/local-mysql-connect.sh -e "SHOW TABLES;"
 ```
 
-## `test-data.sh`
+## `local-test-data.sh`
 
-개발용 테스트 데이터를 DB에 넣는 실행 스크립트입니다. 기본 SQL 파일은 `scripts/test-data.sql`입니다.
+로컬 Docker MySQL에 개발용 테스트 데이터를 넣는 실행 스크립트입니다. 기본 SQL 파일은 `scripts/test-data.sql`입니다.
 
 ```bash
-./scripts/test-data.sh
+./scripts/local-test-data.sh
 ```
 
 다른 SQL 파일을 적용하려면 첫 번째 인자로 넘깁니다.
 
 ```bash
-./scripts/test-data.sh ./path/to/custom-seed.sql
+./scripts/local-test-data.sh ./path/to/custom-seed.sql
 ```
 
 실행 흐름:
@@ -65,6 +69,30 @@ Docker Compose로 실행 중인 MySQL 컨테이너에 `mysql` CLI로 접속합�
 - `scripts/seed-images/seed_review_01.*` ~ `seed_review_05.*`이 있으면 리뷰 이미지 원본으로 사용합니다.
 - 원본 이미지가 없으면 SVG placeholder를 생성합니다.
 - `UPLOAD_DIR` 환경 변수는 Spring local profile과 seed 이미지 복사 경로를 맞추는 데 사용합니다.
+
+## EC2 스크립트
+
+EC2 스크립트는 기본으로 `/home/ubuntu/todaybread/secrets/.env.ec2`를 읽습니다.
+
+```bash
+./scripts/ec2-create-db.sh
+./scripts/ec2-mysql-connect.sh
+./scripts/ec2-test-data.sh
+```
+
+`.env.ec2` 위치가 다르면 `ENV_FILE`로 지정합니다.
+
+```bash
+ENV_FILE=/path/to/.env.ec2 ./scripts/ec2-test-data.sh
+```
+
+실행 흐름:
+
+1. `ec2-create-db.sh`로 RDS 데이터베이스를 생성합니다.
+2. Spring Boot 서버를 한 번 실행해 Flyway가 테이블을 만듭니다.
+3. `ec2-test-data.sh`를 실행합니다.
+4. `ec2-test-data.sh`는 `test-data.sql`을 RDS에 적용하고, `seed-images/`의 이미지를 DB의 `stored_filename` 이름으로 S3에 업로드합니다.
+5. `ec2-drop-db.sh`는 필요할 때만 사용합니다.
 
 토큰 주의:
 
@@ -137,7 +165,7 @@ Hansung Univ: lat=37.5826000, lng=127.0106000, radius=5
 
 ## `seed-images/`
 
-`test-data.sh`가 seed 이미지 원본으로 사용하는 파일 디렉터리입니다.
+로컬/EC2 테스트 데이터 스크립트가 seed 이미지 원본으로 사용하는 파일 디렉터리입니다.
 
 현재 규칙:
 
@@ -173,7 +201,7 @@ set +a
 서버가 뜬 뒤 다른 터미널에서 seed 데이터를 적용합니다.
 
 ```bash
-./scripts/test-data.sh
+./scripts/local-test-data.sh
 ```
 
 주문/결제 흐름은 프론트엔드 토스 SDK와 백엔드 confirm API를 함께 사용해 확인합니다. 자세한 내용은 `docs/TOSS.md`를 참고합니다.

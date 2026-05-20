@@ -36,7 +36,7 @@ set +a
 서버가 한 번 뜨면 Flyway가 `src/main/resources/db/migration`의 SQL을 실행해 스키마를 생성합니다. 개발용 seed 데이터가 필요하면 서버가 뜬 뒤 다른 터미널에서 실행합니다.
 
 ```bash
-./scripts/test-data.sh
+./scripts/local-test-data.sh
 ```
 
 ## 로컬 환경변수
@@ -128,7 +128,7 @@ ports:
 
 ## EC2 / RDS 실행 개요
 
-EC2에서는 `.env.ec2.example`을 참고해 EC2 서버 안에 실제 `.env`를 작성합니다.
+EC2에서는 `.env.ec2.example`을 참고해 EC2 서버 안에 실제 `/home/ubuntu/todaybread/secrets/.env.ec2`를 작성합니다.
 
 필수 값:
 
@@ -137,24 +137,24 @@ SPRING_PROFILES_ACTIVE=ec2
 MYSQL_HOST=your-rds-endpoint.ap-northeast-2.rds.amazonaws.com
 MYSQL_PORT=3306
 MYSQL_DATABASE=todaybread
-MYSQL_USER=todaybread
-MYSQL_PASSWORD=change-this-rds-password
-JWT_SECRET=change-this-to-a-long-random-secret
+MYSQL_USER=your-rds-user
+MYSQL_PASSWORD=your-rds-password
+JWT_SECRET=replace-with-ec2-64-hex-secret
 TOSS_SECRET_KEY=test_sk_your_secret_key_here
 TOSS_CLIENT_KEY=test_ck_your_client_key_here
 FCM_ENABLED=false
 GOOGLE_APPLICATION_CREDENTIALS=/home/ubuntu/todaybread/firebase-adminsdk.json
 NTS_BUSINESS_SERVICE_KEY=your_own_service_key
-BUSINESS_APPROVAL_HASH_SECRET=change-this-to-a-long-random-secret
+BUSINESS_APPROVAL_HASH_SECRET=replace-with-ec2-64-hex-secret
 S3_BUCKET=todaybread-demo-images
 AWS_REGION=ap-northeast-2
 ```
 
-systemd를 쓰는 경우 서비스 파일에서 `EnvironmentFile`로 `.env`를 읽게 할 수 있습니다.
+systemd를 쓰는 경우 서비스 파일에서 `EnvironmentFile`로 `.env.ec2`를 읽게 할 수 있습니다.
 
 ```ini
 [Service]
-EnvironmentFile=/home/ubuntu/todaybread/.env
+EnvironmentFile=/home/ubuntu/todaybread/secrets/.env.ec2
 ExecStart=/usr/bin/java -Xms256m -Xmx768m -jar /home/ubuntu/todaybread/server.jar
 ```
 
@@ -187,8 +187,8 @@ set +a
 다른 터미널에서:
 
 ```bash
-./scripts/test-data.sh
-./scripts/mysql-connect.sh
+./scripts/local-test-data.sh
+./scripts/local-mysql-connect.sh
 ```
 
 ## DB 초기화
@@ -208,5 +208,5 @@ set +a
 필요하면 seed 데이터도 다시 넣습니다.
 
 ```bash
-./scripts/test-data.sh
+./scripts/local-test-data.sh
 ```
