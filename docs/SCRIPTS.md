@@ -91,8 +91,10 @@ ENV_FILE=/path/to/.env.ec2 ./scripts/ec2-test-data.sh
 1. `ec2-create-db.sh`로 RDS 데이터베이스를 생성합니다.
 2. Spring Boot 서버를 한 번 실행해 Flyway가 테이블을 만듭니다.
 3. `ec2-test-data.sh`를 실행합니다.
-4. `ec2-test-data.sh`는 `test-data.sql`을 RDS에 적용하고, `seed-images/`의 이미지를 DB의 `stored_filename` 이름으로 S3에 업로드합니다.
+4. `ec2-test-data.sh`는 `test-data.sql`을 RDS에 적용하고, `seed-images/`의 이미지를 DB의 `stored_filename` 이름으로 준비한 뒤 S3에 sync합니다.
 5. `ec2-drop-db.sh`는 필요할 때만 사용합니다.
+
+S3 업로드는 `aws s3 sync --size-only`를 사용합니다. 이미 같은 크기로 올라간 seed 이미지는 건너뛰고, 새로 필요한 이미지만 업로드합니다.
 
 토큰 주의:
 

@@ -175,32 +175,32 @@ if [[ -z "${image_rows}" ]]; then
   exit 1
 fi
 
-uploaded_count=0
+prepared_count=0
+
+echo "Preparing seed images for S3 sync..."
 
 while IFS=$'\t' read -r object_key source_key title subtitle; do
   if [[ -z "${object_key:-}" ]]; then
     continue
   fi
 
-  target_path="${WORK_DIR}/${object_key}"
-  content_type="$(prepare_seed_image "${object_key}" "${source_key}" "${title}" "${subtitle}")"
-
-  aws s3 cp \
-    "${target_path}" \
-    "s3://${S3_BUCKET}/${object_key}" \
-    --region "${AWS_REGION}" \
-    --content-type "${content_type}" \
-    --cache-control "public, max-age=31536000" \
-    --only-show-errors
-
-  uploaded_count=$((uploaded_count + 1))
+  prepare_seed_image "${object_key}" "${source_key}" "${title}" "${subtitle}" >/dev/null
+  prepared_count=$((prepared_count + 1))
 done <<< "${image_rows}"
+
+echo "Syncing seed images to s3://${S3_BUCKET}..."
+aws s3 sync \
+  "${WORK_DIR}/" \
+  "s3://${S3_BUCKET}/" \
+  --region "${AWS_REGION}" \
+  --size-only \
+  --cache-control "public, max-age=31536000"
 
 cat <<EOF
 EC2 test data applied.
 - RDS: ${MYSQL_HOST}/${MYSQL_DATABASE}
 - S3: s3://${S3_BUCKET}
-- Uploaded seed images: ${uploaded_count}
+- Prepared seed images: ${prepared_count}
 
 Sample accounts:
 - demo-user01@todaybread.com ~ demo-user20@todaybread.com / todaybread123
