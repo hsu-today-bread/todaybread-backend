@@ -158,6 +158,23 @@ EnvironmentFile=/home/ubuntu/todaybread/secrets/.env.ec2
 ExecStart=/usr/bin/java -Xms256m -Xmx768m -jar /home/ubuntu/todaybread/server.jar
 ```
 
+EC2 데모 데이터를 준비할 때는 아래 순서로 실행합니다.
+
+```bash
+./scripts/ec2-create-db.sh
+# Spring Boot 서버를 한 번 실행해 Flyway 테이블을 생성
+./scripts/ec2-test-data.sh
+./scripts/ec2-mysql-connect.sh
+```
+
+데모 환경을 완전히 초기화하려면 DB와 S3를 함께 비웁니다.
+
+```bash
+./scripts/ec2-reset-demo.sh
+```
+
+`ec2-reset-demo.sh`는 RDS 데이터베이스를 drop하고 `S3_BUCKET` 버킷의 모든 객체를 삭제합니다. 이후 다시 데모 데이터를 준비하려면 `ec2-create-db.sh`부터 실행합니다.
+
 ## S3 이미지 저장
 
 EC2 프로필은 `S3FileStorage`를 사용합니다. 업로드와 삭제는 서버가 S3 권한으로 수행하고, API 응답의 `imageUrl`은 S3 public URL입니다.

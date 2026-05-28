@@ -11,6 +11,7 @@
 | `scripts/ec2-mysql-connect.sh` | EC2에서 `.env.ec2`를 읽어 RDS MySQL에 접속 |
 | `scripts/ec2-create-db.sh` | EC2에서 RDS 데이터베이스 생성 |
 | `scripts/ec2-drop-db.sh` | EC2에서 RDS 데이터베이스 삭제 |
+| `scripts/ec2-reset-demo.sh` | EC2 데모 초기화: RDS 데이터베이스 삭제와 S3 버킷 전체 비우기 |
 | `scripts/ec2-test-data.sh` | EC2에서 RDS seed 데이터 삽입과 S3 seed 이미지 업로드 |
 | `scripts/test-data.sql` | 샘플 유저, 사장님, 관심지역, 키워드, 매장, 영업시간, 빵, 이미지, 즐겨찾기, 주문, 결제, 리뷰 데이터를 삽입 |
 | `scripts/seed-images/` | 로컬/EC2 seed 이미지 원본 |
@@ -76,8 +77,8 @@ EC2 스크립트는 기본으로 `/home/ubuntu/todaybread/secrets/.env.ec2`를 �
 
 ```bash
 ./scripts/ec2-create-db.sh
-./scripts/ec2-mysql-connect.sh
 ./scripts/ec2-test-data.sh
+./scripts/ec2-mysql-connect.sh
 ```
 
 `.env.ec2` 위치가 다르면 `ENV_FILE`로 지정합니다.
@@ -86,15 +87,25 @@ EC2 스크립트는 기본으로 `/home/ubuntu/todaybread/secrets/.env.ec2`를 �
 ENV_FILE=/path/to/.env.ec2 ./scripts/ec2-test-data.sh
 ```
 
-실행 흐름:
+데모 준비 흐름:
 
 1. `ec2-create-db.sh`로 RDS 데이터베이스를 생성합니다.
 2. Spring Boot 서버를 한 번 실행해 Flyway가 테이블을 만듭니다.
 3. `ec2-test-data.sh`를 실행합니다.
 4. `ec2-test-data.sh`는 `test-data.sql`을 RDS에 적용하고, `seed-images/`의 이미지를 DB의 `stored_filename` 이름으로 준비한 뒤 S3에 sync합니다.
-5. `ec2-drop-db.sh`는 필요할 때만 사용합니다.
+5. 필요하면 `ec2-mysql-connect.sh`로 RDS MySQL에 접속해 데이터를 확인합니다.
 
 S3 업로드는 `aws s3 sync --size-only`를 사용합니다. 이미 같은 크기로 올라간 seed 이미지는 건너뛰고, 새로 필요한 이미지만 업로드합니다.
+
+데모 초기화는 `ec2-reset-demo.sh`를 사용합니다.
+
+```bash
+./scripts/ec2-reset-demo.sh
+```
+
+이 스크립트는 RDS 데이터베이스를 drop하고 `S3_BUCKET` 버킷의 모든 객체를 삭제합니다. 실행하려면 확인 문구로 `RESET DEMO`를 입력해야 합니다. 초기화 후에는 다시 `ec2-create-db.sh` -> Spring Boot 서버 실행 -> `ec2-test-data.sh` 순서로 준비합니다.
+
+`ec2-drop-db.sh`는 RDS 데이터베이스만 삭제하고 S3는 건드리지 않습니다. DB와 S3를 함께 비우는 데모 초기화에는 `ec2-reset-demo.sh`를 사용합니다.
 
 토큰 주의:
 
