@@ -139,10 +139,10 @@ S3 업로드는 `aws s3 sync --size-only`를 사용합니다. 이미 같은 크�
 - 빵 이미지 레코드
 - 유저별 0~5개 반복 즐겨찾기
 - 장바구니는 비어 있는 상태로 유지
-- 2026년 1월 1일부터 2026년 5월 7일까지의 주문/매출 내역
-- 매장별 월 주문 날짜 5~15일, 2026년 5월은 5~7일만 생성
+- 2026년 1월 1일부터 2026년 6월 4일까지의 주문/매출 내역
+- 매장별 월 주문 날짜는 1~5월 5~15일, 2026년 6월은 1~4일만 생성
 - 주문 상태에 맞는 결제 데이터 (`PICKED_UP`/`CANCELLED`만 생성)
-- 매장별 리뷰 10개, 그중 이미지 리뷰 5개와 텍스트 리뷰 5개
+- 매장별 리뷰 10~18개, 그중 첫 5개는 이미지 리뷰
 - 리뷰는 `demo-user02`~`demo-user20`의 픽업 완료 주문상품에만 연결
 - 이미지 리뷰는 리뷰당 1장 또는 2장
 
@@ -150,7 +150,7 @@ S3 업로드는 `aws s3 sync --size-only`를 사용합니다. 이미 같은 크�
 
 ```text
 seed_stores = 120
-seed_reviews = 1200
+seed_reviews = 1671
 seed_normal_users = 20
 user01_orders = 10
 user01_reviews = 0
@@ -160,7 +160,7 @@ invalid_review_order_links = 0
 stores_without_reviews = 0
 stores_below_10_reviews = 0
 min_reviews_per_store = 10
-max_reviews_per_store = 10
+max_reviews_per_store = 18
 monthly_order_day_range_violations = 0
 seed_store_images = 120
 seed_bread_images = 생성된 빵 수와 동일

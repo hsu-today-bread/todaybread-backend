@@ -2,7 +2,7 @@ SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 SET collation_connection = 'utf8mb4_unicode_ci';
 
 /*
- 개발용 테스트 데이터 스크립트 (v5)
+ 개발용 테스트 데이터 스크립트 (v6)
 
  기본 실행으로 서울 전역 120개 매장을 생성합니다.
 
@@ -21,9 +21,9 @@ SET collation_connection = 'utf8mb4_unicode_ci';
  - 한성대 5km 안 매장은 20개만 배치하고, 나머지 100개는 5km 밖 서울 전역에 분산합니다.
  - seed 자체는 sellingStatus를 저장하지 않습니다. 영업시간 + 재고 조건으로 SELLING / OPEN_SOLD_OUT / CLOSED를 계산할 수 있게 만듭니다.
  - 주문은 PICKED_UP 또는 CANCELLED만 생성합니다. PENDING / CONFIRMED / CANCEL_PENDING은 생성하지 않습니다.
- - 주문/매출 날짜는 2026-01-01부터 2026-05-07까지만 사용합니다.
- - 매장별 월 주문 날짜는 5~15일이며, 2026년 5월은 5~7일만 생성합니다.
- - 리뷰는 매장당 10개를 만들고, 이미지 리뷰 5개 + 텍스트 리뷰 5개를 유지합니다.
+ - 주문/매출 날짜는 2026-01-01부터 2026-06-04까지만 사용합니다.
+ - 매장별 월 주문 날짜는 1~5월 5~15일이며, 2026년 6월은 1~4일만 생성합니다.
+ - 리뷰는 매장별 10~18개를 만들고, 매장별 첫 5개 리뷰에 이미지를 연결합니다.
  - 이미지 리뷰는 리뷰당 1장 또는 2장만 연결합니다.
  */
 
@@ -96,6 +96,7 @@ BEGIN
     DECLARE v_content VARCHAR(500);
     DECLARE v_review_id BIGINT;
     DECLARE v_review_idx INT;
+    DECLARE v_review_limit INT;
     DECLARE v_review_created_at DATETIME(6);
     DECLARE v_source_idx INT;
 
@@ -672,27 +673,28 @@ BEGIN
         SET v_pickup_seq = 0;
         SET v_month = 1;
 
-        WHILE v_month <= 5 DO
-            SET v_max_day = ELT(v_month, 31, 28, 31, 30, 7);
+        WHILE v_month <= 6 DO
+            SET v_max_day = ELT(v_month, 31, 28, 31, 30, 31, 4);
 
             IF v_sales_pattern = 1 THEN
-                SET v_month_order_count = IF(v_month = 5, 5 + (v_i MOD 3), 10 + ((v_i + v_month) MOD 4));
+                SET v_month_order_count = IF(v_month = 6, 5 + (v_i MOD 3), 10 + ((v_i + v_month) MOD 4));
             ELSEIF v_sales_pattern = 2 THEN
-                SET v_month_order_count = IF(v_month = 5, 4 + (v_i MOD 3), 8 + ((v_i + v_month) MOD 5));
+                SET v_month_order_count = IF(v_month = 6, 4 + (v_i MOD 3), 8 + ((v_i + v_month) MOD 5));
             ELSEIF v_sales_pattern = 3 THEN
                 SET v_month_order_count = IF(v_month = 1, 4 + (v_i MOD 2),
                     IF(v_month = 2, 6 + (v_i MOD 2),
                     IF(v_month = 3, 9 + (v_i MOD 2),
                     IF(v_month = 4, 12 + (v_i MOD 3), 6 + (v_i MOD 2)))));
             ELSEIF v_sales_pattern = 4 THEN
-                SET v_month_order_count = IF(v_month = 5, 2 + (v_i MOD 2), 3 + ((v_i + v_month) MOD 4));
+                SET v_month_order_count = IF(v_month = 6, 2 + (v_i MOD 2), 3 + ((v_i + v_month) MOD 4));
             ELSE
-                SET v_month_order_count = IF(v_month = 5, 6 + (v_i MOD 2), 12 + ((v_i + v_month) MOD 4));
+                SET v_month_order_count = IF(v_month = 6, 6 + (v_i MOD 2), 12 + ((v_i + v_month) MOD 4));
             END IF;
 
-            SET v_month_order_count = GREATEST(5, LEAST(15, v_month_order_count));
-            IF v_month = 5 THEN
-                SET v_month_order_count = GREATEST(5, LEAST(7, v_month_order_count));
+            IF v_month = 6 THEN
+                SET v_month_order_count = 4;
+            ELSE
+                SET v_month_order_count = GREATEST(5, LEAST(15, v_month_order_count));
             END IF;
 
             SET v_j = 1;
@@ -704,7 +706,9 @@ BEGIN
                 SET v_order_date = STR_TO_DATE(CONCAT('2026-', LPAD(v_month, 2, '0'), '-', LPAD(v_day_no, 2, '0')), '%Y-%m-%d');
                 SET v_created_at = TIMESTAMP(v_order_date, CAST(CONCAT(LPAD(9 + ((v_i + v_j) MOD 12), 2, '0'), ':', LPAD((v_j * 7) MOD 60, 2, '0'), ':00') AS TIME));
 
-                IF v_sales_pattern = 5 THEN
+                IF v_month = 6 AND v_i <= 10 THEN
+                    SET v_status = 'PICKED_UP';
+                ELSEIF v_sales_pattern = 5 THEN
                     SET v_status = IF(MOD(v_j, 3) = 0 OR MOD(v_i + v_j + v_month, 11) = 0, 'CANCELLED', 'PICKED_UP');
                 ELSE
                     SET v_status = IF(MOD(v_i + v_j + v_month, 9) = 0, 'CANCELLED', 'PICKED_UP');
@@ -883,12 +887,13 @@ BEGIN
         toi.bread_id,
         toi.user_id,
         toi.created_at,
-        ROW_NUMBER() OVER (PARTITION BY toi.store_no ORDER BY toi.created_at, toi.order_item_id) AS review_seq
+        ROW_NUMBER() OVER (PARTITION BY toi.store_no ORDER BY toi.created_at DESC, toi.order_item_id DESC) AS review_seq
     FROM tmp_seed_order_items toi
     JOIN tmp_seed_breads tb ON tb.bread_id = toi.bread_id
     JOIN tmp_seed_users tsu ON tsu.user_id = toi.user_id
     WHERE tb.is_review_target = TRUE
-      AND tsu.user_no BETWEEN 2 AND 20;
+      AND tsu.user_no BETWEEN 2 AND 20
+      AND toi.created_at <= '2026-06-03 22:00:00';
 
     SET v_i = 1;
     WHILE v_i <= 120 DO
@@ -897,19 +902,16 @@ BEGIN
         WHERE store_no = v_i;
 
         SET v_review_idx = 1;
-        WHILE v_review_idx <= 10 DO
+        SET v_review_limit = 10 + ((v_i - 1) MOD 9);
+        WHILE v_review_idx <= v_review_limit DO
             SELECT order_item_id, bread_id, user_id, created_at
             INTO v_order_item_id, v_bread_id, v_review_user_id, v_created_at
             FROM tmp_review_candidates
             WHERE store_no = v_i AND review_seq = v_review_idx;
 
-            IF DATE_ADD(v_created_at, INTERVAL 1 DAY) > '2026-05-07 22:00:00' THEN
-                SET v_review_created_at = DATE_ADD(v_created_at, INTERVAL 1 HOUR);
-            ELSE
-                SET v_review_created_at = DATE_ADD(v_created_at, INTERVAL 1 DAY);
-            END IF;
+            SET v_review_created_at = DATE_ADD(v_created_at, INTERVAL 1 DAY);
 
-            IF v_i = 1 AND v_review_idx = 1 THEN
+            IF v_i = 1 AND v_review_idx = v_review_limit THEN
                 SET v_rating = 1;
                 SET v_content = '한성대 근처 데모용 나쁜 리뷰입니다. 빵이 많이 말라서 다음에는 개선되면 좋겠습니다.';
             ELSE
@@ -1124,8 +1126,9 @@ BEGIN
         WHERE store_id IN (SELECT store_id FROM tmp_store_specs)
         GROUP BY store_id, DATE_FORMAT(order_date, '%Y-%m')
     ) m
-    WHERE (order_month < '2026-05' AND monthly_order_days NOT BETWEEN 5 AND 15)
-       OR (order_month = '2026-05' AND monthly_order_days NOT BETWEEN 5 AND 7);
+    WHERE (order_month BETWEEN '2026-01' AND '2026-05' AND monthly_order_days NOT BETWEEN 5 AND 15)
+       OR (order_month = '2026-06' AND monthly_order_days <> 4)
+       OR (order_month < '2026-01' OR order_month > '2026-06');
 
     SELECT 'review_image_reviews' AS metric, COUNT(DISTINCT review_id) AS value
     FROM review_image ri
