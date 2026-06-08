@@ -169,3 +169,8 @@ DB를 완전히 초기화해야 하면 Docker 볼륨까지 제거합니다.
 docker compose down -v
 docker compose up -d
 ```
+
+## 이용 안내
+
+본 저장소는 캡스톤 디자인 및 포트폴리오 목적으로 공개되었습니다.
+상업적 이용은 하지 말아 주세요.

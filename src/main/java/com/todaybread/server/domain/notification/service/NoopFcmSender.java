@@ -15,7 +15,7 @@ public class NoopFcmSender implements FcmSender {
 
     @Override
     public FcmSendResult send(FcmSendRequest request) {
-        log.debug("NoopFcmSender: FCM send skipped (noop mode). token={}", request.token());
+        log.debug("NoopFcmSender: FCM send skipped (noop mode).");
         return FcmSendResult.noop();
     }
 }
